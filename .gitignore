@@ -1,4 +1,8 @@
 .vscode
+history.csv
+monitor.py
+shoonya_test.py
+test_position.csv
 monitor_local.py
 *.log
 *.pyc
