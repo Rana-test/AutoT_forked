@@ -31,6 +31,7 @@ max_strike_price = config['max_strike_price']
 lot_size = config['lot_size']
 lots = config['lots']
 
+userid=None
 # Global variables
 #  Initialize the API
 
@@ -214,10 +215,20 @@ def calculate_initial_positions(base_strike_price, CEOptdf, PEOptdf):
         {'buy_sell':'S', 'tsym': ce_sell,  'qty': lots*lot_size, 'remarks':f'Initial CE Sell with premium: {ce_premium}'},
         {'buy_sell':'B', 'tsym': ce_hedge, 'qty': lots*lot_size, 'remarks':f'Initial CE Hedg with premium: {ce_hedge_premium}'},
     ])
-    logger.info(orders_df)
-    logger.info(f"Cash required: {pe_hedge_premium+ ce_hedge_premium}")
+    span_res = api.span_calculator(userid,[
+        {"prd":"M","exch":"NFO","instname":"OPTSTK","symname":"NIFTY","exd":Expiry,"optt":"PE","strprc":str(pe_hedge[13:])+".00","buyqty":str(lots*lot_size),"sellqty":"0","netqty":"0"},
+        {"prd":"M","exch":"NFO","instname":"OPTSTK","symname":"NIFTY","exd":Expiry,"optt":"CE","strprc":str(ce_hedge[13:])+".00","buyqty":str(lots*lot_size),"sellqty":"0","netqty":"0"},
+        {"prd":"M","exch":"NFO","instname":"OPTSTK","symname":"NIFTY","exd":Expiry,"optt":"PE","strprc":str(pe_sell[13:])+".00","buyqty":"0","sellqty":str(lots*lot_size),"netqty":"0"},
+        {"prd":"M","exch":"NFO","instname":"OPTSTK","symname":"NIFTY","exd":Expiry,"optt":"CE","strprc":str(ce_sell[13:])+".00","buyqty":"0","sellqty":str(lots*lot_size),"netqty":"0"}
+    ])
+    trade_margin=float(span_res['span_trade']) + float(span_res['expo_trade'])
+    cash_margin = (pe_hedge_premium+ ce_hedge_premium)*lots*lot_size
+    net_margin=trade_margin-cash_margin
+    print(f"Margin Requirements: Total: {trade_margin} | Equity Collateral: {round(net_margin/2,2)} | Cash Collateral: {round(net_margin/2,2)} | Cash: {cash_margin}")
+    logger.info(f"Margin Requirements: Total: {trade_margin} | Equity Collateral: {round(net_margin/2,2)} | Cash Collateral: {round(net_margin/2,2)} | Cash: {cash_margin}")
     print(orders_df)
-    print(f"Cash required: {pe_hedge_premium+ ce_hedge_premium}")
+    logger.info(orders_df)
+
     return orders_df
     
 
@@ -273,8 +284,6 @@ def enter_trade():
     Delta_ord_df = calculate_initial_positions(delta_atm, CEOptdf, PEOptdf)
     Delta_ord_df.sort_values(by='buy_sell', inplace=True)
 
-
-    # TODO: Get margin requirement for the trades
     # Execute trade:
     if EntryType== "CURRENT":
         logger.info("Placing Order as per Current Values")
@@ -289,7 +298,6 @@ def enter_trade():
         logger.info("Placing Order as per Delta Neutral")
         execute_basket(Delta_ord_df)
     email_subject = '<<<<<<<< ENTRY MADE >>>>>>>>>>>>'
-    # logger.info(email_subject)
 
     return
 
@@ -371,7 +379,6 @@ def monitor_and_execute_trades(target_profit, stop_loss, lots):
 
     # Get Positions
     positions_df, m2m = get_current_positions()
-    
     # Step 1: Create positions on Day 1
     if positions_df is None:
         noon = datetime.strptime("06:30:00", "%H:%M:%S").time()
@@ -513,6 +520,7 @@ def check_day_after_last_thursday():
     return today == last_thursday_current_month + timedelta(days=1)
 
 def login():
+    global userid
     TOKEN = os.getenv("TOKEN")
     userid=os.getenv("userid")
     password=os.getenv("password")
