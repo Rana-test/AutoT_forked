@@ -397,7 +397,6 @@ def monitor_and_execute_trades(target_profit, stop_loss, lots):
     email_subject = f'DELTA: {delta}% | M2M: {m2m}'
 
     if delta>delta_threshold:
-        email_subject = f'*ADJUSTMENT* | DELTA: {delta}% | M2M: {m2m}'
         # If Iron Fly
         if strategy=="IF":
             # Exit the loss making leg
@@ -460,7 +459,7 @@ def monitor_and_execute_trades(target_profit, stop_loss, lots):
             api.logout()
         else:
             # Exit and create adjustment Legs:
-            email_subject = f"<<< ADJUSTMENT MADE | Revised DELTA: {new_delta} >>>"
+            email_subject = f"*ADJUSTMENT* | DELTA: {delta}% | M2M: {m2m} | Revised DELTA: {new_delta} "
             exit_positions(exit_order_df)
             # Place leg and hedge orders
             # Place leg and hedge orders
