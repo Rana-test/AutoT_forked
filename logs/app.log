@@ -1,1 +1,7 @@
-2024-10-23 11:21:59,880 - Auto_Trader - INFO - Login successful!
+2024-10-23 17:16:00,913 - Auto_Trader - INFO - Login successful!
+2024-10-23 17:16:01,016 - Auto_Trader - INFO - Current Position:
+2024-10-23 17:16:01,017 - Auto_Trader - INFO -   buy_sell                tsym  qty         remarks netavgprc      lp ord_type
+0        B  NIFTY28NOV24P23900   25  Existing Order    174.20  198.95        P
+1        B  NIFTY28NOV24C25700   25  Existing Order     93.30   69.40        C
+2        S  NIFTY28NOV24P24800  -25  Existing Order    456.50  525.00        P
+3        S  NIFTY28NOV24C24800  -25  Existing Order    413.70  339.05        C

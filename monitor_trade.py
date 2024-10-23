@@ -319,6 +319,15 @@ def calculate_delta(df):
 
     return delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff
 
+def past_time(t):
+    # Get the current time
+    now = datetime.now().time()
+    # Check if the current time is greater than t
+    if now > t:
+        return True
+    else:
+        return False
+
 # Main monitoring and trading function
 def monitor_and_execute_trades(target_profit, stop_loss, lots):
     global email_subject
@@ -331,12 +340,15 @@ def monitor_and_execute_trades(target_profit, stop_loss, lots):
 
     # Get Positions
     positions_df, m2m = get_current_positions()
-    # Step 3: Create positions on Day 1
+    
+    # Step 1: Create positions on Day 1
     if positions_df is None:
-        if check_day_after_last_thursday() or enter_today:
+        noon = datetime.strptime("06:30:00", "%H:%M:%S").time()
+        if (check_day_after_last_thursday() and past_time(noon)) or enter_today :
             enter_trade()
             api.logout()
             return
+        
     if len(positions_df)!=4:
         email_subject = f'!!!! POSITIONS ERROR: Found {len(positions_df)} positions !!!!'
         api.logout()
@@ -345,8 +357,8 @@ def monitor_and_execute_trades(target_profit, stop_loss, lots):
     # Exit all Trades if Target achieved or Stop loss hit
     if m2m> target_profit:
         logger.info("Target Profit Acheived. Exit Trade")
-        exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
         email_subject = f'<<< TARGET PROFIT ACHIEVED. EXIT TRADE | M2M: {m2m} >>>'
+        exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
         return
     elif m2m < stop_loss:
         logger.info("Stop Loss hit. Exit Trade")
@@ -354,17 +366,15 @@ def monitor_and_execute_trades(target_profit, stop_loss, lots):
         exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
         return
 
-    # Step 4: Check adjustment signal
+    # Step 2: Check adjustment signal
     delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff = calculate_delta(positions_df)
 
     print(delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff)
 
     email_subject = f'DELTA: {delta}% | M2M: {m2m}'
-    # logger.info(email_subject)
 
     if delta>delta_threshold:
         email_subject = f'*ADJUSTMENT* | DELTA: {delta}% | M2M: {m2m}'
-        # logger.info(email_subject)
         # If Iron Fly
         if strategy=="IF":
             # Exit the loss making leg
@@ -374,13 +384,15 @@ def monitor_and_execute_trades(target_profit, stop_loss, lots):
             if loss_leg=="C":
                 search_ltp = pltp
                 odf = get_Option_Chain("CE")
-                L_tsym, lp = get_nearest_price_strike(odf, search_ltp)
+                L_tsym, L_lp = get_nearest_price_strike(odf, search_ltp)
                 H_strike = int(L_tsym[13:])+ce_hedge_diff 
+                new_delta = round(100*abs(L_lp-pltp)/(L_lp+pltp),2)
             else:
                 search_ltp = cltp
                 odf = get_Option_Chain("PE")
-                L_tsym, lp = get_nearest_price_strike(odf, search_ltp)
+                L_tsym, L_lp = get_nearest_price_strike(odf, search_ltp)
                 H_strike = int(L_tsym[13:])-pe_hedge_diff
+                new_delta = round(100*abs(L_lp-cltp)/(L_lp+cltp),2)
 
             H_tsym, lp = get_nearest_strike_strike(odf, H_strike)
 
@@ -392,31 +404,46 @@ def monitor_and_execute_trades(target_profit, stop_loss, lots):
             if profit_leg=="C":
                 search_ltp = pltp
                 odf = get_Option_Chain("CE")
-                L_tsym, lp = get_nearest_price_strike(odf, search_ltp) 
+                L_tsym, L_lp = get_nearest_price_strike(odf, search_ltp) 
                 # Find loss_leg ATM
                 loss_atm = int(positions_df[(positions_df.ord_type==loss_leg) & (positions_df.buy_sell=="S")].iloc[0]['tsym'][13:]) 
-                new_strike_price = int(L_tsym[13:]) if int(L_tsym[13:])> loss_atm else loss_atm
+                if int(L_tsym[13:])> loss_atm:
+                    new_strike_price = int(L_tsym[13:])  
+                else:
+                    new_strike_price = loss_atm
+                    L_tsym, L_lp = get_nearest_strike_strike(odf, new_strike_price)
                 H_strike = new_strike_price+ce_hedge_diff
+                new_delta = round(100*abs(L_lp-pltp)/(L_lp+pltp),2)
             else:
                 search_ltp = cltp
                 odf = get_Option_Chain("PE")
-                L_tsym, lp = get_nearest_price_strike(odf, search_ltp)
+                L_tsym, L_lp = get_nearest_price_strike(odf, search_ltp)
                 # Find loss_leg ATM
                 loss_atm = int(positions_df[(positions_df.ord_type==loss_leg) & (positions_df.buy_sell=="S")].iloc[0]['tsym'][13:]) 
-                new_strike_price = int(L_tsym[13:]) if int(L_tsym[13:])< loss_atm else loss_atm  
+                if int(L_tsym[13:]) < loss_atm:
+                    new_strike_price = int(L_tsym[13:])  
+                else:
+                    new_strike_price = loss_atm
+                    L_tsym, L_lp = get_nearest_strike_strike(odf, new_strike_price)
                 H_strike = new_strike_price-pe_hedge_diff
+                new_delta = round(100*abs(L_lp-cltp)/(L_lp+cltp),2)
 
             H_tsym, lp = get_nearest_strike_strike(odf, H_strike)
 
-        #Exit Legs:
-        exit_positions(exit_order_df)
-        # Place leg and hedge orders
-        # Place leg and hedge orders
-        place_order("B", H_tsym, lots*lot_size, remarks="Adjustment Hedge order")
-        place_order("S", L_tsym, lots*lot_size, remarks="Adjustment Sell order")
-
-    api.logout()
-
+        # Check if adjustment is not possible
+        # If new Delta is higher than delta threshhold
+        if new_delta > delta_threshold:
+            email_subject="<<< PRICE OUT OF RANGE | EXIT OR ADJUST MANUALLY >>>"
+            api.logout()
+        else:
+            # Exit and create adjustment Legs:
+            exit_positions(exit_order_df)
+            # Place leg and hedge orders
+            # Place leg and hedge orders
+            place_order("B", H_tsym, lots*lot_size, remarks="Adjustment Hedge order")
+            place_order("S", L_tsym, lots*lot_size, remarks="Adjustment Sell order")
+            api.logout()
+    
 
 # Function to check if today is the first day of the month (example)
 def get_last_thursday(year, month):
