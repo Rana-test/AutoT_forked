@@ -467,9 +467,11 @@ def monitor_and_execute_trades(target_profit, stop_loss, lots):
         if new_delta > delta_threshold:
             email_subject="<<< PRICE OUT OF RANGE | EXIT OR ADJUST MANUALLY >>>"
             logger.info("RECOMMENDED ADJUSTMENT:")
-            logger.info(exit_order_df)
-            logger.info(f"B | H_tsym | {lots*lot_size} | remarks=Adjustment Hedge order")
-            logger.info(f"S | L_tsym | {lots*lot_size} | remarks=Adjustment Sell order")
+            for i, order in exit_order_df.iterrows():
+                rev_buy_sell = {"B": "S", "S": "B"}.get(order['buy_sell'])
+                logger.info(f"{rev_buy_sell} | {order['tsym']} | {lots*lot_size} | Original Order")
+            logger.info(f"B | {H_tsym} | {lots*lot_size} | Adjustment Hedge order")
+            logger.info(f"S | {L_tsym} | {lots*lot_size} | Adjustment Sell order")
             logger.info(f"REVISED DELTA: {new_delta}%")
         else:
             # Exit and create adjustment Legs:
@@ -521,7 +523,6 @@ def login():
     twoFA = pyotp.TOTP(TOKEN).now()
     login_response = api.login(userid=userid, password=password, twoFA=twoFA, vendor_code=vendor_code, api_secret=api_secret, imei=imei)   
     if login_response['stat'] == 'Ok':
-        logger.info("Login successful!")
         print('Logged in sucessfully')
     else:
         logger.info(f"Login failed: {login_response.get('emsg', 'Unknown error')}")
