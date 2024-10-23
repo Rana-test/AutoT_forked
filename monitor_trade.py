@@ -10,7 +10,7 @@ import pandas as pd
 from datetime import datetime, timedelta, date
 import requests
 import zipfile
-
+import time
 ### Add condition for exception, when index moves way beyond adjustment
 import yaml
 with open('config.yml', 'r') as file:
@@ -129,6 +129,14 @@ def get_current_positions():
         logger.info(positions_df)
     
         return positions_df, day_m2m
+
+def get_position_status():
+    # Publish new Positions after 5 second wait
+    time.sleep(5)
+    rev_position, rev_m2m = get_current_positions()
+    logger.info("<<<REVISED POSITIONS>>>")
+    logger.info(rev_position)
+    logger.info(f"<<<Revised M2M: {rev_m2m}>>>")
 
 def execute_basket(orders_df):
     # {'buy_sell':'B', 'tsym': pe_hedge, 'qty': lots*lot_size, 'remarks':f'Initial PE Hedg with premium: {pe_hedge_premium}'},
@@ -369,12 +377,14 @@ def monitor_and_execute_trades(target_profit, stop_loss, lots):
         noon = datetime.strptime("06:30:00", "%H:%M:%S").time()
         if (check_day_after_last_thursday() and past_time(noon)) or enter_today :
             enter_trade()
-            api.logout()
+            # Publish new Positions after 5 second wait
+            get_position_status()
             return
         
     if len(positions_df)!=4:
         email_subject = f'!!!! POSITIONS ERROR: Found {len(positions_df)} positions !!!!'
-        api.logout()
+        logger.info(positions_df)
+        logger.df(m2m)
         return
     
     # Exit all Trades if Target achieved or Stop loss hit
@@ -456,7 +466,6 @@ def monitor_and_execute_trades(target_profit, stop_loss, lots):
         # If new Delta is higher than delta threshhold
         if new_delta > delta_threshold:
             email_subject="<<< PRICE OUT OF RANGE | EXIT OR ADJUST MANUALLY >>>"
-            api.logout()
         else:
             # Exit and create adjustment Legs:
             email_subject = f"*ADJUSTMENT* | DELTA: {delta}% | M2M: {m2m} | Revised DELTA: {new_delta}% "
@@ -466,7 +475,8 @@ def monitor_and_execute_trades(target_profit, stop_loss, lots):
             place_order("B", H_tsym, lots*lot_size, remarks="Adjustment Hedge order")
             place_order("S", L_tsym, lots*lot_size, remarks="Adjustment Sell order")
             logger.info(f"REVISED DELTA: {new_delta}%")
-            api.logout()
+            # Publish new Positions after 5 second wait
+            get_position_status()
     
 
 # Function to check if today is the first day of the month (example)
