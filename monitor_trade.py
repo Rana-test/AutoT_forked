@@ -459,13 +459,13 @@ def monitor_and_execute_trades(target_profit, stop_loss, lots):
             api.logout()
         else:
             # Exit and create adjustment Legs:
-            email_subject = f"*ADJUSTMENT* | DELTA: {delta}% | M2M: {m2m} | Revised DELTA: {new_delta} "
+            email_subject = f"*ADJUSTMENT* | DELTA: {delta}% | M2M: {m2m} | Revised DELTA: {new_delta}% "
             exit_positions(exit_order_df)
             # Place leg and hedge orders
             # Place leg and hedge orders
             place_order("B", H_tsym, lots*lot_size, remarks="Adjustment Hedge order")
             place_order("S", L_tsym, lots*lot_size, remarks="Adjustment Sell order")
-            logger.info(f"REVISED DELTA: {new_delta}")
+            logger.info(f"REVISED DELTA: {new_delta}%")
             api.logout()
     
 
