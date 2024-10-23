@@ -337,7 +337,11 @@ def monitor_and_execute_trades(target_profit, stop_loss, lots):
             enter_trade()
             api.logout()
             return
-
+    if len(positions_df)!=4:
+        email_subject = f'!!!! POSITIONS ERROR: Found {len(positions_df)} positions !!!!'
+        api.logout()
+        return
+    
     # Exit all Trades if Target achieved or Stop loss hit
     if m2m> target_profit:
         logger.info("Target Profit Acheived. Exit Trade")
