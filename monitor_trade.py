@@ -359,7 +359,7 @@ def monitor_and_execute_trades(target_profit, stop_loss, lots):
     # logger.info(email_subject)
 
     if delta>delta_threshold:
-        email_subject = f'*ADJUSTMENT* | DELTA: {delta}% | M2M: {m2m} >>>'
+        email_subject = f'*ADJUSTMENT* | DELTA: {delta}% | M2M: {m2m}'
         # logger.info(email_subject)
         # If Iron Fly
         if strategy=="IF":
