@@ -1,0 +1,18 @@
+live: 0
+enter_today: 0
+target_profit: 999999
+stop_loss: -999999
+delta_threshold: 5
+
+EntryType: DELTA
+
+Expiry: 28-NOV-2024
+lots: 1
+lot_size: 25
+min_strike_price: 23000
+max_strike_price: 27000
+
+nse_sym_path: NSE_symbols.txt
+nfo_sym_path: NFO_symbols.txt
+Symbol: NIFTY
+

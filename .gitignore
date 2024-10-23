@@ -1,0 +1,8 @@
+.vscode
+monitor_local.py
+*.log
+*.pyc
+*.ipynb
+test.py
+app.log
+.~lock*

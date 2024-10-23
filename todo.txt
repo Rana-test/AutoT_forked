@@ -1,0 +1,2 @@
+Refresh symbols.txts
+Find better hedge points
