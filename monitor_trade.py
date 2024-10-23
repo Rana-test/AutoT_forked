@@ -8,6 +8,8 @@ import os
 import pyotp
 import pandas as pd
 from datetime import datetime, timedelta, date
+import requests
+import zipfile
 
 ### Add condition for exception, when index moves way beyond adjustment
 import yaml
@@ -48,6 +50,27 @@ file_handler = RotatingFileHandler('logs/app.log', maxBytes=1_000_000, backupCou
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
+
+# If symbols are not present then download them
+root = 'https://api.shoonya.com/'
+masters = ['NSE_symbols.txt.zip', 'NFO_symbols.txt.zip'] 
+for zip_file in masters:   
+    if not os.path.exists(zip_file[:-4]): 
+        print(f'downloading {zip_file}')
+        url = root + zip_file
+        r = requests.get(url, allow_redirects=True)
+        open(zip_file, 'wb').write(r.content)
+        file_to_extract = zip_file.split()
+    
+        try:
+            with zipfile.ZipFile(zip_file) as z:
+                z.extractall()
+                print("Extracted: ", zip_file)
+        except:
+            print("Invalid file")
+
+        os.remove(zip_file)
+        print(f'remove: {zip_file}')
 
 def send_custom_email(subject, body):
     # Email configuration
@@ -494,10 +517,6 @@ if __name__=="__main__":
     if not os.path.exists('logs'):
         os.makedirs('logs')
     open('logs/app.log', 'w').close()
-    # history_df = pd.read_csv('history.csv')
-    # new_row = {'Sno.':int(history_df['Sno.'].iloc[-1])+1, 'Name': 'Charlie', 'Age': 35, 'City': 'Los Angeles'}
-    # history_df = pd.concat([history_df, pd.DataFrame([new_row])], ignore_index=True)
-    # history_df.to_csv('history.csv')
     monitor_and_execute_trades(target_profit=target_profit, stop_loss=stop_loss, lots=lots)
     # Send mail with log information
     with open('logs/app.log', 'r') as f:
