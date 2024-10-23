@@ -466,6 +466,11 @@ def monitor_and_execute_trades(target_profit, stop_loss, lots):
         # If new Delta is higher than delta threshhold
         if new_delta > delta_threshold:
             email_subject="<<< PRICE OUT OF RANGE | EXIT OR ADJUST MANUALLY >>>"
+            logger.info("RECOMMENDED ADJUSTMENT:")
+            logger.info(exit_order_df)
+            logger.info("B", H_tsym, lots*lot_size, remarks="Adjustment Hedge order")
+            logger.info("S", L_tsym, lots*lot_size, remarks="Adjustment Sell order")
+            logger.info(f"REVISED DELTA: {new_delta}%")
         else:
             # Exit and create adjustment Legs:
             email_subject = f"*ADJUSTMENT* | DELTA: {delta}% | M2M: {m2m} | Revised DELTA: {new_delta}% "
