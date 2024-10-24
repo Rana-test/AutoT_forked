@@ -142,7 +142,7 @@ def get_current_positions():
         total_m2m=round(float(positions_df['net_profit'].sum()),2)
         logger.info("Current Position:")
         with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-            logger.info("\n%s",positions_df)
+            logger.info("\n%s",positions_df[['buy_sell', 'tsym', 'qty', 'netupldprc', 'lp']])
     
         return positions_df, total_m2m
 
@@ -152,7 +152,7 @@ def get_position_status():
     rev_position, rev_m2m = get_current_positions()
     logger.info("<<<REVISED POSITIONS>>>")
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-        logger.info("\n%s",rev_position)
+        logger.info("\n%s",rev_position[['buy_sell', 'tsym', 'qty', 'netupldprc', 'lp']])
     logger.info(f"<<<Revised M2M: {rev_m2m}>>>")
 
 def execute_basket(orders_df):
@@ -408,7 +408,7 @@ def monitor_and_execute_trades(target_profit, stop_loss, lots):
     if len(positions_df)!=4:
         email_subject = f'!!!! POSITIONS ERROR: Found {len(positions_df)} positions !!!!'
         with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-            logger.info("\n%s",positions_df)
+            logger.info("\n%s",positions_df[['buy_sell', 'tsym', 'qty', 'netupldprc', 'lp']])
         logger.df(f'M2M: {m2m}')
         return
     
