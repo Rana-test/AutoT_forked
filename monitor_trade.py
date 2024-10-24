@@ -138,7 +138,8 @@ def get_current_positions():
         positions_df['net_profit']=(positions_df['lp'].astype(float)-positions_df['netupldprc'].astype(float))*positions_df['qty'].astype(float)
         total_m2m=round(float(positions_df['net_profit'].sum()),2)
         logger.info("Current Position:")
-        logger.info(positions_df)
+        with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+            logger.info("\n%s",positions_df)
     
         return positions_df, total_m2m
 
@@ -401,8 +402,9 @@ def monitor_and_execute_trades(target_profit, stop_loss, lots):
         
     if len(positions_df)!=4:
         email_subject = f'!!!! POSITIONS ERROR: Found {len(positions_df)} positions !!!!'
-        logger.info(positions_df)
-        logger.df(m2m)
+        with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+            logger.info("\n%s",positions_df)
+        logger.df(f'M2M: {m2m}')
         return
     
     # Exit all Trades if Target achieved or Stop loss hit
