@@ -140,7 +140,7 @@ def get_current_positions():
         positions_df = pd.DataFrame(open_pos_data)
         positions_df['net_profit']=(positions_df['lp'].astype(float)-positions_df['netupldprc'].astype(float))*positions_df['qty'].astype(float)
         total_m2m=round(float(positions_df['net_profit'].sum()),2)
-        logger.info("Current Position:")
+        logger.info("<<<CURRENT POSITION>>>:")
         with pd.option_context('display.max_rows', None, 'display.max_columns', None):
             logger.info("\n%s",positions_df[['buy_sell', 'tsym', 'qty', 'netupldprc', 'lp']])
     
@@ -518,6 +518,7 @@ def monitor_and_execute_trades(target_profit, stop_loss, lots):
                 logger.info(f"{rev_buy_sell} | {order['tsym']} | {lots*lot_size} | Original Order")
             logger.info(f"B | {H_tsym} | {lots*lot_size} | Adjustment Hedge order")
             logger.info(f"S | {L_tsym} | {lots*lot_size} | Adjustment Sell order")
+            logger.info(f"ORIGINAL DELTA: {delta}%")
             logger.info(f"REVISED DELTA: {new_delta}%")
             logger.info("-----------------------------------------------")
         else:
