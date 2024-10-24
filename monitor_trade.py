@@ -366,6 +366,7 @@ def enter_trade():
     # Get initial trade basis future price
     max_net_premium=0
     best_entry=None
+    best_ord_df=None
 
     print("Getting Future Price")
     future_price_df = symbolDf[(symbolDf.Symbol=="NIFTY")&(symbolDf.Expiry==Expiry) &(symbolDf['OptionType']=="XX")]
@@ -375,10 +376,12 @@ def enter_trade():
     logger.info(format_line)
     logger.info("Positions based on Future Price")
     Fut_ord_df, net_premium = calculate_initial_positions(future_strike, CEOptdf, PEOptdf)
+    Fut_ord_df.sort_values(by='buy_sell', inplace=True)
     if net_premium>max_net_premium:
         max_net_premium= net_premium
         best_entry="FUTURE"
-    Fut_ord_df.sort_values(by='buy_sell', inplace=True)
+        best_ord_df=Fut_ord_df
+    
 
     # Get initial trade basis current price
     print("Getting Current Price")
@@ -390,10 +393,11 @@ def enter_trade():
     print("Positions based on Current Price")
     logger.info("Positions based on Current Price")
     Curr_ord_df, net_premium = calculate_initial_positions(current_strike, CEOptdf, PEOptdf)
+    Curr_ord_df.sort_values(by='buy_sell', inplace=True)
     if net_premium>max_net_premium:
         max_net_premium= net_premium
         best_entry="CURRENT"
-    Curr_ord_df.sort_values(by='buy_sell', inplace=True)
+        best_ord_df=Curr_ord_df
 
     # Get initial trade basis oi
     print("Getting positions based on oi support/resistance")
@@ -401,10 +405,11 @@ def enter_trade():
     logger.info(format_line)
     logger.info("Positions based on Support/Resistance")
     Oi_ord_df, net_premium = calculate_initial_positions(atm, CEOptdf, PEOptdf)
+    Oi_ord_df.sort_values(by='buy_sell', inplace=True)
     if net_premium>max_net_premium:
         max_net_premium= net_premium
         best_entry="OI"
-    Oi_ord_df.sort_values(by='buy_sell', inplace=True)
+        best_ord_df=Oi_ord_df
 
     # Get initial trade basis delta
     logger.info(format_line)
@@ -414,10 +419,12 @@ def enter_trade():
     delta_oc.sort_values(by='delta_diff', inplace=True)
     delta_atm = delta_oc['StrikePrice'].iloc[0]
     Delta_ord_df, net_premium = calculate_initial_positions(delta_atm, CEOptdf, PEOptdf)
+    Delta_ord_df.sort_values(by='buy_sell', inplace=True)
     if net_premium>max_net_premium:
         max_net_premium= net_premium
         best_entry="DELTA"
-    Delta_ord_df.sort_values(by='buy_sell', inplace=True)
+        best_ord_df=Delta_ord_df
+    
 
     # Get initial trade basis combination
     print("Getting combined position")
@@ -425,29 +432,31 @@ def enter_trade():
     logger.info(format_line)
     logger.info("Combined Positions")
     Comb_ord_df, net_premium = calculate_initial_positions(comb_atm, CEOptdf, PEOptdf)
+    Comb_ord_df.sort_values(by='buy_sell', inplace=True)
     if net_premium>max_net_premium:
         max_net_premium= net_premium
         best_entry="COMBINED"
-    Comb_ord_df.sort_values(by='buy_sell', inplace=True)
-
-    if EntryType=="AUTO":
-        EntryType=best_entry
-    print(EntryType)
+        best_ord_df=Comb_ord_df
+    
     # Execute trade:
     logger.info(format_line)
-    if EntryType== "CURRENT":
+    if EntryType=="AUTO":
+        logger.info(f"AUTO: Placing Order as per {best_entry}")
+        print(f"AUTO: Placing Order as per {best_entry}")
+        execute_basket(best_ord_df)
+    elif EntryType== "CURRENT":
         logger.info("Placing Order as per Current Values")
         execute_basket(Curr_ord_df)
-    if EntryType== "FUTURE":
+    elif EntryType== "FUTURE":
         logger.info("Placing Order as per Future Values")
         execute_basket(Fut_ord_df)
-    if EntryType== "COMBINED":
+    elif EntryType== "COMBINED":
         logger.info("Placing Order as per Combined Values")
         execute_basket(Comb_ord_df)
-    if EntryType== "DELTA":
+    elif EntryType== "DELTA":
         logger.info("Placing Order as per Delta Neutral")
         execute_basket(Delta_ord_df)
-    if EntryType== "OI":
+    elif EntryType== "OI":
         logger.info("Placing Order as per OI")
         execute_basket(Oi_ord_df)
 
