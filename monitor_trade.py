@@ -110,6 +110,10 @@ def send_custom_email(subject, body):
 def load_state(csv_file):
     """Load state from CSV if it exists, otherwise initialize defaults."""
     global in_trailing_mode
+    if not os.path.exists(csv_file):
+        columns = ['sno', 'm2m', 'trailing_profit_threshold', 'in_trailing_mode']
+        df = pd.DataFrame(columns=columns)
+        df.to_csv(csv_file, index=False)
     df = pd.read_csv(csv_file)
     if len(df)>0:
         max_profit = df['m2m'].max()  # Max profit based on m2m column
