@@ -502,6 +502,7 @@ def monitor_and_execute_trades(target_profit, stop_loss, lots):
         else:
             # Exit and create adjustment Legs:
             email_subject = f"*ADJUSTMENT* | DELTA: {delta}% | M2M: {m2m} | Revised DELTA: {new_delta}% "
+            logger.info("<<<ADJUSTMENTS>>>")
             exit_positions(exit_order_df)
             # Place leg and hedge orders
             # Place leg and hedge orders
