@@ -348,8 +348,8 @@ def calculate_initial_positions(base_strike_price, CEOptdf, PEOptdf):
     print(orders_df)
     logger.info(orders_df)
     logger.info(format_line)
-    net_premium = ce_premium+pe_premium-ce_hedge_premium-pe_hedge_premium
-    logger.info(f"Net premium = {net_premium}")
+    net_premium = tot_premium-ce_hedge_premium-pe_hedge_premium
+    logger.info(f"Sell premium = {tot_premium} | Net premium = {net_premium}")
     print(f"Net premium = {net_premium}")
 
     return orders_df, net_premium
