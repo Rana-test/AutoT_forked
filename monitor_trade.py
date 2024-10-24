@@ -30,6 +30,7 @@ min_strike_price = config['min_strike_price']
 max_strike_price = config['max_strike_price']
 lot_size = config['lot_size']
 lots = config['lots']
+trailing_profit_threshold=config['trailing_profit_threshold']
 
 userid=None
 # Global variables
@@ -104,6 +105,21 @@ def send_custom_email(subject, body):
         print(f"Error sending email: {e}")
     finally:
         server.quit()
+
+def load_state(csv_file):
+    """Load state from CSV if it exists, otherwise initialize defaults."""
+    if os.path.exists(csv_file):
+        df = pd.read_csv(csv_file)
+        max_profit = df['m2m'].max()  # Max profit based on m2m column
+        # trailing_profit_threshold = df.loc[0, 'trailing_profit_threshold']
+        in_trailing_mode = df.iloc[-1]['in_trailing_mode']
+        print(f"Loaded state: Max profit: {max_profit}, Trailing stop: {trailing_profit_threshold}, Trailing mode: {in_trailing_mode}")
+        return max_profit, trailing_profit_threshold, in_trailing_mode, df
+    else:
+        # Initial state if CSV doesn't exist
+        columns = ['m2m', 'trailing_profit_threshold', 'in_trailing_mode']
+        df = pd.DataFrame(columns=columns)
+        return 0, 0, False, df
 
 
 # Step 1: Preprocess data and extract necessary information
