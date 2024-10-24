@@ -141,6 +141,7 @@ def get_current_positions():
         positions_df = pd.DataFrame(open_pos_data)
         positions_df['net_profit']=(positions_df['lp'].astype(float)-positions_df['netupldprc'].astype(float))*positions_df['qty'].astype(float)
         total_m2m=round(float(positions_df['net_profit'].sum()),2)
+        logger.info(format_line)
         logger.info("<<<CURRENT POSITION>>>:")
         with pd.option_context('display.max_rows', None, 'display.max_columns', None):
             logger.info("\n%s",positions_df[['buy_sell', 'tsym', 'qty', 'netupldprc', 'lp']])
@@ -338,7 +339,6 @@ def place_order(buy_sell, tsym, qty, remarks="regular order"):
     price=0
     trigger_price = None
     retention='DAY'
-    logger.info(format_line)
     if live:
         ret = api.place_order(buy_or_sell=buy_sell, product_type=prd_type, exchange=exchange, tradingsymbol=tsym, quantity=qty, discloseqty=disclosed_qty,
                               price_type=price_type, price=price,trigger_price=trigger_price, retention=retention, remarks=remarks)
@@ -351,7 +351,6 @@ def place_order(buy_sell, tsym, qty, remarks="regular order"):
     else:
         logger.info(f"TEST ORDER PLACEMENT: {buy_sell}, {tsym}, {qty}, {remarks}")
         print((f"TEST ORDER PLACEMENT : {buy_sell}, {tsym}, {qty}, {remarks}"))
-    logger.info(format_line)
 
 def calculate_delta(df):
     # Verify that there are only 2 records
