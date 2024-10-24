@@ -461,7 +461,7 @@ def past_time(t):
         return False
 
 # Main monitoring and trading function
-def monitor_and_execute_trades(target_profit, stop_loss, lots):
+def monitor_and_execute_trades():
     global delta
     global email_subject
     # Login to Shoonya app
@@ -499,6 +499,7 @@ def monitor_and_execute_trades(target_profit, stop_loss, lots):
         logger.info(format_line)
         return
     elif m2m < stop_loss:
+        # Implement traling stop loss
         logger.info(format_line)
         logger.info("Stop Loss hit. Exit Trade")
         email_subject = f'<<< STOP LOSS HIT. EXIT TRADE | M2M: {m2m} >>>'
@@ -648,7 +649,7 @@ if __name__=="__main__":
     if not os.path.exists('logs'):
         os.makedirs('logs')
     open('logs/app.log', 'w').close()
-    monitor_and_execute_trades(target_profit=target_profit, stop_loss=stop_loss, lots=lots)
+    monitor_and_execute_trades()
     # Send mail with log information
     with open('logs/app.log', 'r') as f:
         body = f.read() 
