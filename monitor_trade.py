@@ -38,6 +38,8 @@ userid=None
 api = ShoonyaApiPy()
 
 symbolDf= None
+total_m2m = 0
+delta=0
 edate = Expiry.split("-")
 tsym_prefix= Symbol+edate[0]+edate[1]+edate[2][-2:]
 email_subject = "Trade Analytics: NO ACTION"
@@ -104,7 +106,7 @@ def send_custom_email(subject, body):
 
 # Step 1: Preprocess data and extract necessary information
 def get_current_positions():
-    global day_m2m
+    global total_m2m
     # Fetch the latest data (positions, LTP, etc.)
     open_pos_data=[]
     ret = api.get_positions()
@@ -382,6 +384,7 @@ def past_time(t):
 
 # Main monitoring and trading function
 def monitor_and_execute_trades(target_profit, stop_loss, lots):
+    global delta
     global email_subject
     # Login to Shoonya app
     print('Logging in ...')
@@ -562,3 +565,8 @@ if __name__=="__main__":
         body = f.read() 
         # Send the email
         send_custom_email(email_subject, body)
+    # Update state csv
+    state = pd.read_csv('state.csv')
+    new_row={'sno':len(state)+1,'m2m':total_m2m,'delta':delta}
+    new_row_df = pd.DataFrame([new_row])
+    state = pd.concat([state, new_row_df], ignore_index=True)

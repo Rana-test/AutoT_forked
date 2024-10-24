@@ -30,3 +30,13 @@ jobs:
         api_secret: ${{ secrets.api_secret }}
         imei: ${{ secrets.imei }}
       run: python3 monitor_trade.py
+
+    - name: Commit changes
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add "state.csv"
+        git commit -m "Update JSON file"
+        git push origin master
+      env:
+        GITHUB_TOKEN: ${{ secrets.TEST_API_KEY}}
