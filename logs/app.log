@@ -1,4 +1,9 @@
-M2M:0
+--------------------------------------------------------
+<<<TODAY'S CLOSED POSITION : 512.5 | ADJUST TARGET PROFIT>>>
+--------------------------------------------------------
+--------------------------------------------------------
+M2M:512.5
+--------------------------------------------------------
 --------------------------------------------------------
 Positions based on Future Price
 --------------------------------------------------------
@@ -60,6 +65,9 @@ TEST ORDER PLACEMENT: B, NIFTY28NOV24P23700, 25, Initial PE Hedg with premium: 1
 TEST ORDER PLACEMENT: B, NIFTY28NOV24C25300, 25, Initial CE Hedg with premium: 132.55
 TEST ORDER PLACEMENT: S, NIFTY28NOV24P24500, 25, Initial PE Sell with premium: 364.85
 TEST ORDER PLACEMENT: S, NIFTY28NOV24C24500, 25, Initial CE Sell with premium: 475.0
+--------------------------------------------------------
+<<<TODAY'S CLOSED POSITION : 512.5 | ADJUST TARGET PROFIT>>>
+--------------------------------------------------------
 --------------------------------------------------------
 <<<REVISED POSITIONS>>>
 NO POSITIONS CREATED
