@@ -110,9 +110,10 @@ def send_custom_email(subject, body):
 def load_state(csv_file):
     """Load state from CSV if it exists, otherwise initialize defaults."""
     global in_trailing_mode
-    if os.path.exists(csv_file):
-        df = pd.read_csv(csv_file)
+    df = pd.read_csv(csv_file)
+    if len(df)>0:
         max_profit = df['m2m'].max()  # Max profit based on m2m column
+        trailing_profit_threshold=df.iloc[-1]['trailing_profit_threshold']
         in_trailing_mode = df.iloc[-1]['in_trailing_mode']
         print(f"Loaded state: Max profit: {max_profit}, Trailing stop: {trailing_profit_threshold}, Trailing mode: {in_trailing_mode}")
         logger.info(f"Loaded state: Max profit: {max_profit}, Trailing stop: {trailing_profit_threshold}, Trailing mode: {in_trailing_mode}")
