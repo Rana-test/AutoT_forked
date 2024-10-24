@@ -181,6 +181,7 @@ def get_current_positions():
     ret = api.get_positions()
     if ret is None:
         logger.info("Issue fetching Positions")
+        return None, 0
     else:
         mtm = 0
         pnl = 0
@@ -188,55 +189,55 @@ def get_current_positions():
             mtm += float(i['urmtom'])
             pnl += float(i['rpnl'])
             day_m2m = mtm + pnl
-            if int(i['netqty'])!=0:
-                # {'buy_sell':'B', 'tsym': pe_hedge, 'qty': lots*lot_size, 'remarks':f'Initial PE Hedg with premium: {pe_hedge_premium}'},
-                # rev_buy_sell = {"B": "C", "C": "B"}.get(i['buy_sell'])
-                if int(i['netqty'])<0:
-                    buy_sell = 'S'
-                elif int(i['netqty'])>0:
-                    buy_sell = 'B'
-                elif int(i['netqty'])==0:
-                    buy_sell = 'NA'
-                open_pos_data.append({
-                    'buy_sell': buy_sell, 
-                    'tsym':i['tsym'], 
-                    'qty': i['netqty'], 
-                    'remarks':'Existing Order', 
-                    'upldprc': i['upldprc'], 
-                    # 'netupldprc': i['netupldprc'], 
-                    'lp':i['lp'], 
-                    'ord_type':i['tsym'][12],
-                    'rpnl':i['rpnl'],
-                    'cfbuyqty': i['cfbuyqty'],
-                    'cfsellqty': i['cfsellqty'],                
-                    'daybuyamt':i['daybuyamt'],
-                    'daysellamt':i['daysellamt']
-                    })
+            # {'buy_sell':'B', 'tsym': pe_hedge, 'qty': lots*lot_size, 'remarks':f'Initial PE Hedg with premium: {pe_hedge_premium}'},
+            # rev_buy_sell = {"B": "C", "C": "B"}.get(i['buy_sell'])
+            if int(i['netqty'])<0:
+                buy_sell = 'S'
+            elif int(i['netqty'])>0:
+                buy_sell = 'B'
+            elif int(i['netqty'])==0:
+                buy_sell = 'NA'
+            open_pos_data.append({
+                'buy_sell': buy_sell, 
+                'tsym':i['tsym'], 
+                'qty': i['netqty'], 
+                'remarks':'Existing Order', 
+                'upldprc': i['upldprc'], 
+                # 'netupldprc': i['netupldprc'], 
+                'lp':i['lp'], 
+                'ord_type':i['tsym'][12],
+                'rpnl':i['rpnl'],
+                'cfbuyqty': i['cfbuyqty'],
+                'cfsellqty': i['cfsellqty'],                
+                'daybuyamt':i['daybuyamt'],
+                'daysellamt':i['daysellamt']
+                })
         positions_df = pd.DataFrame(open_pos_data)
         if not positions_df.empty:
             # Calculate Total M2M
             closed_positions = positions_df[positions_df['buy_sell']=="NA"]
-            closed_positions['totcfbuyamt'] = closed_positions.upldprc.astype(float)*closed_positions.cfbuyqty.astype(int)
-            closed_positions['totcfsellamt'] = closed_positions.upldprc.astype(float)*closed_positions.cfsellqty.astype(int)
-            closed_positions['netbuy']=closed_positions['daybuyamt'].astype(float)+closed_positions['totcfbuyamt']
-            closed_positions['netsell']=closed_positions['daysellamt'].astype(float)+closed_positions['totcfsellamt']
-            closed_positions['net_prft']=closed_positions['netsell']-closed_positions['netbuy']
-            closed_m2m = round(float(closed_positions['net_prft'].sum()),2)
-            del closed_positions
+            closed_m2m=0
+            if not closed_positions.empty:
+                closed_positions['totcfbuyamt'] = closed_positions.upldprc.astype(float)*closed_positions.cfbuyqty.astype(int)
+                closed_positions['totcfsellamt'] = closed_positions.upldprc.astype(float)*closed_positions.cfsellqty.astype(int)
+                closed_positions['netbuy']=closed_positions['daybuyamt'].astype(float)+closed_positions['totcfbuyamt']
+                closed_positions['netsell']=closed_positions['daysellamt'].astype(float)+closed_positions['totcfsellamt']
+                closed_positions['net_prft']=closed_positions['netsell']-closed_positions['netbuy']
+                closed_m2m = round(float(closed_positions['net_prft'].sum()),2)
+                print(f"Closed M2M: {closed_m2m}")
+                del closed_positions
 
             open_positions = positions_df[~(positions_df['buy_sell']=="NA")]
-            open_positions['net_profit']=(open_positions['lp'].astype(float)-open_positions['upldprc'].astype(float))*open_positions['qty'].astype(float)
-            openm2m =round(float(positions_df['net_profit'].sum()),2)
-
+            open_m2m=0
+            if not open_positions.empty:
+                open_positions['net_profit']=(open_positions['lp'].astype(float)-open_positions['upldprc'].astype(float))*open_positions['qty'].astype(float)
+                openm2m =round(float(positions_df['net_profit'].sum()),2)
+                logger.info(format_line)
+                logger.info("<<<CURRENT POSITION>>>")
+                with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+                    logger.info("\n%s",open_positions[['buy_sell', 'tsym', 'qty', 'upldprc', 'lp']])
             total_m2m = closed_m2m+openm2m
-
-            logger.info(format_line)
-            logger.info("<<<CURRENT POSITION>>>")
-            with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-                logger.info("\n%s",open_positions[['buy_sell', 'tsym', 'qty', 'upldprc', 'lp']])
-    
             return open_positions, total_m2m
-        
         else:
             return None, 0
         
