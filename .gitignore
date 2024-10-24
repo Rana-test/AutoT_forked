@@ -10,3 +10,4 @@ monitor_local.py
 test.py
 app.log
 .~lock*
+logs/app.log
