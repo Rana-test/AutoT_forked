@@ -30,7 +30,7 @@ min_strike_price = config['min_strike_price']
 max_strike_price = config['max_strike_price']
 lot_size = config['lot_size']
 lots = config['lots']
-trailing_profit_threshold=config['trailing_profit_threshold']
+trailing_percent=config['trailing_percent']
 
 userid=None
 # Global variables
@@ -40,6 +40,7 @@ api = ShoonyaApiPy()
 
 state = pd.read_csv('state.csv')
 symbolDf= None
+in_trailing_mode=None
 total_m2m = 0
 delta=0
 edate = Expiry.split("-")
@@ -108,12 +109,13 @@ def send_custom_email(subject, body):
 
 def load_state(csv_file):
     """Load state from CSV if it exists, otherwise initialize defaults."""
+    global in_trailing_mode
     if os.path.exists(csv_file):
         df = pd.read_csv(csv_file)
         max_profit = df['m2m'].max()  # Max profit based on m2m column
-        # trailing_profit_threshold = df.loc[0, 'trailing_profit_threshold']
         in_trailing_mode = df.iloc[-1]['in_trailing_mode']
         print(f"Loaded state: Max profit: {max_profit}, Trailing stop: {trailing_profit_threshold}, Trailing mode: {in_trailing_mode}")
+        logger.info(f"Loaded state: Max profit: {max_profit}, Trailing stop: {trailing_profit_threshold}, Trailing mode: {in_trailing_mode}")
         return max_profit, trailing_profit_threshold, in_trailing_mode, df
     else:
         # Initial state if CSV doesn't exist
@@ -121,6 +123,46 @@ def load_state(csv_file):
         df = pd.DataFrame(columns=columns)
         return 0, 0, False, df
 
+def save_state(trailing_profit_threshold, in_trailing_mode, csv_file, df):
+    """Save the current state to CSV using pandas."""
+    new_row={'sno':len(df)+1,'m2m':total_m2m,'delta':delta, 'trailing_profit_threshold':trailing_profit_threshold,'in_trailing_mode':in_trailing_mode}
+    new_row_df = pd.DataFrame([new_row])
+    df = pd.concat([df, new_row_df], ignore_index=True)
+    df.to_csv(csv_file, index=False)
+
+def trailing_profit_exit(csv_file):
+    """
+    Update the current profit and decide if we should exit.
+    :param current_profit: Current profit of the position
+    :param target_profit: Target profit to start trailing
+    :param trailing_percent: Trailing stop percentage once target is hit
+    :param csv_file: CSV file to store state using pandas
+    :return: True if trade should be exited, otherwise False
+    """
+    global in_trailing_mode, trailing_percent, total_m2m
+    max_profit, trailing_profit_threshold, in_trailing_mode, df = load_state(csv_file)
+
+    # If profit exceeds the target, activate trailing mode
+    if total_m2m >= target_profit and not in_trailing_mode:
+        in_trailing_mode = True
+        trailing_profit_threshold = total_m2m * (1 - trailing_percent / 100)
+        print(f"Target profit hit! Activating trailing profit logic. Max profit: {max_profit}")
+    
+    # If already in trailing mode, update max profit and trailing stop
+    if in_trailing_mode:
+        if total_m2m > max_profit:
+            trailing_profit_threshold = total_m2m * (1 - trailing_percent / 100)
+            print(f"New max profit: {total_m2m}. Updated trailing stop: {trailing_profit_threshold}")
+        # If current profit drops below trailing threshold, exit trade
+        elif total_m2m < trailing_profit_threshold:
+            print(f"Exiting trade. Current profit: {total_m2m} is below trailing stop: {trailing_profit_threshold}")
+            # Save the state after every update
+            save_state(trailing_profit_threshold, in_trailing_mode, csv_file, df)
+            return True
+
+    # Save the state after every update
+    save_state(trailing_profit_threshold, in_trailing_mode, csv_file, df)
+    return False
 
 # Step 1: Preprocess data and extract necessary information
 def get_current_positions():
@@ -444,8 +486,7 @@ def monitor_and_execute_trades(target_profit, stop_loss, lots):
         return
     
     # Exit all Trades if Target achieved or Stop loss hit
-    if m2m> target_profit:
-        # Implement Trailing profit
+    if trailing_profit_exit('state.csv'):
         logger.info(format_line)
         logger.info("Target Profit Acheived. Exit Trade")
         email_subject = f'<<< TARGET PROFIT ACHIEVED. EXIT TRADE | M2M: {m2m} >>>'
