@@ -37,6 +37,7 @@ userid=None
 
 api = ShoonyaApiPy()
 
+state = pd.read_csv('state.csv')
 symbolDf= None
 total_m2m = 0
 delta=0
@@ -50,7 +51,7 @@ logger.setLevel(logging.DEBUG)  # Set the logging level for the logger
 # Rotating file handler (file size limit of 1 MB, keeps 5 backup files)
 file_handler = RotatingFileHandler('logs/app.log', maxBytes=1_000_000, backupCount=5)
 # Create a logging format
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter('%(message)s')
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
@@ -413,6 +414,7 @@ def monitor_and_execute_trades(target_profit, stop_loss, lots):
     
     # Exit all Trades if Target achieved or Stop loss hit
     if m2m> target_profit:
+        # Implement Trailing profit
         logger.info("Target Profit Acheived. Exit Trade")
         email_subject = f'<<< TARGET PROFIT ACHIEVED. EXIT TRADE | M2M: {m2m} >>>'
         exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
@@ -566,7 +568,6 @@ if __name__=="__main__":
         # Send the email
         send_custom_email(email_subject, body)
     # Update state csv
-    state = pd.read_csv('state.csv')
     new_row={'sno':len(state)+1,'m2m':total_m2m,'delta':delta}
     new_row_df = pd.DataFrame([new_row])
     state = pd.concat([state, new_row_df], ignore_index=True)
