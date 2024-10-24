@@ -8,7 +8,7 @@ Margin Requirements: Total: 43942.15 | Equity Collateral: 18753.58 | Cash Collat
 2        S  NIFTY28NOV24C24600   25  Initial CE Sell with premium: 424.4
 3        B  NIFTY28NOV24C25400   25  Initial CE Hedg with premium: 105.0
 --------------------------------------------------------
-Net premium = 562.6
+Sell premium = 820.0 | Net premium = 562.6
 --------------------------------------------------------
 Positions based on Current Price
 --------------------------------------------------------
@@ -19,7 +19,7 @@ Margin Requirements: Total: 44675.4 | Equity Collateral: 18820.2 | Cash Collater
 2        S  NIFTY28NOV24C24400   25   Initial CE Sell with premium: 528.0
 3        B  NIFTY28NOV24C25200   25  Initial CE Hedg with premium: 158.75
 --------------------------------------------------------
-Net premium = 564.6
+Sell premium = 846.0 | Net premium = 564.6
 --------------------------------------------------------
 Positions based on Support/Resistance
 --------------------------------------------------------
@@ -30,7 +30,7 @@ Margin Requirements: Total: 44675.4 | Equity Collateral: 18820.2 | Cash Collater
 2        S  NIFTY28NOV24C24400   25   Initial CE Sell with premium: 528.0
 3        B  NIFTY28NOV24C25200   25  Initial CE Hedg with premium: 158.75
 --------------------------------------------------------
-Net premium = 564.6
+Sell premium = 846.0 | Net premium = 564.6
 --------------------------------------------------------
 Positions based on Delta
 --------------------------------------------------------
@@ -41,7 +41,7 @@ Margin Requirements: Total: 43942.15 | Equity Collateral: 18753.58 | Cash Collat
 2        S  NIFTY28NOV24C24600   25  Initial CE Sell with premium: 424.4
 3        B  NIFTY28NOV24C25400   25  Initial CE Hedg with premium: 105.0
 --------------------------------------------------------
-Net premium = 562.6
+Sell premium = 820.0 | Net premium = 562.6
 --------------------------------------------------------
 Combined Positions
 --------------------------------------------------------
@@ -52,7 +52,7 @@ Margin Requirements: Total: 44361.9 | Equity Collateral: 18820.32 | Cash Collate
 2        S  NIFTY28NOV24C24500   25   Initial CE Sell with premium: 475.0
 3        B  NIFTY28NOV24C25300   25  Initial CE Hedg with premium: 132.55
 --------------------------------------------------------
-Net premium = 571.0
+Sell premium = 839.85 | Net premium = 571.0
 --------------------------------------------------------
 AUTO: Placing Order as per COMBINED
 TEST ORDER PLACEMENT: B, NIFTY28NOV24P23700, 25, Initial PE Hedg with premium: 136.3
