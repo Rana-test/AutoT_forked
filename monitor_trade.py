@@ -478,17 +478,13 @@ def monitor_and_execute_trades():
     # Get Positions
     positions_df, m2m = get_current_positions()
     # Step 1: Create positions on Day 1
-    if positions_df is None:
+    if positions_df is None or positions_df.empty:
         noon = datetime.strptime("06:30:00", "%H:%M:%S").time()
         if (check_day_after_last_thursday() and past_time(noon)) or enter_today :
             enter_trade()
             # Publish new Positions after 5 second wait
             get_position_status()
             return
-    
-    if len(positions_df)==0:
-        email_subject = f'<<<NO OPEN POSITIONS FOUND>>>'
-        return
     elif len(positions_df)!=4:
         email_subject = f'!!!! POSITIONS ERROR: Found {len(positions_df)} positions !!!!'
         logger.info(format_line)
