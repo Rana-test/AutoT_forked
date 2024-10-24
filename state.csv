@@ -1,7 +1,6 @@
 sno,m2m,trailing_profit_threshold,in_trailing_mode
-<<<<<<< HEAD
-
-=======
+<<<<<<< HEAD,,,
+=======,,,
 1,448.75,426.31,True
 2,513.75,488.06,True
 3,468.75,488.06,True
@@ -13,4 +12,5 @@ sno,m2m,trailing_profit_threshold,in_trailing_mode
 9,578.75,568.81,True
 10,612.5,581.88,True
 11,670.0,636.5,True
->>>>>>> e037a612ec33bbeecf697e2b07278b2f324b8b2e
+>>>>>>> e037a612ec33bbeecf697e2b07278b2f324b8b2e,,,
+15,590.0,,
