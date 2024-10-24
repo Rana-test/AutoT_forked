@@ -486,7 +486,7 @@ def monitor_and_execute_trades():
             enter_trade()
             # Publish new Positions after 5 second wait
             get_position_status()
-            return
+        return
     elif len(positions_df)!=4:
         email_subject = f'!!!! POSITIONS ERROR: Found {len(positions_df)} positions !!!!'
         logger.info(format_line)
