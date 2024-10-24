@@ -206,12 +206,13 @@ def get_current_positions():
                     'rpnl':i['rpnl']
                     })
         positions_df = pd.DataFrame(open_pos_data)
-        positions_df['net_profit']=(positions_df['lp'].astype(float)-positions_df['netupldprc'].astype(float))*positions_df['qty'].astype(float)
-        total_m2m=round(float(positions_df['net_profit'].sum()),2)
-        logger.info(format_line)
-        logger.info("<<<CURRENT POSITION>>>")
-        with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-            logger.info("\n%s",positions_df[['buy_sell', 'tsym', 'qty', 'netupldprc', 'lp']])
+        if not positions_df.empty:
+            positions_df['net_profit']=(positions_df['lp'].astype(float)-positions_df['netupldprc'].astype(float))*positions_df['qty'].astype(float)
+            total_m2m=round(float(positions_df['net_profit'].sum()),2)
+            logger.info(format_line)
+            logger.info("<<<CURRENT POSITION>>>")
+            with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+                logger.info("\n%s",positions_df[['buy_sell', 'tsym', 'qty', 'netupldprc', 'lp']])
     
         return positions_df, total_m2m
 
