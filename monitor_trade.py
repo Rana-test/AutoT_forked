@@ -44,6 +44,7 @@ delta=0
 edate = Expiry.split("-")
 tsym_prefix= Symbol+edate[0]+edate[1]+edate[2][-2:]
 email_subject = "Trade Analytics: NO ACTION"
+format_line = format_line
 
 # Logging Setup
 logger = logging.getLogger('Auto_Trader')
@@ -150,13 +151,13 @@ def get_position_status():
     # Publish new Positions after 5 second wait
     time.sleep(5)
     rev_position, rev_m2m = get_current_positions()
-    logger.info("-----------------------------------------------")
+    logger.info(format_line)
     logger.info("<<<REVISED POSITIONS>>>")
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):
         logger.info("\n%s",rev_position[['buy_sell', 'tsym', 'qty', 'netupldprc', 'lp']])
-    logger.info("-----------------------------------------------")
+    logger.info(format_line)
     logger.info(f"<<<REVISED M2M: {rev_m2m}>>>")
-    logger.info("-----------------------------------------------")
+    logger.info(format_line)
 
 def execute_basket(orders_df):
     # {'buy_sell':'B', 'tsym': pe_hedge, 'qty': lots*lot_size, 'remarks':f'Initial PE Hedg with premium: {pe_hedge_premium}'},
@@ -243,12 +244,12 @@ def calculate_initial_positions(base_strike_price, CEOptdf, PEOptdf):
     trade_margin=float(span_res['span_trade']) + float(span_res['expo_trade'])
     cash_margin = (pe_hedge_premium+ ce_hedge_premium)*lots*lot_size
     net_margin=trade_margin-cash_margin
-    logger.info("-----------------------------------------------")
+    logger.info(format_line)
     print(f"Margin Requirements: Total: {trade_margin} | Equity Collateral: {round(net_margin/2,2)} | Cash Collateral: {round(net_margin/2,2)} | Cash: {cash_margin}")
     logger.info(f"Margin Requirements: Total: {trade_margin} | Equity Collateral: {round(net_margin/2,2)} | Cash Collateral: {round(net_margin/2,2)} | Cash: {cash_margin}")
     print(orders_df)
     logger.info(orders_df)
-    logger.info("-----------------------------------------------")
+    logger.info(format_line)
 
     return orders_df
     
@@ -268,7 +269,7 @@ def enter_trade():
     res=api.get_quotes(exchange="NFO", token=str(future_price_df.iloc[0].Token))
     future_strike = float(res['lp'])
     print("Positions based on Future Price")
-    logger.info("-----------------------------------------------")
+    logger.info(format_line)
     logger.info("Positions based on Future Price")
     Fut_ord_df = calculate_initial_positions(future_strike, CEOptdf, PEOptdf)
     Fut_ord_df.sort_values(by='buy_sell', inplace=True)
@@ -279,7 +280,7 @@ def enter_trade():
     nifty_nse_token = nse_df[(nse_df.Symbol=="Nifty 50")&(nse_df.Instrument=="INDEX")].iloc[0]['Token']
     res=api.get_quotes(exchange="NSE", token=str(nifty_nse_token))
     current_strike = float(res['lp'])
-    logger.info("-----------------------------------------------")
+    logger.info(format_line)
     print("Positions based on Current Price")
     logger.info("Positions based on Current Price")
     Curr_ord_df = calculate_initial_positions(current_strike, CEOptdf, PEOptdf)
@@ -288,13 +289,13 @@ def enter_trade():
     # Get initial trade basis oi
     print("Getting positions based on oi support/resistance")
     atm = get_support_resistence_atm(CEOptdf,PEOptdf)
-    logger.info("-----------------------------------------------")
+    logger.info(format_line)
     logger.info("Positions based on Support/Resistance")
     Oi_ord_df = calculate_initial_positions(atm, CEOptdf, PEOptdf)
     Oi_ord_df.sort_values(by='buy_sell', inplace=True)
 
     # Get initial trade basis delta
-    logger.info("-----------------------------------------------")
+    logger.info(format_line)
     logger.info("Positions based on Delta")
     delta_oc = CEOptdf.merge(PEOptdf, on = 'StrikePrice', how = 'left')
     delta_oc['delta_diff'] = abs(delta_oc[(delta_oc['lp_x']>0) &(delta_oc['lp_y']>0)]['lp_x']-delta_oc[(delta_oc['lp_x']>0) &(delta_oc['lp_y']>0)]['lp_y'])
@@ -306,13 +307,13 @@ def enter_trade():
     # Get initial trade basis combination
     print("Getting combined position")
     comb_atm = round((4*delta_atm+2*current_strike+future_strike+atm)/800,0)*100
-    logger.info("-----------------------------------------------")
+    logger.info(format_line)
     logger.info("Combined Positions")
     Comb_ord_df = calculate_initial_positions(comb_atm, CEOptdf, PEOptdf)
     Comb_ord_df.sort_values(by='buy_sell', inplace=True)
 
     # Execute trade:
-    logger.info("-----------------------------------------------")
+    logger.info(format_line)
     if EntryType== "CURRENT":
         logger.info("Placing Order as per Current Values")
         execute_basket(Curr_ord_df)
@@ -337,7 +338,7 @@ def place_order(buy_sell, tsym, qty, remarks="regular order"):
     price=0
     trigger_price = None
     retention='DAY'
-    logger.info("-----------------------------------------------")
+    logger.info(format_line)
     if live:
         ret = api.place_order(buy_or_sell=buy_sell, product_type=prd_type, exchange=exchange, tradingsymbol=tsym, quantity=qty, discloseqty=disclosed_qty,
                               price_type=price_type, price=price,trigger_price=trigger_price, retention=retention, remarks=remarks)
@@ -350,7 +351,7 @@ def place_order(buy_sell, tsym, qty, remarks="regular order"):
     else:
         logger.info(f"TEST ORDER PLACEMENT: {buy_sell}, {tsym}, {qty}, {remarks}")
         print((f"TEST ORDER PLACEMENT : {buy_sell}, {tsym}, {qty}, {remarks}"))
-    logger.info("-----------------------------------------------")
+    logger.info(format_line)
 
 def calculate_delta(df):
     # Verify that there are only 2 records
@@ -421,7 +422,7 @@ def monitor_and_execute_trades(target_profit, stop_loss, lots):
         
     if len(positions_df)!=4:
         email_subject = f'!!!! POSITIONS ERROR: Found {len(positions_df)} positions !!!!'
-        logger.info("-----------------------------------------------")
+        logger.info(format_line)
         with pd.option_context('display.max_rows', None, 'display.max_columns', None):
             logger.info("\n%s",positions_df[['buy_sell', 'tsym', 'qty', 'netupldprc', 'lp']])
         logger.df(f'M2M: {m2m}')
@@ -430,18 +431,18 @@ def monitor_and_execute_trades(target_profit, stop_loss, lots):
     # Exit all Trades if Target achieved or Stop loss hit
     if m2m> target_profit:
         # Implement Trailing profit
-        logger.info("-----------------------------------------------")
+        logger.info(format_line)
         logger.info("Target Profit Acheived. Exit Trade")
         email_subject = f'<<< TARGET PROFIT ACHIEVED. EXIT TRADE | M2M: {m2m} >>>'
         exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
-        logger.info("-----------------------------------------------")
+        logger.info(format_line)
         return
     elif m2m < stop_loss:
-        logger.info("-----------------------------------------------")
+        logger.info(format_line)
         logger.info("Stop Loss hit. Exit Trade")
         email_subject = f'<<< STOP LOSS HIT. EXIT TRADE | M2M: {m2m} >>>'
         exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
-        logger.info("-----------------------------------------------")
+        logger.info(format_line)
         return
 
     # Step 2: Check adjustment signal
@@ -511,7 +512,7 @@ def monitor_and_execute_trades(target_profit, stop_loss, lots):
         # If new Delta is higher than delta threshhold
         if new_delta > delta_threshold:
             email_subject="<<< PRICE OUT OF RANGE | EXIT OR ADJUST MANUALLY >>>"
-            logger.info("-----------------------------------------------")
+            logger.info(format_line)
             logger.info("RECOMMENDED ADJUSTMENT:")
             for i, order in exit_order_df.iterrows():
                 rev_buy_sell = {"B": "S", "S": "B"}.get(order['buy_sell'])
@@ -520,11 +521,11 @@ def monitor_and_execute_trades(target_profit, stop_loss, lots):
             logger.info(f"S | {L_tsym} | {lots*lot_size} | Adjustment Sell order")
             logger.info(f"ORIGINAL DELTA: {delta}%")
             logger.info(f"REVISED DELTA: {new_delta}%")
-            logger.info("-----------------------------------------------")
+            logger.info(format_line)
         else:
             # Exit and create adjustment Legs:
             email_subject = f"*ADJUSTMENT* | DELTA: {delta}% | M2M: {m2m} | Revised DELTA: {new_delta}% "
-            logger.info("-----------------------------------------------")
+            logger.info(format_line)
             logger.info("<<<ADJUSTMENTS>>>")
             exit_positions(exit_order_df)
             # Place leg and hedge orders
@@ -534,7 +535,7 @@ def monitor_and_execute_trades(target_profit, stop_loss, lots):
             logger.info(f"REVISED DELTA: {new_delta}%")
             # Publish new Positions after 5 second wait
             get_position_status()
-            logger.info("-----------------------------------------------")
+            logger.info(format_line)
     
 
 # Function to check if today is the first day of the month (example)
