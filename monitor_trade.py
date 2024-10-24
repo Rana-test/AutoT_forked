@@ -124,12 +124,14 @@ def get_current_positions():
                     buy_sell = 'S'
                 elif int(i['netqty'])>0:
                     buy_sell = 'B'
-                open_pos_data.append({'buy_sell': buy_sell, 'tsym':i['tsym'], 'qty': i['netqty'], 'remarks':'Existing Order', 'netavgprc': i['netavgprc'], 'lp':i['lp'], 'ord_type':i['tsym'][12]})
+                open_pos_data.append({'buy_sell': buy_sell, 'tsym':i['tsym'], 'qty': i['netqty'], 'remarks':'Existing Order', 'netupldprc': i['netupldprc'], 'lp':i['lp'], 'ord_type':i['tsym'][12]})
         positions_df = pd.DataFrame(open_pos_data)
+        positions_df['net_profit']=(positions_df['lp'].astype(float)-positions_df['netupldprc'].astype(float))*positions_df['qty'].astype(float)
+        total_m2m=round(float(positions_df['net_profit'].sum()),2)
         logger.info("Current Position:")
         logger.info(positions_df)
     
-        return positions_df, day_m2m
+        return positions_df, total_m2m
 
 def get_position_status():
     # Publish new Positions after 5 second wait
