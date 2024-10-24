@@ -146,15 +146,21 @@ def trailing_profit_exit(csv_file):
         in_trailing_mode = True
         trailing_profit_threshold = total_m2m * (1 - trailing_percent / 100)
         print(f"Target profit hit! Activating trailing profit logic. Max profit: {max_profit}")
+        logger.info(format_line)
+        logger.info(f"Target profit hit! Activating trailing profit logic. Max profit: {max_profit}")
     
     # If already in trailing mode, update max profit and trailing stop
     if in_trailing_mode:
         if total_m2m > max_profit:
             trailing_profit_threshold = total_m2m * (1 - trailing_percent / 100)
             print(f"New max profit: {total_m2m}. Updated trailing stop: {trailing_profit_threshold}")
+            logger.info(format_line)
+            logger.info(f"New max profit: {total_m2m}. Updated trailing stop: {trailing_profit_threshold}")
         # If current profit drops below trailing threshold, exit trade
         elif total_m2m < trailing_profit_threshold:
             print(f"Exiting trade. Current profit: {total_m2m} is below trailing stop: {trailing_profit_threshold}")
+            logger.info(format_line)
+            logger.info(f"Exiting trade. Current profit: {total_m2m} is below trailing stop: {trailing_profit_threshold}")
             # Save the state after every update
             save_state(trailing_profit_threshold, in_trailing_mode, csv_file, df)
             return True
@@ -199,7 +205,7 @@ def get_current_positions():
         positions_df['net_profit']=(positions_df['lp'].astype(float)-positions_df['netupldprc'].astype(float))*positions_df['qty'].astype(float)
         total_m2m=round(float(positions_df['net_profit'].sum()),2)
         logger.info(format_line)
-        logger.info("<<<CURRENT POSITION>>>:")
+        logger.info("<<<CURRENT POSITION>>>")
         with pd.option_context('display.max_rows', None, 'display.max_columns', None):
             logger.info("\n%s",positions_df[['buy_sell', 'tsym', 'qty', 'netupldprc', 'lp']])
     
