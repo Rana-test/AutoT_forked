@@ -464,6 +464,13 @@ def past_time(t):
     else:
         return False
 
+def zero_position(df):
+    for i, row in df.iterrows():
+        if int(row['qty'].iloc[0])>0:
+            return False
+    return True
+
+
 # Main monitoring and trading function
 def monitor_and_execute_trades():
     global delta
@@ -478,7 +485,7 @@ def monitor_and_execute_trades():
     # Get Positions
     positions_df, m2m = get_current_positions()
     # Step 1: Create positions on Day 1
-    if positions_df is None:
+    if positions_df is None or zero_position(positions_df):
         noon = datetime.strptime("06:30:00", "%H:%M:%S").time()
         if (check_day_after_last_thursday() and past_time(noon)) or enter_today :
             enter_trade()
