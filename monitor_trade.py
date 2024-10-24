@@ -609,7 +609,7 @@ if __name__=="__main__":
         # Send the email
         send_custom_email(email_subject, body)
     # Update state csv
-    new_row={'sno':len(state)+1,'m2m':total_m2m,'delta':delta}
+    new_row={'sno':len(state)+1,'m2m':total_m2m,'delta':delta, 'in_trailing_mode':False}
     new_row_df = pd.DataFrame([new_row])
     state = pd.concat([state, new_row_df], ignore_index=True)
     state.to_csv('state.csv', index=False)
