@@ -543,6 +543,7 @@ def monitor_and_execute_trades():
 
     # Get Positions
     positions_df, m2m = get_current_positions()
+    logger.info(f"M2M:{m2m}")
     # Step 1: Create positions on Day 1
     if positions_df is None or positions_df.empty:
         noon = datetime.strptime("06:30:00", "%H:%M:%S").time()
