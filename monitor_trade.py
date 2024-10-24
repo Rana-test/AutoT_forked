@@ -223,10 +223,13 @@ def get_position_status():
     rev_position, rev_m2m = get_current_positions()
     logger.info(format_line)
     logger.info("<<<REVISED POSITIONS>>>")
-    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-        logger.info("\n%s",rev_position[['buy_sell', 'tsym', 'qty', 'netupldprc', 'lp']])
-    logger.info(format_line)
-    logger.info(f"<<<REVISED M2M: {rev_m2m}>>>")
+    if not rev_position.empty:
+        with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+            logger.info("\n%s",rev_position[['buy_sell', 'tsym', 'qty', 'netupldprc', 'lp']])
+        logger.info(format_line)
+        logger.info(f"<<<REVISED M2M: {rev_m2m}>>>")
+    else:
+        logger.info("NO POSITIONS CREATED")
     logger.info(format_line)
 
 def execute_basket(orders_df):
