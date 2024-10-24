@@ -225,18 +225,22 @@ def get_current_positions():
                 closed_positions['net_prft']=closed_positions['netsell']-closed_positions['netbuy']
                 closed_m2m = round(float(closed_positions['net_prft'].sum()),2)
                 print(f"Closed M2M: {closed_m2m}")
+                logger.info(format_line)
+                logger.info(f"<<<TODAY'S CLOSED POSITION : {closed_m2m} | ADJUST TARGET PROFIT>>>")
+                logger.info(format_line)
                 del closed_positions
 
             open_positions = positions_df[~(positions_df['buy_sell']=="NA")]
             open_m2m=0
             if not open_positions.empty:
                 open_positions['net_profit']=(open_positions['lp'].astype(float)-open_positions['upldprc'].astype(float))*open_positions['qty'].astype(float)
-                openm2m =round(float(positions_df['net_profit'].sum()),2)
+                open_m2m =round(float(positions_df['net_profit'].sum()),2)
                 logger.info(format_line)
                 logger.info("<<<CURRENT POSITION>>>")
                 with pd.option_context('display.max_rows', None, 'display.max_columns', None):
                     logger.info("\n%s",open_positions[['buy_sell', 'tsym', 'qty', 'upldprc', 'lp']])
-            total_m2m = closed_m2m+openm2m
+
+            total_m2m = closed_m2m+open_m2m
             return open_positions, total_m2m
         else:
             return None, 0
@@ -544,7 +548,9 @@ def monitor_and_execute_trades():
 
     # Get Positions
     positions_df, m2m = get_current_positions()
+    logger.info(format_line)
     logger.info(f"M2M:{m2m}")
+    logger.info(format_line)
     # Step 1: Create positions on Day 1
     if positions_df is None or positions_df.empty:
         noon = datetime.strptime("06:30:00", "%H:%M:%S").time()
