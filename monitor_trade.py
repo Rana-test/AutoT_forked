@@ -333,8 +333,8 @@ def calculate_delta(df):
     cltp= float(call_order.iloc[0]['lp'])
     delta = round(100*abs(pltp-cltp)/(pltp+cltp),2)
 
-    pdiff = float(put_order.iloc[0]['netavgprc'])-pltp
-    cdiff = float(call_order.iloc[0]['netavgprc'])-cltp
+    pdiff = float(put_order.iloc[0]['netupldprc'])-pltp
+    cdiff = float(call_order.iloc[0]['netupldprc'])-cltp
     profit_leg = "C" if  cdiff > pdiff else "P"
     loss_leg = "P" if  cdiff > pdiff else "C"
 
