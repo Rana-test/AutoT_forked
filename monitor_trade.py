@@ -663,6 +663,11 @@ if __name__=="__main__":
         body = f.read() 
         # Send the email
         if in_trailing_mode:
-            email_subject='TRAILING PROFIT |'+ email_subject    
+            email_subject='TRAILING PROFIT |'+ email_subject 
+        if live:
+            email_subject='|||LIVE|||'+ email_subject
+        else:
+            email_subject='|||DUMMY|||'+ email_subject
+            
         send_custom_email(email_subject, body)
 
