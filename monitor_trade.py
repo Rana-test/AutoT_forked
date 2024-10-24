@@ -235,7 +235,11 @@ def get_current_positions():
             with pd.option_context('display.max_rows', None, 'display.max_columns', None):
                 logger.info("\n%s",open_positions[['buy_sell', 'tsym', 'qty', 'upldprc', 'lp']])
     
-        return open_positions, total_m2m
+            return open_positions, total_m2m
+        
+        else:
+            return None, 0
+        
 
 def get_position_status():
     # Publish new Positions after 5 second wait
