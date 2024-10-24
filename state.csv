@@ -1,3 +1,3 @@
-sno,m2m,delta,trailing_profit_threshold,in_trailing_mode
-1,448.75,0,426.31,True
-2,513.75,0,488.06,True
+sno,m2m,trailing_profit_threshold,in_trailing_mode
+1,448.75,426.31,True
+2,513.75,488.06,True

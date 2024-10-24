@@ -124,7 +124,7 @@ def load_state(csv_file):
 
 def save_state(trailing_profit_threshold, in_trailing_mode, csv_file, df):
     """Save the current state to CSV using pandas."""
-    new_row={'sno':len(df)+1,'m2m':total_m2m,'delta':delta, 'trailing_profit_threshold':round(trailing_profit_threshold,2),'in_trailing_mode':in_trailing_mode}
+    new_row={'sno':len(df)+1,'m2m':total_m2m,'trailing_profit_threshold':round(trailing_profit_threshold,2),'in_trailing_mode':in_trailing_mode}
     new_row_df = pd.DataFrame([new_row])
     df = pd.concat([df, new_row_df], ignore_index=True)
     df.to_csv(csv_file, index=False)
