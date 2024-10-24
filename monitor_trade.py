@@ -44,7 +44,7 @@ delta=0
 edate = Expiry.split("-")
 tsym_prefix= Symbol+edate[0]+edate[1]+edate[2][-2:]
 email_subject = "Trade Analytics: NO ACTION"
-format_line = format_line
+format_line = "--------------------------------------------------------"
 
 # Logging Setup
 logger = logging.getLogger('Auto_Trader')
