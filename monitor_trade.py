@@ -119,9 +119,7 @@ def load_state(csv_file):
         logger.info(f"Loaded state: Max profit: {max_profit}, Trailing stop: {trailing_profit_threshold}, Trailing mode: {in_trailing_mode}")
         return max_profit, trailing_profit_threshold, in_trailing_mode, df
     else:
-        # Initial state if CSV doesn't exist
-        columns = ['m2m', 'trailing_profit_threshold', 'in_trailing_mode']
-        df = pd.DataFrame(columns=columns)
+        # Initial state if CSV doesn't have any entry
         return 0, 0, False, df
 
 def save_state(trailing_profit_threshold, in_trailing_mode, csv_file, df):
