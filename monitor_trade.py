@@ -120,11 +120,11 @@ def load_state(csv_file):
         return max_profit, trailing_profit_threshold, in_trailing_mode, df
     else:
         # Initial state if CSV doesn't have any entry
-        return 0, 0, False, df
+        return 0, target_profit, False, df
 
 def save_state(trailing_profit_threshold, in_trailing_mode, csv_file, df):
     """Save the current state to CSV using pandas."""
-    new_row={'sno':len(df)+1,'m2m':total_m2m,'delta':delta, 'trailing_profit_threshold':trailing_profit_threshold,'in_trailing_mode':in_trailing_mode}
+    new_row={'sno':len(df)+1,'m2m':total_m2m,'delta':delta, 'trailing_profit_threshold':round(trailing_profit_threshold,2),'in_trailing_mode':in_trailing_mode}
     new_row_df = pd.DataFrame([new_row])
     df = pd.concat([df, new_row_df], ignore_index=True)
     df.to_csv(csv_file, index=False)
