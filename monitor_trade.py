@@ -350,6 +350,7 @@ def calculate_initial_positions(base_strike_price, CEOptdf, PEOptdf):
     logger.info(format_line)
     net_premium = ce_premium+pe_premium-ce_hedge_premium-pe_hedge_premium
     logger.info(f"Net premium = {net_premium}")
+    print(f"Net premium = {net_premium}")
 
     return orders_df, net_premium
     
@@ -431,6 +432,7 @@ def enter_trade():
 
     if EntryType=="AUTO":
         EntryType=best_entry
+    print(EntryType)
     # Execute trade:
     logger.info(format_line)
     if EntryType== "CURRENT":
