@@ -5,7 +5,7 @@ delta_threshold: 40
 trailing_percent: 5
 
 enter_today: 1
-EntryType: DELTA
+EntryType: AUTO
 Expiry: 28-NOV-2024
 lots: 1
 lot_size: 25

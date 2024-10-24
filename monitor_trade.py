@@ -348,8 +348,10 @@ def calculate_initial_positions(base_strike_price, CEOptdf, PEOptdf):
     print(orders_df)
     logger.info(orders_df)
     logger.info(format_line)
+    net_premium = ce_premium+pe_premium-ce_hedge_premium-pe_hedge_premium
+    logger.info(f"Net premium = {net_premium}")
 
-    return orders_df
+    return orders_df, net_premium
     
 
 def enter_trade():
@@ -361,6 +363,8 @@ def enter_trade():
     PEOptdf=get_Option_Chain("PE")
 
     # Get initial trade basis future price
+    max_net_premium=0
+    best_entry=None
 
     print("Getting Future Price")
     future_price_df = symbolDf[(symbolDf.Symbol=="NIFTY")&(symbolDf.Expiry==Expiry) &(symbolDf['OptionType']=="XX")]
@@ -369,7 +373,10 @@ def enter_trade():
     print("Positions based on Future Price")
     logger.info(format_line)
     logger.info("Positions based on Future Price")
-    Fut_ord_df = calculate_initial_positions(future_strike, CEOptdf, PEOptdf)
+    Fut_ord_df, net_premium = calculate_initial_positions(future_strike, CEOptdf, PEOptdf)
+    if net_premium>max_net_premium:
+        max_net_premium= net_premium
+        best_entry="FUTURE"
     Fut_ord_df.sort_values(by='buy_sell', inplace=True)
 
     # Get initial trade basis current price
@@ -381,7 +388,10 @@ def enter_trade():
     logger.info(format_line)
     print("Positions based on Current Price")
     logger.info("Positions based on Current Price")
-    Curr_ord_df = calculate_initial_positions(current_strike, CEOptdf, PEOptdf)
+    Curr_ord_df, net_premium = calculate_initial_positions(current_strike, CEOptdf, PEOptdf)
+    if net_premium>max_net_premium:
+        max_net_premium= net_premium
+        best_entry="CURRENT"
     Curr_ord_df.sort_values(by='buy_sell', inplace=True)
 
     # Get initial trade basis oi
@@ -389,7 +399,10 @@ def enter_trade():
     atm = get_support_resistence_atm(CEOptdf,PEOptdf)
     logger.info(format_line)
     logger.info("Positions based on Support/Resistance")
-    Oi_ord_df = calculate_initial_positions(atm, CEOptdf, PEOptdf)
+    Oi_ord_df, net_premium = calculate_initial_positions(atm, CEOptdf, PEOptdf)
+    if net_premium>max_net_premium:
+        max_net_premium= net_premium
+        best_entry="OI"
     Oi_ord_df.sort_values(by='buy_sell', inplace=True)
 
     # Get initial trade basis delta
@@ -399,7 +412,10 @@ def enter_trade():
     delta_oc['delta_diff'] = abs(delta_oc[(delta_oc['lp_x']>0) &(delta_oc['lp_y']>0)]['lp_x']-delta_oc[(delta_oc['lp_x']>0) &(delta_oc['lp_y']>0)]['lp_y'])
     delta_oc.sort_values(by='delta_diff', inplace=True)
     delta_atm = delta_oc['StrikePrice'].iloc[0]
-    Delta_ord_df = calculate_initial_positions(delta_atm, CEOptdf, PEOptdf)
+    Delta_ord_df, net_premium = calculate_initial_positions(delta_atm, CEOptdf, PEOptdf)
+    if net_premium>max_net_premium:
+        max_net_premium= net_premium
+        best_entry="DELTA"
     Delta_ord_df.sort_values(by='buy_sell', inplace=True)
 
     # Get initial trade basis combination
@@ -407,23 +423,32 @@ def enter_trade():
     comb_atm = round((4*delta_atm+2*current_strike+future_strike+atm)/800,0)*100
     logger.info(format_line)
     logger.info("Combined Positions")
-    Comb_ord_df = calculate_initial_positions(comb_atm, CEOptdf, PEOptdf)
+    Comb_ord_df, net_premium = calculate_initial_positions(comb_atm, CEOptdf, PEOptdf)
+    if net_premium>max_net_premium:
+        max_net_premium= net_premium
+        best_entry="COMBINED"
     Comb_ord_df.sort_values(by='buy_sell', inplace=True)
 
+    if EntryType=="AUTO":
+        EntryType=best_entry
     # Execute trade:
     logger.info(format_line)
     if EntryType== "CURRENT":
         logger.info("Placing Order as per Current Values")
         execute_basket(Curr_ord_df)
     if EntryType== "FUTURE":
-        logger.info("Placing Order as per Current Values")
+        logger.info("Placing Order as per Future Values")
         execute_basket(Fut_ord_df)
     if EntryType== "COMBINED":
-        logger.info("Placing Order as per Current Values")
+        logger.info("Placing Order as per Combined Values")
         execute_basket(Comb_ord_df)
     if EntryType== "DELTA":
         logger.info("Placing Order as per Delta Neutral")
         execute_basket(Delta_ord_df)
+    if EntryType== "OI":
+        logger.info("Placing Order as per OI")
+        execute_basket(Oi_ord_df)
+
     email_subject = '<<<<<<<< ENTRY MADE >>>>>>>>>>>>'
 
     return
