@@ -485,6 +485,9 @@ def monitor_and_execute_trades():
             # Publish new Positions after 5 second wait
             get_position_status()
             return
+        else:
+            email_subject = f'<<<NO POSITIONS FOUND>>>'
+            return
         
     if len(positions_df)!=4:
         email_subject = f'!!!! POSITIONS ERROR: Found {len(positions_df)} positions !!!!'
