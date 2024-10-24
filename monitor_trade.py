@@ -195,27 +195,47 @@ def get_current_positions():
                     buy_sell = 'S'
                 elif int(i['netqty'])>0:
                     buy_sell = 'B'
+                elif int(i['netqty'])==0:
+                    buy_sell = 'NA'
                 open_pos_data.append({
                     'buy_sell': buy_sell, 
                     'tsym':i['tsym'], 
                     'qty': i['netqty'], 
                     'remarks':'Existing Order', 
-                    'netupldprc': i['netupldprc'], 
+                    'upldprc': i['upldprc'], 
+                    # 'netupldprc': i['netupldprc'], 
                     'lp':i['lp'], 
                     'ord_type':i['tsym'][12],
-                    'rpnl':i['rpnl']
+                    'rpnl':i['rpnl'],
+                    'cfbuyqty': i['cfbuyqty'],
+                    'cfsellqty': i['cfsellqty'],                
+                    'daybuyamt':i['daybuyamt'],
+                    'daysellamt':i['daysellamt']
                     })
         positions_df = pd.DataFrame(open_pos_data)
         if not positions_df.empty:
-            positions_df['net_profit']=(positions_df['lp'].astype(float)-positions_df['netupldprc'].astype(float))*positions_df['qty'].astype(float)
-            total_m2m=round(float(positions_df['net_profit'].sum()),2)
-            # It does not include the closed positions
+            # Calculate Total M2M
+            closed_positions = positions_df[positions_df['buy_sell']=="NA"]
+            closed_positions['totcfbuyamt'] = closed_positions.upldprc.astype(float)*closed_positions.cfbuyqty.astype(int)
+            closed_positions['totcfsellamt'] = closed_positions.upldprc.astype(float)*closed_positions.cfsellqty.astype(int)
+            closed_positions['netbuy']=closed_positions['daybuyamt'].astype(float)+closed_positions['totcfbuyamt']
+            closed_positions['netsell']=closed_positions['daysellamt'].astype(float)+closed_positions['totcfsellamt']
+            closed_positions['net_prft']=closed_positions['netsell']-closed_positions['netbuy']
+            closed_m2m = round(float(closed_positions['net_prft'].sum()),2)
+            del closed_positions
+
+            open_positions = positions_df[~(positions_df['buy_sell']=="NA")]
+            open_positions['net_profit']=(open_positions['lp'].astype(float)-open_positions['upldprc'].astype(float))*open_positions['qty'].astype(float)
+            openm2m =round(float(positions_df['net_profit'].sum()),2)
+
+            total_m2m = closed_m2m+openm2m
+
             logger.info(format_line)
             logger.info("<<<CURRENT POSITION>>>")
             with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-                logger.info("\n%s",positions_df[['buy_sell', 'tsym', 'qty', 'netupldprc', 'lp']])
+                logger.info("\n%s",open_positions[['buy_sell', 'tsym', 'qty', 'upldprc', 'lp']])
     
-        return positions_df, total_m2m
+        return open_positions, total_m2m
 
 def get_position_status():
     # Publish new Positions after 5 second wait
@@ -225,7 +245,7 @@ def get_position_status():
     logger.info("<<<REVISED POSITIONS>>>")
     if not rev_position.empty:
         with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-            logger.info("\n%s",rev_position[['buy_sell', 'tsym', 'qty', 'netupldprc', 'lp']])
+            logger.info("\n%s",rev_position[['buy_sell', 'tsym', 'qty', 'upldprc', 'lp']])
         logger.info(format_line)
         logger.info(f"<<<REVISED M2M: {rev_m2m}>>>")
     else:
@@ -433,8 +453,8 @@ def calculate_delta(df):
     cltp= float(call_order.iloc[0]['lp'])
     delta = round(100*abs(pltp-cltp)/(pltp+cltp),2)
 
-    pdiff = float(put_order.iloc[0]['netupldprc'])-pltp
-    cdiff = float(call_order.iloc[0]['netupldprc'])-cltp
+    pdiff = float(put_order.iloc[0]['upldprc'])-pltp
+    cdiff = float(call_order.iloc[0]['upldprc'])-cltp
     profit_leg = "C" if  cdiff > pdiff else "P"
     loss_leg = "P" if  cdiff > pdiff else "C"
 
@@ -494,7 +514,7 @@ def monitor_and_execute_trades():
         email_subject = f'!!!! POSITIONS ERROR: Found {len(positions_df)} positions !!!!'
         logger.info(format_line)
         with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-            logger.info("\n%s",positions_df[['buy_sell', 'tsym', 'qty', 'netupldprc', 'lp']])
+            logger.info("\n%s",positions_df[['buy_sell', 'tsym', 'qty', 'upldprc', 'lp']])
         logger.df(f'M2M: {m2m}')
         return
     
