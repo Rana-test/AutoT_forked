@@ -654,5 +654,7 @@ if __name__=="__main__":
     with open('logs/app.log', 'r') as f:
         body = f.read() 
         # Send the email
+        if in_trailing_mode:
+            email_subject='TRAILING PROFIT |'+ email_subject    
         send_custom_email(email_subject, body)
 
