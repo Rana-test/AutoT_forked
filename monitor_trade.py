@@ -148,7 +148,8 @@ def get_position_status():
     time.sleep(5)
     rev_position, rev_m2m = get_current_positions()
     logger.info("<<<REVISED POSITIONS>>>")
-    logger.info(rev_position)
+    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+        logger.info("\n%s",rev_position)
     logger.info(f"<<<Revised M2M: {rev_m2m}>>>")
 
 def execute_basket(orders_df):
