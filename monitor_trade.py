@@ -250,7 +250,6 @@ def get_current_positions():
                     logger.info("\n%s",open_positions[['buy_sell', 'tsym', 'qty', 'upldprc', 'lp']])
 
             total_m2m = closed_m2m+open_m2m+Past_M2M
-
             eod = datetime.strptime("10:00:00", "%H:%M:%S").time()
             if past_time(eod):
                 if config['Update_EOD']==0:
@@ -547,6 +546,7 @@ def calculate_delta(df):
 def past_time(t):
     # Get the current time
     now = datetime.now().time()
+    logger.info(f"TIME: {now}")
     # Check if the current time is greater than t
     if now > t:
         return True
