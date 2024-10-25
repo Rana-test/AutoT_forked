@@ -52,6 +52,7 @@ symbolDf= None
 in_trailing_mode=None
 total_m2m = 0
 delta=0
+trailing_profit_threshold=0
 edate = Expiry.split("-")
 tsym_prefix= Symbol+edate[0]+edate[1]+edate[2][-2:]
 email_subject = "Trade Analytics: NO ACTION"
@@ -116,9 +117,14 @@ def send_custom_email(subject, body):
     finally:
         server.quit()
 
+def clear_state(csv_file):
+    columns = ['sno', 'm2m', 'trailing_profit_threshold', 'in_trailing_mode']
+    df = pd.DataFrame(columns=columns)
+    df.to_csv(csv_file, index=False)
+
 def load_state(csv_file):
     """Load state from CSV if it exists, otherwise initialize defaults."""
-    global in_trailing_mode
+    global in_trailing_mode, trailing_profit_threshold, target_profit
     if not os.path.exists(csv_file):
         columns = ['sno', 'm2m', 'trailing_profit_threshold', 'in_trailing_mode']
         df = pd.DataFrame(columns=columns)
@@ -151,32 +157,33 @@ def trailing_profit_exit(csv_file):
     :param csv_file: CSV file to store state using pandas
     :return: True if trade should be exited, otherwise False
     """
-    global in_trailing_mode, trailing_percent, total_m2m
+    global in_trailing_mode, trailing_percent, total_m2m, target_profit
     max_profit, trailing_profit_threshold, in_trailing_mode, df = load_state(csv_file)
 
-    # If profit exceeds the target, activate trailing mode
-    if total_m2m >= target_profit and not in_trailing_mode:
-        in_trailing_mode = True
-        trailing_profit_threshold = total_m2m * (1 - trailing_percent / 100)
-        print(f"Target profit hit! Activating trailing profit logic. Max profit: {max_profit}")
-        logger.info(format_line)
-        logger.info(f"Target profit hit! Activating trailing profit logic. Max profit: {max_profit}")
-    
-    # If already in trailing mode, update max profit and trailing stop
-    if in_trailing_mode:
-        if total_m2m > max_profit:
+    if not df.empty: 
+        # If profit exceeds the target, activate trailing mode
+        if total_m2m >= target_profit and not in_trailing_mode:
+            in_trailing_mode = True
             trailing_profit_threshold = total_m2m * (1 - trailing_percent / 100)
-            print(f"New max profit: {total_m2m}. Updated trailing stop: {trailing_profit_threshold}")
+            print(f"Target profit hit! Activating trailing profit logic. Max profit: {max_profit}")
             logger.info(format_line)
-            logger.info(f"New max profit: {total_m2m}. Updated trailing stop: {trailing_profit_threshold}")
-        # If current profit drops below trailing threshold, exit trade
-        elif total_m2m < trailing_profit_threshold:
-            print(f"Exiting trade. Current profit: {total_m2m} is below trailing stop: {trailing_profit_threshold}")
-            logger.info(format_line)
-            logger.info(f"Exiting trade. Current profit: {total_m2m} is below trailing stop: {trailing_profit_threshold}")
-            # Save the state after every update
-            save_state(trailing_profit_threshold, in_trailing_mode, csv_file, df)
-            return True
+            logger.info(f"Target profit hit! Activating trailing profit logic. Max profit: {max_profit}")
+        
+        # If already in trailing mode, update max profit and trailing stop
+        if in_trailing_mode:
+            if total_m2m > max_profit:
+                trailing_profit_threshold = total_m2m * (1 - trailing_percent / 100)
+                print(f"New max profit: {total_m2m}. Updated trailing stop: {trailing_profit_threshold}")
+                logger.info(format_line)
+                logger.info(f"New max profit: {total_m2m}. Updated trailing stop: {trailing_profit_threshold}")
+            # If current profit drops below trailing threshold, exit trade
+            elif total_m2m < trailing_profit_threshold:
+                print(f"Exiting trade. Current profit: {total_m2m} is below trailing stop: {trailing_profit_threshold}")
+                logger.info(format_line)
+                logger.info(f"Exiting trade. Current profit: {total_m2m} is below trailing stop: {trailing_profit_threshold}")
+                # Save the state after every update
+                save_state(trailing_profit_threshold, in_trailing_mode, csv_file, df)
+                return True
 
     # Save the state after every update
     save_state(trailing_profit_threshold, in_trailing_mode, csv_file, df)
@@ -344,6 +351,7 @@ def get_support_resistence_atm(cedf,pedf):
     return atm
 
 def calculate_initial_positions(base_strike_price, CEOptdf, PEOptdf):
+    global trailing_profit_threshold
     ce_sell, ce_premium = get_nearest_strike_strike(CEOptdf, base_strike_price)
     pe_sell, pe_premium = get_nearest_strike_strike(PEOptdf, base_strike_price)
     tot_premium=round(pe_premium+ce_premium,2)
@@ -376,7 +384,7 @@ def calculate_initial_positions(base_strike_price, CEOptdf, PEOptdf):
     logger.info(f"Sell premium = {tot_premium} | Net premium = {net_premium}")
     print(f"Net premium = {net_premium}")
 
-    return orders_df, net_premium
+    return orders_df, net_premium, trade_margin
     
 
 def enter_trade():
@@ -391,13 +399,14 @@ def enter_trade():
     max_net_premium=0
     best_entry=None
     best_ord_df=None
+    auto_margin = 0
 
     # Get initial trade basis oi
     print("Getting positions based on oi support/resistance")
     atm = get_support_resistence_atm(CEOptdf,PEOptdf)
     logger.info(format_line)
     logger.info("Positions based on Support/Resistance")
-    Oi_ord_df, net_premium = calculate_initial_positions(atm, CEOptdf, PEOptdf)
+    Oi_ord_df, oi_net_premium, oi_margin = calculate_initial_positions(atm, CEOptdf, PEOptdf)
     Oi_ord_df.sort_values(by='buy_sell', inplace=True)
     # if net_premium>max_net_premium:
     #     max_net_premium= net_premium
@@ -411,12 +420,13 @@ def enter_trade():
     print("Positions based on Future Price")
     logger.info(format_line)
     logger.info("Positions based on Future Price")
-    Fut_ord_df, net_premium = calculate_initial_positions(future_strike, CEOptdf, PEOptdf)
+    Fut_ord_df, f_net_premium, f_margin = calculate_initial_positions(future_strike, CEOptdf, PEOptdf)
     Fut_ord_df.sort_values(by='buy_sell', inplace=True)
-    if net_premium>max_net_premium:
-        max_net_premium= net_premium
+    if f_net_premium>max_net_premium:
+        max_net_premium= f_net_premium
         best_entry="FUTURE"
         best_ord_df=Fut_ord_df
+        auto_margin = f_margin
 
     # Get initial trade basis current price
     print("Getting Current Price")
@@ -427,12 +437,13 @@ def enter_trade():
     logger.info(format_line)
     print("Positions based on Current Price")
     logger.info("Positions based on Current Price")
-    Curr_ord_df, net_premium = calculate_initial_positions(current_strike, CEOptdf, PEOptdf)
+    Curr_ord_df, curr_net_premium, curr_margin = calculate_initial_positions(current_strike, CEOptdf, PEOptdf)
     Curr_ord_df.sort_values(by='buy_sell', inplace=True)
-    if net_premium>max_net_premium:
-        max_net_premium= net_premium
+    if curr_net_premium>max_net_premium:
+        max_net_premium= curr_net_premium
         best_entry="CURRENT"
         best_ord_df=Curr_ord_df
+        auto_margin = curr_margin
 
     # Get initial trade basis delta
     logger.info(format_line)
@@ -441,48 +452,59 @@ def enter_trade():
     delta_oc['delta_diff'] = abs(delta_oc[(delta_oc['lp_x']>0) &(delta_oc['lp_y']>0)]['lp_x']-delta_oc[(delta_oc['lp_x']>0) &(delta_oc['lp_y']>0)]['lp_y'])
     delta_oc.sort_values(by='delta_diff', inplace=True)
     delta_atm = delta_oc['StrikePrice'].iloc[0]
-    Delta_ord_df, net_premium = calculate_initial_positions(delta_atm, CEOptdf, PEOptdf)
+    Delta_ord_df, d_net_premium, d_margin = calculate_initial_positions(delta_atm, CEOptdf, PEOptdf)
     Delta_ord_df.sort_values(by='buy_sell', inplace=True)
-    if net_premium>max_net_premium:
-        max_net_premium= net_premium
+    if d_net_premium>max_net_premium:
+        max_net_premium= d_net_premium
         best_entry="DELTA"
         best_ord_df=Delta_ord_df
+        auto_margin = d_margin
     
     # Get initial trade basis combination
     print("Getting combined position")
     comb_atm = round((4*delta_atm+2*current_strike+future_strike+atm)/800,0)*100
     logger.info(format_line)
     logger.info("Combined Positions")
-    Comb_ord_df, net_premium = calculate_initial_positions(comb_atm, CEOptdf, PEOptdf)
+    Comb_ord_df, comb_net_premium, comb_margin = calculate_initial_positions(comb_atm, CEOptdf, PEOptdf)
     Comb_ord_df.sort_values(by='buy_sell', inplace=True)
-    if net_premium>max_net_premium:
-        max_net_premium= net_premium
+    if comb_margin>max_net_premium:
+        max_net_premium= comb_net_premium
         best_entry="COMBINED"
         best_ord_df=Comb_ord_df
-    
+        auto_margin = comb_margin
+
+    percent_profit=5
     # Execute trade:
     logger.info(format_line)
     if EntryType=="AUTO":
         logger.info(f"AUTO: Placing Order as per {best_entry}")
         print(f"AUTO: Placing Order as per {best_entry}")
         execute_basket(best_ord_df)
+        config['target_profit']=round(auto_margin*percent_profit/100,2)
     elif EntryType== "CURRENT":
         logger.info("Placing Order as per Current Values")
         execute_basket(Curr_ord_df)
+        config['target_profit']=round(curr_margin*percent_profit/100,2)
     elif EntryType== "FUTURE":
         logger.info("Placing Order as per Future Values")
         execute_basket(Fut_ord_df)
+        config['target_profit']=round(f_margin*percent_profit/100,2)
     elif EntryType== "COMBINED":
         logger.info("Placing Order as per Combined Values")
         execute_basket(Comb_ord_df)
+        config['target_profit']=round(comb_margin*percent_profit/100,2)
     elif EntryType== "DELTA":
         logger.info("Placing Order as per Delta Neutral")
         execute_basket(Delta_ord_df)
+        config['target_profit']=round(d_margin*percent_profit/100,2)
     elif EntryType== "OI":
         logger.info("Placing Order as per OI")
         execute_basket(Oi_ord_df)
+        config['target_profit']=round(oi_margin*percent_profit/100,2)
 
     email_subject = '<<<<<<<< ENTRY MADE >>>>>>>>>>>>'
+
+    clear_state('state.csv')
 
     return
 
