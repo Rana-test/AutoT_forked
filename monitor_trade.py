@@ -212,7 +212,7 @@ def get_current_positions():
                 'qty': i['netqty'], 
                 'remarks':'Existing Order', 
                 'upldprc': i['upldprc'], 
-                # 'netupldprc': i['netupldprc'], 
+                'netupldprc': i['netupldprc'], 
                 'lp':i['lp'], 
                 'ord_type':i['tsym'][12],
                 'rpnl':i['rpnl'],
@@ -242,7 +242,7 @@ def get_current_positions():
             open_positions = positions_df[~(positions_df['buy_sell']=="NA")]
             open_m2m=0
             if not open_positions.empty:
-                open_positions['net_profit']=(open_positions['lp'].astype(float)-open_positions['upldprc'].astype(float))*open_positions['qty'].astype(float)
+                open_positions['net_profit']=(open_positions['lp'].astype(float)-open_positions['netupldprc'].astype(float))*open_positions['qty'].astype(float)
                 open_m2m =round(float(open_positions['net_profit'].sum()),2)
                 logger.info(format_line)
                 logger.info("<<<CURRENT POSITION>>>")
