@@ -34,12 +34,11 @@ trailing_percent=config['trailing_percent']
 Past_M2M = config['Past_M2M']
 
 # config['Update_EOD']
-# config['Past_M2M']
 
 def save_config():
     global config
     # Update config
-    with open("config.yaml", "w") as f:
+    with open("config.yml", "w") as f:
         yaml.dump(config, f, sort_keys=False)
 
 userid=None
