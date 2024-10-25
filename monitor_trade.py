@@ -243,7 +243,7 @@ def get_current_positions():
             open_m2m=0
             if not open_positions.empty:
                 open_positions['net_profit']=(open_positions['lp'].astype(float)-open_positions['upldprc'].astype(float))*open_positions['qty'].astype(float)
-                open_m2m =round(float(positions_df['net_profit'].sum()),2)
+                open_m2m =round(float(open_positions['net_profit'].sum()),2)
                 logger.info(format_line)
                 logger.info("<<<CURRENT POSITION>>>")
                 with pd.option_context('display.max_rows', None, 'display.max_columns', None):
