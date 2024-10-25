@@ -5,64 +5,64 @@ M2M:0
 --------------------------------------------------------
 Positions based on Future Price
 --------------------------------------------------------
-Margin Requirements: Total: 44130.65 | Equity Collateral: 18800.32 | Cash Collateral: 18800.32 | Cash: 6530.0
+Margin Requirements: Total: 132392.2 | Equity Collateral: 56401.1 | Cash Collateral: 56401.1 | Cash: 19590.0
   buy_sell                tsym  qty                               remarks
-0        B  NIFTY28NOV24P23800   25   Initial PE Hedg with premium: 159.1
-1        S  NIFTY28NOV24P24600   25  Initial PE Sell with premium: 407.85
-2        S  NIFTY28NOV24C24600   25  Initial CE Sell with premium: 405.95
-3        B  NIFTY28NOV24C25400   25   Initial CE Hedg with premium: 102.1
+0        B  NIFTY28NOV24P23800   75   Initial PE Hedg with premium: 159.1
+1        S  NIFTY28NOV24P24600   75  Initial PE Sell with premium: 407.85
+2        S  NIFTY28NOV24C24600   75  Initial CE Sell with premium: 405.95
+3        B  NIFTY28NOV24C25400   75   Initial CE Hedg with premium: 102.1
 --------------------------------------------------------
 Sell premium = 813.8 | Net premium = 552.5999999999999
 --------------------------------------------------------
 Positions based on Current Price
 --------------------------------------------------------
-Margin Requirements: Total: 44879.65 | Equity Collateral: 18981.7 | Cash Collateral: 18981.7 | Cash: 6916.249999999999
+Margin Requirements: Total: 134638.95 | Equity Collateral: 56945.1 | Cash Collateral: 56945.1 | Cash: 20748.75
   buy_sell                tsym  qty                               remarks
-0        B  NIFTY28NOV24P23600   25   Initial PE Hedg with premium: 125.7
-1        S  NIFTY28NOV24P24400   25   Initial PE Sell with premium: 325.8
-2        S  NIFTY28NOV24C24400   25   Initial CE Sell with premium: 522.9
-3        B  NIFTY28NOV24C25200   25  Initial CE Hedg with premium: 150.95
+0        B  NIFTY28NOV24P23600   75   Initial PE Hedg with premium: 125.7
+1        S  NIFTY28NOV24P24400   75   Initial PE Sell with premium: 325.8
+2        S  NIFTY28NOV24C24400   75   Initial CE Sell with premium: 522.9
+3        B  NIFTY28NOV24C25200   75  Initial CE Hedg with premium: 150.95
 --------------------------------------------------------
 Sell premium = 848.7 | Net premium = 572.05
 --------------------------------------------------------
 Positions based on Support/Resistance
 --------------------------------------------------------
-Margin Requirements: Total: 44879.65 | Equity Collateral: 18981.7 | Cash Collateral: 18981.7 | Cash: 6916.249999999999
+Margin Requirements: Total: 134638.95 | Equity Collateral: 56945.1 | Cash Collateral: 56945.1 | Cash: 20748.75
   buy_sell                tsym  qty                               remarks
-0        B  NIFTY28NOV24P23600   25   Initial PE Hedg with premium: 125.7
-1        S  NIFTY28NOV24P24400   25   Initial PE Sell with premium: 325.8
-2        S  NIFTY28NOV24C24400   25   Initial CE Sell with premium: 522.9
-3        B  NIFTY28NOV24C25200   25  Initial CE Hedg with premium: 150.95
+0        B  NIFTY28NOV24P23600   75   Initial PE Hedg with premium: 125.7
+1        S  NIFTY28NOV24P24400   75   Initial PE Sell with premium: 325.8
+2        S  NIFTY28NOV24C24400   75   Initial CE Sell with premium: 522.9
+3        B  NIFTY28NOV24C25200   75  Initial CE Hedg with premium: 150.95
 --------------------------------------------------------
 Sell premium = 848.7 | Net premium = 572.05
 --------------------------------------------------------
 Positions based on Delta
 --------------------------------------------------------
-Margin Requirements: Total: 44130.65 | Equity Collateral: 18800.32 | Cash Collateral: 18800.32 | Cash: 6530.0
+Margin Requirements: Total: 132392.2 | Equity Collateral: 56401.1 | Cash Collateral: 56401.1 | Cash: 19590.0
   buy_sell                tsym  qty                               remarks
-0        B  NIFTY28NOV24P23800   25   Initial PE Hedg with premium: 159.1
-1        S  NIFTY28NOV24P24600   25  Initial PE Sell with premium: 407.85
-2        S  NIFTY28NOV24C24600   25  Initial CE Sell with premium: 405.95
-3        B  NIFTY28NOV24C25400   25   Initial CE Hedg with premium: 102.1
+0        B  NIFTY28NOV24P23800   75   Initial PE Hedg with premium: 159.1
+1        S  NIFTY28NOV24P24600   75  Initial PE Sell with premium: 407.85
+2        S  NIFTY28NOV24C24600   75  Initial CE Sell with premium: 405.95
+3        B  NIFTY28NOV24C25400   75   Initial CE Hedg with premium: 102.1
 --------------------------------------------------------
 Sell premium = 813.8 | Net premium = 552.5999999999999
 --------------------------------------------------------
 Combined Positions
 --------------------------------------------------------
-Margin Requirements: Total: 44595.9 | Equity Collateral: 18974.82 | Cash Collateral: 18974.82 | Cash: 6646.250000000001
+Margin Requirements: Total: 133786.7 | Equity Collateral: 56923.98 | Cash Collateral: 56923.98 | Cash: 19938.75
   buy_sell                tsym  qty                               remarks
-0        B  NIFTY28NOV24P23700   25  Initial PE Hedg with premium: 143.15
-1        S  NIFTY28NOV24P24500   25  Initial PE Sell with premium: 364.75
-2        S  NIFTY28NOV24C24500   25   Initial CE Sell with premium: 463.4
-3        B  NIFTY28NOV24C25300   25   Initial CE Hedg with premium: 122.7
+0        B  NIFTY28NOV24P23700   75  Initial PE Hedg with premium: 143.15
+1        S  NIFTY28NOV24P24500   75  Initial PE Sell with premium: 364.75
+2        S  NIFTY28NOV24C24500   75   Initial CE Sell with premium: 463.4
+3        B  NIFTY28NOV24C25300   75   Initial CE Hedg with premium: 122.7
 --------------------------------------------------------
 Sell premium = 828.15 | Net premium = 562.3
 --------------------------------------------------------
 AUTO: Placing Order as per CURRENT
-TEST ORDER PLACEMENT: B, NIFTY28NOV24P23600, 25, Initial PE Hedg with premium: 125.7
-TEST ORDER PLACEMENT: B, NIFTY28NOV24C25200, 25, Initial CE Hedg with premium: 150.95
-TEST ORDER PLACEMENT: S, NIFTY28NOV24P24400, 25, Initial PE Sell with premium: 325.8
-TEST ORDER PLACEMENT: S, NIFTY28NOV24C24400, 25, Initial CE Sell with premium: 522.9
+TEST ORDER PLACEMENT: B, NIFTY28NOV24P23600, 75, Initial PE Hedg with premium: 125.7
+TEST ORDER PLACEMENT: B, NIFTY28NOV24C25200, 75, Initial CE Hedg with premium: 150.95
+TEST ORDER PLACEMENT: S, NIFTY28NOV24P24400, 75, Initial PE Sell with premium: 325.8
+TEST ORDER PLACEMENT: S, NIFTY28NOV24C24400, 75, Initial CE Sell with premium: 522.9
 Issue fetching Positions
 --------------------------------------------------------
 <<<REVISED POSITIONS>>>
