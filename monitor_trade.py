@@ -31,6 +31,7 @@ max_strike_price = config['max_strike_price']
 lot_size = config['lot_size']
 lots = config['lots']
 trailing_percent=config['trailing_percent']
+Past_M2M = config['Past_M2M']
 
 # config['Update_EOD']
 # config['Past_M2M']
@@ -248,7 +249,7 @@ def get_current_positions():
                 with pd.option_context('display.max_rows', None, 'display.max_columns', None):
                     logger.info("\n%s",open_positions[['buy_sell', 'tsym', 'qty', 'upldprc', 'lp']])
 
-            total_m2m = closed_m2m+open_m2m
+            total_m2m = closed_m2m+open_m2m+Past_M2M
 
             eod = datetime.strptime("10:00:00", "%H:%M:%S").time()
             if past_time(eod):
