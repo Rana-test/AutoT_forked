@@ -546,7 +546,9 @@ def calculate_delta(df):
 def past_time(t):
     # Get the current time
     now = datetime.now().time()
-    logger.info(f"TIME: {now}")
+    logger.info(format_line)
+    logger.info(f"Current Time: {now} | Checked for time: {t}")
+    logger.info(format_line)
     # Check if the current time is greater than t
     if now > t:
         return True
