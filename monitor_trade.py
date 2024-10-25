@@ -186,9 +186,9 @@ def get_current_positions():
         mtm = 0
         pnl = 0
         for i in ret:
-            mtm += float(i['urmtom'])
-            pnl += float(i['rpnl'])
-            day_m2m = mtm + pnl
+            # mtm += float(i['urmtom'])
+            # pnl += float(i['rpnl'])
+            # day_m2m = mtm + pnl
             # {'buy_sell':'B', 'tsym': pe_hedge, 'qty': lots*lot_size, 'remarks':f'Initial PE Hedg with premium: {pe_hedge_premium}'},
             # rev_buy_sell = {"B": "C", "C": "B"}.get(i['buy_sell'])
             if int(i['netqty'])<0:
@@ -373,6 +373,18 @@ def enter_trade():
     best_entry=None
     best_ord_df=None
 
+    # Get initial trade basis oi
+    print("Getting positions based on oi support/resistance")
+    atm = get_support_resistence_atm(CEOptdf,PEOptdf)
+    logger.info(format_line)
+    logger.info("Positions based on Support/Resistance")
+    Oi_ord_df, net_premium = calculate_initial_positions(atm, CEOptdf, PEOptdf)
+    Oi_ord_df.sort_values(by='buy_sell', inplace=True)
+    if net_premium>max_net_premium:
+        max_net_premium= net_premium
+        best_entry="OI"
+        best_ord_df=Oi_ord_df
+
     print("Getting Future Price")
     future_price_df = symbolDf[(symbolDf.Symbol=="NIFTY")&(symbolDf.Expiry==Expiry) &(symbolDf['OptionType']=="XX")]
     res=api.get_quotes(exchange="NFO", token=str(future_price_df.iloc[0].Token))
@@ -386,7 +398,6 @@ def enter_trade():
         max_net_premium= net_premium
         best_entry="FUTURE"
         best_ord_df=Fut_ord_df
-    
 
     # Get initial trade basis current price
     print("Getting Current Price")
@@ -404,18 +415,6 @@ def enter_trade():
         best_entry="CURRENT"
         best_ord_df=Curr_ord_df
 
-    # Get initial trade basis oi
-    print("Getting positions based on oi support/resistance")
-    atm = get_support_resistence_atm(CEOptdf,PEOptdf)
-    logger.info(format_line)
-    logger.info("Positions based on Support/Resistance")
-    Oi_ord_df, net_premium = calculate_initial_positions(atm, CEOptdf, PEOptdf)
-    Oi_ord_df.sort_values(by='buy_sell', inplace=True)
-    if net_premium>max_net_premium:
-        max_net_premium= net_premium
-        best_entry="OI"
-        best_ord_df=Oi_ord_df
-
     # Get initial trade basis delta
     logger.info(format_line)
     logger.info("Positions based on Delta")
@@ -430,7 +429,6 @@ def enter_trade():
         best_entry="DELTA"
         best_ord_df=Delta_ord_df
     
-
     # Get initial trade basis combination
     print("Getting combined position")
     comb_atm = round((4*delta_atm+2*current_strike+future_strike+atm)/800,0)*100

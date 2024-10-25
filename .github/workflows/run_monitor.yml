@@ -37,6 +37,7 @@ jobs:
         git config --local user.name "GitHub Action"
         git add state.csv
         git add logs/app.log
+        git add config.yml
         git commit -m "Update JSON file"
         git push origin master
       env:
