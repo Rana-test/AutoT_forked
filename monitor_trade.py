@@ -190,6 +190,9 @@ def trailing_profit_exit(csv_file):
         else:
             save_state(trailing_profit_threshold, in_trailing_mode, csv_file, df)
             return False
+    else:
+        save_state(trailing_profit_threshold, in_trailing_mode, csv_file, df)
+        return False
 
 # Step 1: Preprocess data and extract necessary information
 def get_current_positions():
