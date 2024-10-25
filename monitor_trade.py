@@ -400,10 +400,10 @@ def enter_trade():
     logger.info("Positions based on Support/Resistance")
     Oi_ord_df, net_premium = calculate_initial_positions(atm, CEOptdf, PEOptdf)
     Oi_ord_df.sort_values(by='buy_sell', inplace=True)
-    if net_premium>max_net_premium:
-        max_net_premium= net_premium
-        best_entry="OI"
-        best_ord_df=Oi_ord_df
+    # if net_premium>max_net_premium:
+    #     max_net_premium= net_premium
+    #     best_entry="OI"
+    #     best_ord_df=Oi_ord_df
 
     print("Getting Future Price")
     future_price_df = symbolDf[(symbolDf.Symbol=="NIFTY")&(symbolDf.Expiry==Expiry) &(symbolDf['OptionType']=="XX")]
