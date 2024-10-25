@@ -161,20 +161,7 @@ def trailing_profit_exit(csv_file):
     global in_trailing_mode, trailing_percent, total_m2m, target_profit
     max_profit, trailing_profit_threshold, in_trailing_mode, df = load_state(csv_file)
 
-    # if trailing mode is diabled then exit if profit greater than target
-    if not enable_trailing and total_m2m >= target_profit:
-        save_state(target_profit, False, csv_file, df)
-        return True
-
-    if not df.empty:         
-        # If profit exceeds the target, activate trailing mode
-        if total_m2m >= target_profit and not in_trailing_mode:
-            in_trailing_mode = True
-            trailing_profit_threshold = total_m2m * (1 - trailing_percent / 100)
-            print(f"Target profit hit! Activating trailing profit logic. Max profit: {max_profit}")
-            logger.info(format_line)
-            logger.info(f"Target profit hit! Activating trailing profit logic. Max profit: {max_profit}")
-        
+    if enable_trailing and not df.empty:         
         # If already in trailing mode, update max profit and trailing stop
         if in_trailing_mode:
             if total_m2m > max_profit:
@@ -182,6 +169,8 @@ def trailing_profit_exit(csv_file):
                 print(f"New max profit: {total_m2m}. Updated trailing stop: {trailing_profit_threshold}")
                 logger.info(format_line)
                 logger.info(f"New max profit: {total_m2m}. Updated trailing stop: {trailing_profit_threshold}")
+                save_state(trailing_profit_threshold, in_trailing_mode, csv_file, df)
+                return False
             # If current profit drops below trailing threshold, exit trade
             elif total_m2m < trailing_profit_threshold:
                 print(f"Exiting trade. Current profit: {total_m2m} is below trailing stop: {trailing_profit_threshold}")
@@ -190,10 +179,17 @@ def trailing_profit_exit(csv_file):
                 # Save the state after every update
                 save_state(trailing_profit_threshold, in_trailing_mode, csv_file, df)
                 return True
-
-    # Save the state after every update
-    save_state(trailing_profit_threshold, in_trailing_mode, csv_file, df)
-    return False
+        elif total_m2m >= target_profit:
+            in_trailing_mode = True
+            trailing_profit_threshold = total_m2m * (1 - trailing_percent / 100)
+            print(f"Target profit hit! Activating trailing profit logic. Max profit: {max_profit}")
+            logger.info(format_line)
+            logger.info(f"Target profit hit! Activating trailing profit logic. Max profit: {max_profit}")
+            save_state(trailing_profit_threshold, in_trailing_mode, csv_file, df)
+            return False
+        else:
+            save_state(trailing_profit_threshold, in_trailing_mode, csv_file, df)
+            return False
 
 # Step 1: Preprocess data and extract necessary information
 def get_current_positions():
@@ -742,7 +738,7 @@ def check_day_after_last_thursday():
     
     # Get the last Thursday of the current month
     last_thursday_current_month = get_last_thursday(today.year, today.month)
-    
+
     # If the last Thursday is in the future, get the last Thursday of the previous month
     if last_thursday_current_month > today:
         last_thursday_current_month = get_last_thursday(today.year, today.month - 1)
