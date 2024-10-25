@@ -32,6 +32,7 @@ lot_size = config['lot_size']
 lots = config['lots']
 trailing_percent=config['trailing_percent']
 Past_M2M = config['Past_M2M']
+enable_trailing = config['enable_trailing']
 
 # config['Update_EOD']
 
@@ -160,7 +161,12 @@ def trailing_profit_exit(csv_file):
     global in_trailing_mode, trailing_percent, total_m2m, target_profit
     max_profit, trailing_profit_threshold, in_trailing_mode, df = load_state(csv_file)
 
-    if not df.empty: 
+    # if trailing mode is diabled then exit if profit greater than target
+    if not enable_trailing and total_m2m >= target_profit:
+        save_state(target_profit, False, csv_file, df)
+        return True
+
+    if not df.empty:         
         # If profit exceeds the target, activate trailing mode
         if total_m2m >= target_profit and not in_trailing_mode:
             in_trailing_mode = True
@@ -609,7 +615,6 @@ def monitor_and_execute_trades():
         logger.df(f'M2M: {m2m}')
         return
     
-    # Exit all Trades if Target achieved or Stop loss hit
     if trailing_profit_exit('state.csv'):
         logger.info(format_line)
         logger.info("Target Profit Acheived. Exit Trade")
