@@ -247,7 +247,7 @@ def get_current_positions():
                 logger.info(format_line)
                 logger.info("<<<CURRENT POSITION>>>")
                 with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-                    logger.info("\n%s",open_positions[['buy_sell', 'tsym', 'qty', 'upldprc', 'lp']])
+                    logger.info("\n%s",open_positions[['buy_sell', 'tsym', 'qty', 'netupldprc', 'lp']])
 
             total_m2m = closed_m2m+open_m2m+Past_M2M
             eod = datetime.strptime("10:00:00", "%H:%M:%S").time()
