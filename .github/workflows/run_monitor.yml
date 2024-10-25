@@ -37,12 +37,7 @@ jobs:
         git config --local user.name "GitHub Action"
         git add state.csv
         git add logs/app.log
-        if git diff --quiet config.yml; then
-          echo "No changes in config.yml"
-        else
-          echo "Changes detected in config.yml"
-          git add config.yml
-        fi
+        git add config.yml -f
         git commit -m "Update JSON file"
         git push origin master
       env:
