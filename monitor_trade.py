@@ -503,7 +503,7 @@ def enter_trade():
         config['target_profit']=round(oi_margin*percent_profit/100,2)
 
     email_subject = '<<<<<<<< ENTRY MADE >>>>>>>>>>>>'
-
+    save_config()
     clear_state('state.csv')
 
     return
