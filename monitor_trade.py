@@ -40,7 +40,7 @@ def save_config():
     global config
     # Update config
     with open("config.yaml", "w") as f:
-        config = yaml.dump(config, stream=f, default_flow_style=False, sort_keys=False)
+        yaml.dump(config, f, sort_keys=False)
 
 userid=None
 # Global variables
@@ -758,4 +758,6 @@ if __name__=="__main__":
             email_subject='|||DUMMY|||'+ email_subject
             
         send_custom_email(email_subject, body)
+    # Clear Logs
+    open('logs/app.log', 'w').close()
 
