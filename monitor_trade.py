@@ -37,6 +37,7 @@ Past_M2M = config['Past_M2M']
 # config['Past_M2M']
 
 def save_config():
+    global config
     # Update config
     with open("config.yaml", "w") as f:
         config = yaml.dump(config, stream=f, default_flow_style=False, sort_keys=False)
@@ -184,7 +185,7 @@ def trailing_profit_exit(csv_file):
 
 # Step 1: Preprocess data and extract necessary information
 def get_current_positions():
-    global total_m2m
+    global total_m2m, config
     # Fetch the latest data (positions, LTP, etc.)
     open_pos_data=[]
     ret = api.get_positions()
