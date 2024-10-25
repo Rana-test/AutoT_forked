@@ -743,22 +743,25 @@ def login():
 
 # Call the main function periodically to monitor and execute trades
 if __name__=="__main__":
-    if not os.path.exists('logs'):
-        os.makedirs('logs')
-    open('logs/app.log', 'w').close()
-    monitor_and_execute_trades()
-    # Send mail with log information
-    with open('logs/app.log', 'r') as f:
-        body = f.read() 
-        # Send the email
-        if in_trailing_mode:
-            email_subject='TRAILING PROFIT |'+ email_subject 
-        if live:
-            email_subject='|||LIVE|||'+ email_subject
-        else:
-            email_subject='|||DUMMY|||'+ email_subject
-            
-        send_custom_email(email_subject, body)
-    # Clear Logs
-    open('logs/app.log', 'w').close()
+    past_930 = datetime.strptime("04:00:00", "%H:%M:%S").time()
+    eod_10 = datetime.strptime("10:10:00", "%H:%M:%S").time()
+    if not past_time(eod_10) and past_time(past_930):
+        if not os.path.exists('logs'):
+            os.makedirs('logs')
+        open('logs/app.log', 'w').close()
+        monitor_and_execute_trades()
+        # Send mail with log information
+        with open('logs/app.log', 'r') as f:
+            body = f.read() 
+            # Send the email
+            if in_trailing_mode:
+                email_subject='TRAILING PROFIT |'+ email_subject 
+            if live:
+                email_subject='|||LIVE|||'+ email_subject
+            else:
+                email_subject='|||DUMMY|||'+ email_subject
+                
+            send_custom_email(email_subject, body)
+        # Clear Logs
+        open('logs/app.log', 'w').close()
 
