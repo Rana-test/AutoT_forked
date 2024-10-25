@@ -30,14 +30,20 @@ jobs:
         api_secret: ${{ secrets.api_secret }}
         imei: ${{ secrets.imei }}
       run: python3 monitor_trade.py
-
-    - name: Commit changes
+    - name: Configure git
       run: |
+        git config --local user.name "github-actions[bot]"
         git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add state.csv -f
-        git add config.yml -f
-        git commit -m "Update JSON file"
-        git push origin master
+    - name: Check for changes
+      id: git_status
+      run: |
+        if git diff --quiet; then
+          echo "No changes to commit."
+        else
+          echo "Changes detected."
+          git add .
+          git commit -m "Update file"
+          git push
+        fi
       env:
         GITHUB_TOKEN: ${{ secrets.TEST_API_KEY}}
