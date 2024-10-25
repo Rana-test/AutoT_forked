@@ -347,7 +347,7 @@ def get_support_resistence_atm(cedf,pedf):
 def calculate_initial_positions(base_strike_price, CEOptdf, PEOptdf):
     ce_sell, ce_premium = get_nearest_strike_strike(CEOptdf, base_strike_price)
     pe_sell, pe_premium = get_nearest_strike_strike(PEOptdf, base_strike_price)
-    tot_premium=pe_premium+ce_premium
+    tot_premium=round(pe_premium+ce_premium,2)
     pe_breakeven = base_strike_price - tot_premium
     ce_breakeven = base_strike_price + tot_premium
     ce_hedge, ce_hedge_premium = get_nearest_strike_strike(CEOptdf, ce_breakeven)
@@ -373,7 +373,7 @@ def calculate_initial_positions(base_strike_price, CEOptdf, PEOptdf):
     print(orders_df)
     logger.info(orders_df)
     logger.info(format_line)
-    net_premium = tot_premium-ce_hedge_premium-pe_hedge_premium
+    net_premium = round(tot_premium-ce_hedge_premium-pe_hedge_premium,2)
     logger.info(f"Sell premium = {tot_premium} | Net premium = {net_premium}")
     print(f"Net premium = {net_premium}")
 

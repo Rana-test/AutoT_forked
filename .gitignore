@@ -11,3 +11,4 @@ test.py
 app.log
 .~lock*
 logs/app.log
+*.sh
