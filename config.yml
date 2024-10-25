@@ -4,6 +4,9 @@ stop_loss: -5000
 delta_threshold: 40
 trailing_percent: 5
 
+Update_EOD: 1
+Past_M2M: 0 
+
 enter_today: 1
 EntryType: AUTO
 Expiry: 28-NOV-2024
@@ -15,7 +18,5 @@ nse_sym_path: NSE_symbols.txt
 nfo_sym_path: NFO_symbols.txt
 Symbol: NIFTY
 
-Update_EOD: 1
-Past_M2M: 0 
 
 
