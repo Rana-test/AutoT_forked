@@ -15,3 +15,7 @@ nse_sym_path: NSE_symbols.txt
 nfo_sym_path: NFO_symbols.txt
 Symbol: NIFTY
 
+Update_EOD: 1
+Past_M2M: 0 
+
+

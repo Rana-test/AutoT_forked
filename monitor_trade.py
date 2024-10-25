@@ -32,6 +32,14 @@ lot_size = config['lot_size']
 lots = config['lots']
 trailing_percent=config['trailing_percent']
 
+# config['Update_EOD']
+# config['Past_M2M']
+
+def save_config():
+    # Update config
+    with open("config.yaml", "w") as f:
+        config = yaml.dump(config, stream=f, default_flow_style=False, sort_keys=False)
+
 userid=None
 # Global variables
 #  Initialize the API
@@ -241,6 +249,17 @@ def get_current_positions():
                     logger.info("\n%s",open_positions[['buy_sell', 'tsym', 'qty', 'upldprc', 'lp']])
 
             total_m2m = closed_m2m+open_m2m
+
+            eod = datetime.strptime("10:00:00", "%H:%M:%S").time()
+            if past_time(eod):
+                if config['Update_EOD']==0:
+                    # Update Settled Amount
+                    config['Update_EOD']=1
+                    config['Past_M2M']=config['Past_M2M']+closed_m2m
+            else:
+                config['Update_EOD']=0
+            save_config()
+
             return open_positions, total_m2m
         else:
             return None, 0
@@ -725,11 +744,6 @@ if __name__=="__main__":
         os.makedirs('logs')
     open('logs/app.log', 'w').close()
     monitor_and_execute_trades()
-    eod = datetime.strptime("10:00:00", "%H:%M:%S").time()
-    if past_time(eod):
-        # Update Settled Amount
-        
-
     # Send mail with log information
     with open('logs/app.log', 'r') as f:
         body = f.read() 
