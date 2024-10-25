@@ -35,8 +35,7 @@ jobs:
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-        git add state.csv
-        git add logs/app.log
+        git add state.csv -f
         git add config.yml -f
         git commit -m "Update JSON file"
         git push origin master
