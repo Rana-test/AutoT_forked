@@ -725,6 +725,11 @@ if __name__=="__main__":
         os.makedirs('logs')
     open('logs/app.log', 'w').close()
     monitor_and_execute_trades()
+    eod = datetime.strptime("10:00:00", "%H:%M:%S").time()
+    if past_time(eod):
+        # Update Settled Amount
+        
+
     # Send mail with log information
     with open('logs/app.log', 'r') as f:
         body = f.read() 
