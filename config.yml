@@ -4,7 +4,7 @@ target_profit: 695000
 stop_loss: -1390000
 enter_today: 0
 enable_trailing: 0
-trailing_percent: 5
+trailing_percent: 0
 Update_EOD: 1
 Past_M2M: 0
 EntryType: AUTO
