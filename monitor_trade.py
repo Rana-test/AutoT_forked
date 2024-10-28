@@ -325,7 +325,7 @@ def get_Option_Chain(type):
     for i in df.index:
         strikeInfo = df.loc[i]
         res=api.get_quotes(exchange="NFO", token=str(strikeInfo.Token))
-        res={'oi':res['oi'], 'tsym':res['tsym'], 'lp':float(res['lp']), 'lotSize':strikeInfo.LotSize, 'token':res['token'], 'StrikePrice':int(float(res['strprc']))}
+        res={'oi':res.get('oi',0), 'tsym':res['tsym'], 'lp':float(res['lp']), 'lotSize':strikeInfo.LotSize, 'token':res['token'], 'StrikePrice':int(float(res['strprc']))}
         OList.append(res)
     Ostrikedf = pd.DataFrame(OList)
     return Ostrikedf
