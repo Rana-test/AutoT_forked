@@ -254,3 +254,4 @@ sno,m2m,trailing_profit_threshold,in_trailing_mode
 253,48.75,695000,False
 254,-48.75,695000,False
 255,78.75,695000,False
+256,-176.25,695000,False
