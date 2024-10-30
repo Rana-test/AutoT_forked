@@ -16,3 +16,4 @@ max_strike_price: 27000
 nse_sym_path: NSE_symbols.txt
 nfo_sym_path: NFO_symbols.txt
 Symbol: NIFTY
+
