@@ -212,30 +212,30 @@ def get_current_positions():
             # day_m2m = mtm + pnl
             # {'buy_sell':'B', 'tsym': pe_hedge, 'qty': lots*lot_size, 'remarks':f'Initial PE Hedg with premium: {pe_hedge_premium}'},
             # rev_buy_sell = {"B": "C", "C": "B"}.get(i['buy_sell'])
-            if int(i['netqty'])<0:
-                buy_sell = 'S'
-            elif int(i['netqty'])>0:
-                buy_sell = 'B'
-            elif int(i['netqty'])==0:
-                buy_sell = 'NA'
-            open_pos_data.append({
-                'buy_sell': buy_sell, 
-                'tsym':i['tsym'], 
-                'qty': i['netqty'], 
-                'remarks':'Existing Order', 
-                'upldprc': i['upldprc'], 
-                'netupldprc': i['netupldprc'], 
-                'lp':i['lp'], 
-                'ord_type':i['tsym'][12],
-                'rpnl':i['rpnl'],
-                'cfbuyqty': i['cfbuyqty'],
-                'cfsellqty': i['cfsellqty'],                
-                'daybuyamt':i['daybuyamt'],
-                'daysellamt':i['daysellamt']
-                })
+            if i['tsym'][:5]=='NIFTY':
+                if int(i['netqty'])<0:
+                    buy_sell = 'S'
+                elif int(i['netqty'])>0:
+                    buy_sell = 'B'
+                elif int(i['netqty'])==0:
+                    buy_sell = 'NA'
+                open_pos_data.append({
+                    'buy_sell': buy_sell, 
+                    'tsym':i['tsym'], 
+                    'qty': i['netqty'], 
+                    'remarks':'Existing Order', 
+                    'upldprc': i['upldprc'], 
+                    'netupldprc': i['netupldprc'], 
+                    'lp':i['lp'], 
+                    'ord_type':i['tsym'][12],
+                    'rpnl':i['rpnl'],
+                    'cfbuyqty': i['cfbuyqty'],
+                    'cfsellqty': i['cfsellqty'],                
+                    'daybuyamt':i['daybuyamt'],
+                    'daysellamt':i['daysellamt']
+                    })
         positions_df = pd.DataFrame(open_pos_data)
-        positions_df['nifty']= positions_df['tsym'].apply(lambda x: x[:5])
-        positions_df=positions_df[positions_df['nifty']=='NIFTY']
+        
         if not positions_df.empty:
             # Calculate Total M2M
             closed_positions = positions_df[positions_df['buy_sell']=="NA"]
