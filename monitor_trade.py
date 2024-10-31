@@ -557,6 +557,7 @@ def calculate_delta(df):
     nifty_nse_token = nse_df[(nse_df.Symbol=="Nifty 50")&(nse_df.Instrument=="INDEX")].iloc[0]['Token']
     res=api.get_quotes(exchange="NSE", token=str(nifty_nse_token))
     current_strike = float(res['lp'])
+    logger.info(f"NIFTY CURRENT : {current_strike}")
 
     strategy = 'IF' if abs(pstrike-cstrike) < min(abs(current_strike-pstrike), abs(current_strike-cstrike)) else 'IC'
 
