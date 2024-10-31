@@ -770,7 +770,7 @@ def login():
 
 # Call the main function periodically to monitor and execute trades
 if __name__=="__main__":
-    past_930 = datetime.strptime("03:00:00", "%H:%M:%S").time()
+    past_930 = datetime.strptime("04:00:00", "%H:%M:%S").time()
     eod_10 = datetime.strptime("10:10:00", "%H:%M:%S").time()
     if not past_time(eod_10) and past_time(past_930):
         if not os.path.exists('logs'):
