@@ -234,6 +234,7 @@ def get_current_positions():
                 'daysellamt':i['daysellamt']
                 })
         positions_df = pd.DataFrame(open_pos_data)
+        positions_df=positions_df[positions_df['tsym'][:5]=='NIFTY']
         if not positions_df.empty:
             # Calculate Total M2M
             closed_positions = positions_df[positions_df['buy_sell']=="NA"]
