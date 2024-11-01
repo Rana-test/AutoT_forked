@@ -201,7 +201,7 @@ def calculate_breakevens(df):
         df['total_credit'] = df['netupldprc'].astype(float)*df['qty'].astype(int)/(lot_size*lots)
         net_credit = round(float(df['total_credit'].sum()),2)
         lower_be = float(df[(df['ord_type']=="P")&(df['buy_sell']=="S")]['tsym'].iloc[0][13:])-net_credit
-        higher_be = flaot(df[(df['ord_type']=="P")&(df['buy_sell']=="S")]['tsym'].iloc[0][13:])+net_credit
+        higher_be = float(df[(df['ord_type']=="P")&(df['buy_sell']=="S")]['tsym'].iloc[0][13:])+net_credit
         return lower_be, higher_be
 
 
