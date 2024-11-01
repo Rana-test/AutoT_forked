@@ -771,6 +771,7 @@ def login():
         print('Logged in failed')
 
 def monitor_loop():
+    global email_subject
     if not os.path.exists('logs'):
         os.makedirs('logs')
     open('logs/app.log', 'w').close()
