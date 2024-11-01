@@ -772,8 +772,6 @@ def login():
 
 def monitor_loop():
     global email_subject
-    if not os.path.exists('logs'):
-        os.makedirs('logs')
     open('logs/app.log', 'w').close()
     monitor_and_execute_trades()
     # Send mail with log information
@@ -795,6 +793,8 @@ def monitor_loop():
 if __name__=="__main__":
     past_930 = datetime.strptime("04:00:00", "%H:%M:%S").time()
     eod_10 = datetime.strptime("10:01:00", "%H:%M:%S").time()
+    if not os.path.exists('logs'):
+        os.makedirs('logs')
     if past_time(past_930) and not past_time(eod_10):
         monitor_loop()
         time.sleep(interval)
