@@ -33,6 +33,7 @@ lots = config['lots']
 trailing_percent=config['trailing_percent']
 Past_M2M = config['Past_M2M']
 enable_trailing = config['enable_trailing']
+interval = config['interval']
 
 # config['Update_EOD']
 
@@ -212,7 +213,7 @@ def get_current_positions():
             # day_m2m = mtm + pnl
             # {'buy_sell':'B', 'tsym': pe_hedge, 'qty': lots*lot_size, 'remarks':f'Initial PE Hedg with premium: {pe_hedge_premium}'},
             # rev_buy_sell = {"B": "C", "C": "B"}.get(i['buy_sell'])
-            if i['tsym'][:5]=='NIFTY':
+            if i['tsym'][:5]==Symbol:
                 if int(i['netqty'])<0:
                     buy_sell = 'S'
                 elif int(i['netqty'])>0:
@@ -769,28 +770,30 @@ def login():
         logger.info(f"Login failed: {login_response.get('emsg', 'Unknown error')}")
         print('Logged in failed')
 
+def monitor_loop():
+    if not os.path.exists('logs'):
+        os.makedirs('logs')
+    open('logs/app.log', 'w').close()
+    monitor_and_execute_trades()
+    # Send mail with log information
+    with open('logs/app.log', 'r') as f:
+        body = f.read() 
+        # Send the email
+        if in_trailing_mode:
+            email_subject='TRAILING PROFIT |'+ email_subject 
+        if live:
+            email_subject='|||LIVE|||'+ email_subject
+        else:
+            email_subject='|||DUMMY|||'+ email_subject
+            
+        send_custom_email(email_subject, body)
+    # Clear Logs
+    open('logs/app.log', 'w').close()
 
 # Call the main function periodically to monitor and execute trades
 if __name__=="__main__":
     past_930 = datetime.strptime("04:00:00", "%H:%M:%S").time()
-    eod_10 = datetime.strptime("10:10:00", "%H:%M:%S").time()
-    if not past_time(eod_10) and past_time(past_930):
-        if not os.path.exists('logs'):
-            os.makedirs('logs')
-        open('logs/app.log', 'w').close()
-        monitor_and_execute_trades()
-        # Send mail with log information
-        with open('logs/app.log', 'r') as f:
-            body = f.read() 
-            # Send the email
-            if in_trailing_mode:
-                email_subject='TRAILING PROFIT |'+ email_subject 
-            if live:
-                email_subject='|||LIVE|||'+ email_subject
-            else:
-                email_subject='|||DUMMY|||'+ email_subject
-                
-            send_custom_email(email_subject, body)
-        # Clear Logs
-        open('logs/app.log', 'w').close()
-
+    eod_10 = datetime.strptime("10:01:00", "%H:%M:%S").time()
+    if past_time(past_930) and not past_time(eod_10):
+        monitor_loop()
+        time.sleep(interval)
