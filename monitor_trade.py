@@ -795,6 +795,6 @@ if __name__=="__main__":
     eod_10 = datetime.strptime("10:01:00", "%H:%M:%S").time()
     if not os.path.exists('logs'):
         os.makedirs('logs')
-    if past_time(past_930) and not past_time(eod_10):
+    while past_time(past_930) and not past_time(eod_10):
         monitor_loop()
         time.sleep(interval)
