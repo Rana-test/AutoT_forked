@@ -647,7 +647,7 @@ def monitor_and_execute_trades():
     # Step 2: Check adjustment signal
     delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff, current_strike = calculate_delta(positions_df)
 
-    print(delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff)
+    print(delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff, current_strike)
 
     email_subject = f'DELTA: {delta}% | M2M: {m2m}'
 
@@ -655,27 +655,30 @@ def monitor_and_execute_trades():
         # If Iron Fly
         # Get current strike price and see if it is lower than lower_be or higher than higher_be
         logger.info("DELTA LIMIT CROSSED.. Checking breakevens..")
-        if strategy=="IF" and (current_strike < lower_be or current_strike > higher_be):
-            logger.info("Breakevens breached.. making adjustments...")
-            # Exit the loss making leg
-            exit_order_df = positions_df[positions_df.ord_type==loss_leg][['buy_sell','tsym','qty','remarks']]
-            # exit_positions(exit_order_df)
-            #Find new legs
-            if loss_leg=="C":
-                search_ltp = pltp
-                odf = get_Option_Chain("CE")
-                L_tsym, L_lp = get_nearest_price_strike(odf, search_ltp)
-                H_strike = int(L_tsym[13:])+ce_hedge_diff 
-                new_delta = round(100*abs(L_lp-pltp)/(L_lp+pltp),2)
+        if strategy=="IF": 
+            if (int(current_strike) < int(lower_be) or int(current_strike) > int(higher_be)):
+                logger.info("Breakevens breached.. making adjustments...")
+                # Exit the loss making leg
+                exit_order_df = positions_df[positions_df.ord_type==loss_leg][['buy_sell','tsym','qty','remarks']]
+                # exit_positions(exit_order_df)
+                #Find new legs
+                if loss_leg=="C":
+                    search_ltp = pltp
+                    odf = get_Option_Chain("CE")
+                    L_tsym, L_lp = get_nearest_price_strike(odf, search_ltp)
+                    H_strike = int(L_tsym[13:])+ce_hedge_diff 
+                    new_delta = round(100*abs(L_lp-pltp)/(L_lp+pltp),2)
+                else:
+                    search_ltp = cltp
+                    odf = get_Option_Chain("PE")
+                    L_tsym, L_lp = get_nearest_price_strike(odf, search_ltp)
+                    H_strike = int(L_tsym[13:])-pe_hedge_diff
+                    new_delta = round(100*abs(L_lp-cltp)/(L_lp+cltp),2)
+
+                H_tsym, lp = get_nearest_strike_strike(odf, H_strike)
             else:
-                search_ltp = cltp
-                odf = get_Option_Chain("PE")
-                L_tsym, L_lp = get_nearest_price_strike(odf, search_ltp)
-                H_strike = int(L_tsym[13:])-pe_hedge_diff
-                new_delta = round(100*abs(L_lp-cltp)/(L_lp+cltp),2)
-
-            H_tsym, lp = get_nearest_strike_strike(odf, H_strike)
-
+                logger.info("Delta breached, but breakevens are not.. Exiting...")
+                return
         elif strategy=="IC":
             #Exit Profit making leg
             exit_order_df = positions_df[positions_df.ord_type==profit_leg][['buy_sell','tsym','qty','remarks']]
@@ -768,12 +771,18 @@ def check_day_after_last_thursday():
 
 def login():
     global userid
-    TOKEN = os.getenv("TOKEN")
-    userid=os.getenv("userid")
-    password=os.getenv("password")
-    vendor_code=os.getenv("vendor_code")
-    api_secret=os.getenv("api_secret")
-    imei=os.getenv("imei")
+    # TOKEN = os.getenv("TOKEN")
+    # userid=os.getenv("userid")
+    # password=os.getenv("password")
+    # vendor_code=os.getenv("vendor_code")
+    # api_secret=os.getenv("api_secret")
+    # imei=os.getenv("imei")
+    TOKEN = 'HWWYD7R4EPSW4I23H4634R336XALMED6'
+    userid='FA417461' 
+    password='NewIden@123' 
+    vendor_code='FA417461_U'
+    api_secret='456cdec44eae982782376e77101a6698'
+    imei='abc1234'
 
     twoFA = pyotp.TOTP(TOKEN).now()
     login_response = api.login(userid=userid, password=password, twoFA=twoFA, vendor_code=vendor_code, api_secret=api_secret, imei=imei)   
