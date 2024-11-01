@@ -163,7 +163,8 @@ def trailing_profit_exit(csv_file):
     global in_trailing_mode, trailing_percent, total_m2m, target_profit
     max_profit, trailing_profit_threshold, in_trailing_mode, df = load_state(csv_file)
 
-    if enable_trailing and not df.empty:         
+    if enable_trailing and not df.empty:     
+        # Apply loop for trailing
         # If already in trailing mode, update max profit and trailing stop
         if in_trailing_mode:
             if total_m2m > max_profit:
