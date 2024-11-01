@@ -590,9 +590,6 @@ def past_time(t):
 def monitor_and_execute_trades():
     global delta
     global email_subject
-    # Login to Shoonya app
-    print('Logging in ...')
-    login()
 
     # Capture days into the trade and exit in the expiry week
     # Capture total number of adjustments and exit if counter exceeds some value
@@ -795,6 +792,9 @@ if __name__=="__main__":
     eod_10 = datetime.strptime("10:01:00", "%H:%M:%S").time()
     if not os.path.exists('logs'):
         os.makedirs('logs')
+    # Login to Shoonya app
+    print('Logging in ...')
+    login()
     while past_time(past_930) and not past_time(eod_10):
         monitor_loop()
         time.sleep(interval)
