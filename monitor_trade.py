@@ -198,7 +198,7 @@ def trailing_profit_exit(csv_file):
     
 def calculate_breakevens(df):
             # Calculate breakevens
-        df['total_credit'] = df['netupldprc']*df['qty']/(lot_size*lots)
+        df['total_credit'] = df['netupldprc'].astype(float)*df['qty'].astype(int)/(lot_size*lots)
         net_credit = round(float(df['total_credit'].sum()),2)
         lower_be = df[(df['tsym'][12]=="P")&(df['buy_sell']=="S")].index(0).astype(int)['tsym'][13:]-net_credit
         higher_be = df[(df['tsym'][12]=="P")&(df['buy_sell']=="S")].index(0).astype(int)['tsym'][13:]+net_credit
