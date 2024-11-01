@@ -7,7 +7,7 @@
 2        S  NIFTY28NOV24P24300  -75     349.20  359.90
 3        B  NIFTY28NOV24C25100   75     151.10  111.95
 --------------------------------------------------------
-Current Time: 00:32:57.616810 | Checked for time: 10:00:00
+Current Time: 00:38:02.866179 | Checked for time: 10:00:00
 --------------------------------------------------------
 --------------------------------------------------------
 M2M:1248.75
@@ -16,4 +16,12 @@ LOWER BE: 23713.5, HIGHER BE: 24886.5
 Loaded state: Max profit: 1503.75, Trailing stop: 695000, Trailing mode: False
 ### NIFTY CURRENT : 24304.35 ###
 DELTA LIMIT CROSSED.. Checking breakevens..
-Delta breached, but breakevens are not.. Exiting...
+--------------------------------------------------------
+RECOMMENDED ADJUSTMENT:
+S | NIFTY28NOV24P23400 | 75 | Original Order
+B | NIFTY28NOV24P24300 | 75 | Original Order
+B | NIFTY28NOV24P23600 | 75 | Adjustment Hedge order
+S | NIFTY28NOV24P24500 | 75 | Adjustment Sell order
+ORIGINAL DELTA: 10.13%
+REVISED DELTA: 1.28%
+--------------------------------------------------------
