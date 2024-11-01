@@ -34,6 +34,7 @@ trailing_percent=config['trailing_percent']
 Past_M2M = config['Past_M2M']
 enable_trailing = config['enable_trailing']
 interval = config['interval']
+iteration_hours = config['iteration_hours']
 
 # config['Update_EOD']
 
@@ -795,6 +796,8 @@ if __name__=="__main__":
     # Login to Shoonya app
     print('Logging in ...')
     login()
-    while past_time(past_930) and not past_time(eod_10):
+    counter=0
+    while past_time(past_930) and not past_time(eod_10) and counter < iteration_hours*60:
         monitor_loop()
+        counter+=1
         time.sleep(interval)

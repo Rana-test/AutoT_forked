@@ -17,3 +17,4 @@ nse_sym_path: NSE_symbols.txt
 nfo_sym_path: NFO_symbols.txt
 Symbol: NIFTY
 interval: 60
+iteration_hours: 3
