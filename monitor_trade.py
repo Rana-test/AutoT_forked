@@ -581,7 +581,7 @@ def calculate_delta(df):
     pe_hedge_diff= pstrike-p_hedge_strike
     ce_hedge_diff= c_hedge_strike-cstrike
 
-    return delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff
+    return delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff, current_strike
 
 def past_time(t):
     # Get the current time
@@ -645,7 +645,7 @@ def monitor_and_execute_trades():
         return
 
     # Step 2: Check adjustment signal
-    delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff = calculate_delta(positions_df)
+    delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff, current_strike = calculate_delta(positions_df)
 
     print(delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff)
 
@@ -653,7 +653,10 @@ def monitor_and_execute_trades():
 
     if delta>delta_threshold:
         # If Iron Fly
-        if strategy=="IF":
+        # Get current strike price and see if it is lower than lower_be or higher than higher_be
+        logger.info("DELTA LIMIT CROSSED.. Checking breakevens..")
+        if strategy=="IF" and (current_strike < lower_be or current_strike > higher_be):
+            logger.info("Breakevens breached.. making adjustments..."
             # Exit the loss making leg
             exit_order_df = positions_df[positions_df.ord_type==loss_leg][['buy_sell','tsym','qty','remarks']]
             # exit_positions(exit_order_df)
