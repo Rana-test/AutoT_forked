@@ -656,7 +656,7 @@ def monitor_and_execute_trades():
         # Get current strike price and see if it is lower than lower_be or higher than higher_be
         logger.info("DELTA LIMIT CROSSED.. Checking breakevens..")
         if strategy=="IF" and (current_strike < lower_be or current_strike > higher_be):
-            logger.info("Breakevens breached.. making adjustments..."
+            logger.info("Breakevens breached.. making adjustments...")
             # Exit the loss making leg
             exit_order_df = positions_df[positions_df.ord_type==loss_leg][['buy_sell','tsym','qty','remarks']]
             # exit_positions(exit_order_df)
