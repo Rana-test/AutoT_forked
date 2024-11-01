@@ -195,6 +195,15 @@ def trailing_profit_exit(csv_file):
     else:
         save_state(target_profit, False, csv_file, df)
         return False
+    
+def calculate_breakevens(df):
+            # Calculate breakevens
+        df['total_credit'] = df.apply(lambda x: x['netupldprc']*x['qty'])
+        net_credit = round(float(df['total_credit'].sum()),2)
+        lower_be = df[(df['tsym'][12]=="P")&(df['buy_sell']=="S")].index(0).astype(int)['tsym'][13:]-net_credit
+        higher_be = df[(df['tsym'][12]=="P")&(df['buy_sell']=="S")].index(0).astype(int)['tsym'][13:]+net_credit
+        return lower_be, higher_be
+
 
 # Step 1: Preprocess data and extract necessary information
 def get_current_positions():
@@ -275,10 +284,9 @@ def get_current_positions():
             else:
                 config['Update_EOD']=0
             save_config()
-
             return open_positions, total_m2m
         else:
-            return None, 0
+            return None, 0, 0, 999999999
         
 
 def get_position_status():
@@ -616,6 +624,10 @@ def monitor_and_execute_trades():
         logger.df(f'M2M: {m2m}')
         return
     
+    # Get breakevens
+    lower_be, higher_be = calculate_breakevens(positions_df)
+    logger.info(f"LOWER BE: {lower_be}, HIGHER BE: {higher_be}")
+    
     if trailing_profit_exit('state.csv'):
         logger.info(format_line)
         logger.info("Target Profit Acheived. Exit Trade")
@@ -789,17 +801,16 @@ def monitor_loop():
 
 # Call the main function periodically to monitor and execute trades
 if __name__=="__main__":
-    past_930 = datetime.strptime("04:00:00", "%H:%M:%S").time()
-    eod_10 = datetime.strptime("10:02:00", "%H:%M:%S").time()
-    #past_930 = datetime.strptime("12:30:00", "%H:%M:%S").time()
-    #eod_10 = datetime.strptime("13:32:00", "%H:%M:%S").time()
+    # past_930 = datetime.strptime("04:00:00", "%H:%M:%S").time()
+    # eod_10 = datetime.strptime("10:02:00", "%H:%M:%S").time()
     if not os.path.exists('logs'):
         os.makedirs('logs')
     # Login to Shoonya app
     print('Logging in ...')
     login()
     counter=0
-    while past_time(past_930) and not past_time(eod_10) and counter < iteration_hours*60:
-        monitor_loop()
-        counter+=1
-        time.sleep(interval)
+    monitor_loop()
+    # while past_time(past_930) and not past_time(eod_10) and counter < iteration_hours*60:
+    #     monitor_loop()
+    #     counter+=1
+    #     time.sleep(interval)
