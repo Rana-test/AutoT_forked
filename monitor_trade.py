@@ -650,7 +650,7 @@ def monitor_and_execute_trades():
 
     print(delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff, current_strike)
 
-    email_subject = f'DELTA: {delta}% | M2M: {m2m}'
+    email_subject = f'DELTA: {delta}% | M2M: {m2m} |SP: {current_strike}'
 
     if delta>delta_threshold:
         # If Iron Fly
