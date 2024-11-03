@@ -20,7 +20,8 @@ live = config['live']
 target_profit = config['target_profit']
 stop_loss = config['stop_loss']
 enter_today = config['enter_today']
-delta_threshold = config['delta_threshold']
+IC_delta_threshold = config['IC_delta_threshold']
+IF_delta_threshold = config['IC_delta_threshold']
 EntryType= config['EntryType']
 nse_sym_path = config['nse_sym_path']
 nfo_sym_path = config['nfo_sym_path']
@@ -652,71 +653,67 @@ def monitor_and_execute_trades():
 
     email_subject = f'DELTA: {delta}% | M2M: {m2m} |SP: {current_strike}'
 
-    if delta>delta_threshold:
-        # If Iron Fly
-        # Get current strike price and see if it is lower than lower_be or higher than higher_be
-        logger.info("DELTA LIMIT CROSSED.. Checking breakevens..")
-        if strategy=="IF": 
-            # if (int(current_strike) < int(lower_be) or int(current_strike) > int(higher_be)):
-                # logger.info("Breakevens breached.. making adjustments...")
-                # Exit the loss making leg
-            exit_order_df = positions_df[positions_df.ord_type==loss_leg][['buy_sell','tsym','qty','remarks']]
-            # exit_positions(exit_order_df)
-            #Find new legs
-            if loss_leg=="C":
-                search_ltp = pltp
-                odf = get_Option_Chain("CE")
-                L_tsym, L_lp = get_nearest_price_strike(odf, search_ltp)
-                H_strike = int(L_tsym[13:])+ce_hedge_diff 
-                new_delta = round(100*abs(L_lp-pltp)/(L_lp+pltp),2)
-            else:
-                search_ltp = cltp
-                odf = get_Option_Chain("PE")
-                L_tsym, L_lp = get_nearest_price_strike(odf, search_ltp)
-                H_strike = int(L_tsym[13:])-pe_hedge_diff
-                new_delta = round(100*abs(L_lp-cltp)/(L_lp+cltp),2)
+    if strategy=="IF" and delta > IF_delta_threshold: 
+        # if (int(current_strike) < int(lower_be) or int(current_strike) > int(higher_be)):
+            # logger.info("Breakevens breached.. making adjustments...")
+            # Exit the loss making leg
+        exit_order_df = positions_df[positions_df.ord_type==loss_leg][['buy_sell','tsym','qty','remarks']]
+        # exit_positions(exit_order_df)
+        #Find new legs
+        if loss_leg=="C":
+            search_ltp = pltp
+            odf = get_Option_Chain("CE")
+            L_tsym, L_lp = get_nearest_price_strike(odf, search_ltp)
+            H_strike = int(L_tsym[13:])+ce_hedge_diff 
+            new_delta = round(100*abs(L_lp-pltp)/(L_lp+pltp),2)
+        else:
+            search_ltp = cltp
+            odf = get_Option_Chain("PE")
+            L_tsym, L_lp = get_nearest_price_strike(odf, search_ltp)
+            H_strike = int(L_tsym[13:])-pe_hedge_diff
+            new_delta = round(100*abs(L_lp-cltp)/(L_lp+cltp),2)
 
-            H_tsym, lp = get_nearest_strike_strike(odf, H_strike)
-            # else:
-            #     logger.info("Delta breached, but breakevens are not.. Exiting...")
-            #     return
-        elif strategy=="IC":
-            #Exit Profit making leg
-            exit_order_df = positions_df[positions_df.ord_type==profit_leg][['buy_sell','tsym','qty','remarks']]
-            # exit_positions(exit_order_df)
-            #Find new legs
-            if profit_leg=="C":
-                search_ltp = pltp
-                odf = get_Option_Chain("CE")
-                L_tsym, L_lp = get_nearest_price_strike(odf, search_ltp) 
-                # Find loss_leg ATM
-                loss_atm = int(positions_df[(positions_df.ord_type==loss_leg) & (positions_df.buy_sell=="S")].iloc[0]['tsym'][13:]) 
-                if int(L_tsym[13:])> loss_atm:
-                    new_strike_price = int(L_tsym[13:])  
-                else:
-                    new_strike_price = loss_atm
-                    L_tsym, L_lp = get_nearest_strike_strike(odf, new_strike_price)
-                H_strike = new_strike_price+ce_hedge_diff
-                new_delta = round(100*abs(L_lp-pltp)/(L_lp+pltp),2)
+        H_tsym, lp = get_nearest_strike_strike(odf, H_strike)
+        # else:
+        #     logger.info("Delta breached, but breakevens are not.. Exiting...")
+        #     return
+    elif strategy=="IC" and delta> IC_delta_threshold:
+        #Exit Profit making leg
+        exit_order_df = positions_df[positions_df.ord_type==profit_leg][['buy_sell','tsym','qty','remarks']]
+        # exit_positions(exit_order_df)
+        #Find new legs
+        if profit_leg=="C":
+            search_ltp = pltp
+            odf = get_Option_Chain("CE")
+            L_tsym, L_lp = get_nearest_price_strike(odf, search_ltp) 
+            # Find loss_leg ATM
+            loss_atm = int(positions_df[(positions_df.ord_type==loss_leg) & (positions_df.buy_sell=="S")].iloc[0]['tsym'][13:]) 
+            if int(L_tsym[13:])> loss_atm:
+                new_strike_price = int(L_tsym[13:])  
             else:
-                search_ltp = cltp
-                odf = get_Option_Chain("PE")
-                L_tsym, L_lp = get_nearest_price_strike(odf, search_ltp)
-                # Find loss_leg ATM
-                loss_atm = int(positions_df[(positions_df.ord_type==loss_leg) & (positions_df.buy_sell=="S")].iloc[0]['tsym'][13:]) 
-                if int(L_tsym[13:]) < loss_atm:
-                    new_strike_price = int(L_tsym[13:])  
-                else:
-                    new_strike_price = loss_atm
-                    L_tsym, L_lp = get_nearest_strike_strike(odf, new_strike_price)
-                H_strike = new_strike_price-pe_hedge_diff
-                new_delta = round(100*abs(L_lp-cltp)/(L_lp+cltp),2)
+                new_strike_price = loss_atm
+                L_tsym, L_lp = get_nearest_strike_strike(odf, new_strike_price)
+            H_strike = new_strike_price+ce_hedge_diff
+            new_delta = round(100*abs(L_lp-pltp)/(L_lp+pltp),2)
+        else:
+            search_ltp = cltp
+            odf = get_Option_Chain("PE")
+            L_tsym, L_lp = get_nearest_price_strike(odf, search_ltp)
+            # Find loss_leg ATM
+            loss_atm = int(positions_df[(positions_df.ord_type==loss_leg) & (positions_df.buy_sell=="S")].iloc[0]['tsym'][13:]) 
+            if int(L_tsym[13:]) < loss_atm:
+                new_strike_price = int(L_tsym[13:])  
+            else:
+                new_strike_price = loss_atm
+                L_tsym, L_lp = get_nearest_strike_strike(odf, new_strike_price)
+            H_strike = new_strike_price-pe_hedge_diff
+            new_delta = round(100*abs(L_lp-cltp)/(L_lp+cltp),2)
 
-            H_tsym, lp = get_nearest_strike_strike(odf, H_strike)
+        H_tsym, lp = get_nearest_strike_strike(odf, H_strike)
 
         # Check if adjustment is not possible
         # If new Delta is higher than delta threshhold
-        if new_delta > delta_threshold:
+        if (strategy =="IC" and new_delta > IF_delta_threshold) or (strategy =="IF" and new_delta > IC_delta_threshold):
             email_subject="<<< PRICE OUT OF RANGE | EXIT OR ADJUST MANUALLY >>>"
             logger.info(format_line)
             logger.info("RECOMMENDED ADJUSTMENT:")
@@ -725,6 +722,7 @@ def monitor_and_execute_trades():
                 logger.info(f"{rev_buy_sell} | {order['tsym']} | {lots*lot_size} | Original Order")
             logger.info(f"B | {H_tsym} | {lots*lot_size} | Adjustment Hedge order")
             logger.info(f"S | {L_tsym} | {lots*lot_size} | Adjustment Sell order")
+            logger.info(f"CURRENT STRATEGY: {strategy}")
             logger.info(f"ORIGINAL DELTA: {delta}%")
             logger.info(f"REVISED DELTA: {new_delta}%")
             logger.info(format_line)
