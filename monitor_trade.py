@@ -48,9 +48,7 @@ def save_config():
 userid=None
 # Global variables
 #  Initialize the API
-
 api = ShoonyaApiPy()
-
 state = pd.read_csv('state.csv')
 symbolDf= None
 in_trailing_mode=None
@@ -206,7 +204,6 @@ def calculate_breakevens(df):
         higher_be = float(df[(df['ord_type']=="C")&(df['buy_sell']=="S")]['tsym'].iloc[0][13:])-net_credit
         return lower_be, higher_be
 
-
 # Step 1: Preprocess data and extract necessary information
 def get_current_positions():
     global total_m2m, config
@@ -291,7 +288,7 @@ def get_current_positions():
             return None, 0, 0, 999999999
         
 
-def get_position_status():
+def get_revised_position():
     # Publish new Positions after 5 second wait
     time.sleep(5)
     rev_position, rev_m2m = get_current_positions()
@@ -621,7 +618,7 @@ def monitor_and_execute_trades():
         if (check_day_after_last_thursday() and past_time(noon)) or enter_today :
             enter_trade()
             # Publish new Positions after 5 second wait
-            get_position_status()
+            get_revised_position()
         return
     elif len(positions_df)!=4:
         email_subject = f'!!!! POSITIONS ERROR: Found {len(positions_df)} positions !!!!'
@@ -743,7 +740,7 @@ def monitor_and_execute_trades():
             place_order("S", L_tsym, lots*lot_size, remarks="Adjustment Sell order")
             logger.info(f"REVISED DELTA: {new_delta}%")
             # Publish new Positions after 5 second wait
-            get_position_status()
+            get_revised_position()
             logger.info(format_line)
     
 
