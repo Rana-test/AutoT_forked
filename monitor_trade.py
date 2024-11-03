@@ -575,6 +575,8 @@ def calculate_delta(df):
 
     strategy = 'IF' if abs(pstrike-cstrike) < min(abs(current_strike-pstrike), abs(current_strike-cstrike)) else 'IC'
 
+    email_subject = email_subject + f"| {strategy} |"
+
     put_hedge = df[(df.buy_sell=="B")&(df.ord_type=="P")]
     call_hedge = df[(df.buy_sell=="B")&(df.ord_type=="C")] 
 
