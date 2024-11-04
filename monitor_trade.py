@@ -585,7 +585,6 @@ def calculate_delta(df):
     nifty_nse_token = nse_df[(nse_df.Symbol=="Nifty 50")&(nse_df.Instrument=="INDEX")].iloc[0]['Token']
     res=api.get_quotes(exchange="NSE", token=str(nifty_nse_token))
     current_strike = float(res['lp'])
-    logger.info(f"### NIFTY CURRENT : {current_strike} ###")
 
     strategy = 'IF' if abs(pstrike-cstrike) < min(abs(current_strike-pstrike), abs(current_strike-cstrike)) else 'IC'
     # Special condition
@@ -625,9 +624,6 @@ def monitor_and_execute_trades():
 
     # Get Positions
     positions_df, m2m = get_current_positions()
-    logger.info(format_line)
-    logger.info(f"M2M:{m2m}")
-    logger.info(format_line)
     # Step 1: Create positions on Day 1
     if positions_df is None or positions_df.empty:
         # noon = datetime.strptime("06:30:00", "%H:%M:%S").time()
@@ -643,7 +639,7 @@ def monitor_and_execute_trades():
         logger.info(format_line)
         with pd.option_context('display.max_rows', None, 'display.max_columns', None):
             logger.info("\n%s",positions_df[['buy_sell', 'tsym', 'qty', 'upldprc', 'lp']])
-        logger.df(f'M2M: {m2m}')
+        logger.info(f'M2M: {m2m}')
         return
     
     # Get breakevens
