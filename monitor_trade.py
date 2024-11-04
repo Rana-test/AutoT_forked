@@ -673,7 +673,8 @@ def monitor_and_execute_trades():
     if strategy=="IF" and delta > IF_delta_threshold: 
         # Exit the loss making leg
         adjust=True
-        config['num_adjustments']=num_adjustments+1
+        num_adjustments+=1
+        config['num_adjustments']=num_adjustments
         save_config()
         exit_order_df = positions_df[positions_df.ord_type==loss_leg][['buy_sell','tsym','qty','remarks']]
         #Find new legs
@@ -695,7 +696,8 @@ def monitor_and_execute_trades():
     elif strategy=="IC" and delta> IC_delta_threshold:
         #Exit Profit making leg
         adjust=True
-        config['num_adjustments']=num_adjustments+1
+        num_adjustments+=1
+        config['num_adjustments']=num_adjustments
         save_config()
         exit_order_df = positions_df[positions_df.ord_type==profit_leg][['buy_sell','tsym','qty','remarks']]
         #Find new legs
