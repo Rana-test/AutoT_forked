@@ -21,7 +21,7 @@ target_profit = config['target_profit']
 stop_loss = config['stop_loss']
 enter_today = config['enter_today']
 IC_delta_threshold = config['IC_delta_threshold']
-IF_delta_threshold = config['IC_delta_threshold']
+IF_delta_threshold = config['IF_delta_threshold']
 EntryType= config['EntryType']
 nse_sym_path = config['nse_sym_path']
 nfo_sym_path = config['nfo_sym_path']
@@ -722,7 +722,6 @@ def monitor_and_execute_trades():
                 logger.info(f"{rev_buy_sell} | {order['tsym']} | {lots*lot_size} | Original Order")
             logger.info(f"B | {H_tsym} | {lots*lot_size} | Adjustment Hedge order")
             logger.info(f"S | {L_tsym} | {lots*lot_size} | Adjustment Sell order")
-            logger.info(f"CURRENT STRATEGY: {strategy}")
             logger.info(f"ORIGINAL DELTA: {delta}%")
             logger.info(f"REVISED DELTA: {new_delta}%")
             logger.info(format_line)
