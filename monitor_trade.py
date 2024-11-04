@@ -815,6 +815,7 @@ def login():
 def monitor_loop():
     global email_subject
     open('logs/app.log', 'w').close()
+    email_subject ="Initializing..."
     monitor_and_execute_trades()
     # Send mail with log information
     with open('logs/app.log', 'r') as f:
@@ -823,11 +824,10 @@ def monitor_loop():
         if in_trailing_mode:
             email_subject='TRAILING PROFIT |'+ email_subject 
         if live:
-            email_subject='|||LIVE|||'+ email_subject
+            send_custom_email('|||LIVE|||'+ email_subject, body)
         else:
-            email_subject='|||DUMMY|||'+ email_subject
+            send_custom_email('|||DUMMY|||'+ email_subject, body)
             
-        send_custom_email(email_subject, body)
     # Clear Logs
     open('logs/app.log', 'w').close()
 
