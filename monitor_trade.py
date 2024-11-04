@@ -575,8 +575,6 @@ def calculate_delta(df):
     if pstrike==cstrike and cstrike==current_strike:
         strategy = 'IF'
 
-    email_subject = email_subject + f"| {strategy} |"
-
     put_hedge = df[(df.buy_sell=="B")&(df.ord_type=="P")]
     call_hedge = df[(df.buy_sell=="B")&(df.ord_type=="C")] 
 
@@ -653,7 +651,7 @@ def monitor_and_execute_trades():
 
     print(delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff, current_strike)
 
-    email_subject = f'DELTA: {delta}% | M2M: {m2m} | SP: {current_strike}'
+    email_subject = f'DELTA: {delta}% | M2M: {m2m} | SP: {current_strike} | Strategy: {strategy}'
 
     if strategy=="IF" and delta > IF_delta_threshold: 
         # Exit the loss making leg
