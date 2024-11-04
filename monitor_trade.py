@@ -531,6 +531,7 @@ def enter_trade():
     return
 
 def count_working_days():
+    global Entry_Date
     # Generate a range of dates from start_date to end_date
     if Entry_Date==0:
         Entry_Date= datetime.now()+ timedelta(hours=5, minutes=30)
@@ -616,6 +617,7 @@ def past_time(t):
 def monitor_and_execute_trades():
     global delta
     global email_subject
+    global num_adjustments
     logger.info(f"### Day #: {count_working_days()} ###")
     # Capture days into the trade and exit in the expiry week
     # Capture total number of adjustments and exit if counter exceeds some value
