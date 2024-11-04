@@ -208,12 +208,13 @@ def calculate_breakevens(df):
 
 # Step 1: Preprocess data and extract necessary information
 def get_current_positions():
-    global total_m2m, config
+    global total_m2m, config,email_subject
     # Fetch the latest data (positions, LTP, etc.)
     open_pos_data=[]
     ret = api.get_positions()
     if ret is None:
         logger.info("Issue fetching Positions")
+        email_subject = "Issue fetching Positions..."
         return None, 0
     else:
         mtm = 0
