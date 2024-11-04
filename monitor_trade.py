@@ -653,8 +653,11 @@ def monitor_and_execute_trades():
 
     email_subject = f'DELTA: {delta}% | M2M: {m2m} | SP: {current_strike} | Strategy: {strategy}'
 
+    adjust=False
+
     if strategy=="IF" and delta > IF_delta_threshold: 
         # Exit the loss making leg
+        adjust=True
         exit_order_df = positions_df[positions_df.ord_type==loss_leg][['buy_sell','tsym','qty','remarks']]
         #Find new legs
         if loss_leg=="C":
@@ -674,6 +677,7 @@ def monitor_and_execute_trades():
 
     elif strategy=="IC" and delta> IC_delta_threshold:
         #Exit Profit making leg
+        adjust=True
         exit_order_df = positions_df[positions_df.ord_type==profit_leg][['buy_sell','tsym','qty','remarks']]
         #Find new legs
         L_tsym=None
@@ -711,34 +715,35 @@ def monitor_and_execute_trades():
 
         H_tsym, lp = get_nearest_strike_strike(odf, H_strike)
 
-    # Check if adjustment is not possible
-    # If new Delta is higher than delta threshhold
-    if (strategy =="IC" and new_delta > IF_delta_threshold) or (strategy =="IF" and new_delta > IC_delta_threshold):
-        email_subject="<<< PRICE OUT OF RANGE | EXIT OR ADJUST MANUALLY >>>"
-        logger.info(format_line)
-        logger.info("RECOMMENDED ADJUSTMENT:")
-        for i, order in exit_order_df.iterrows():
-            rev_buy_sell = {"B": "S", "S": "B"}.get(order['buy_sell'])
-            logger.info(f"{rev_buy_sell} | {order['tsym']} | {lots*lot_size} | Original Order")
-        logger.info(f"B | {H_tsym} | {lots*lot_size} | Adjustment Hedge order")
-        logger.info(f"S | {L_tsym} | {lots*lot_size} | Adjustment Sell order")
-        logger.info(f"ORIGINAL DELTA: {delta}%")
-        logger.info(f"REVISED DELTA: {new_delta}%")
-        logger.info(format_line)
-    else:
-        # Exit and create adjustment Legs:
-        email_subject = f"*ADJUSTMENT* | DELTA: {delta}% | M2M: {m2m} | Revised DELTA: {new_delta}% "
-        logger.info(format_line)
-        logger.info("<<<ADJUSTMENTS>>>")
-        exit_positions(exit_order_df)
-        # Place leg and hedge orders
-        # Place leg and hedge orders
-        place_order("B", H_tsym, lots*lot_size, remarks="Adjustment Hedge order")
-        place_order("S", L_tsym, lots*lot_size, remarks="Adjustment Sell order")
-        logger.info(f"REVISED DELTA: {new_delta}%")
-        # Publish new Positions after 5 second wait
-        get_revised_position()
-        logger.info(format_line)
+    if adjust:
+        # Check if adjustment is not possible
+        # If new Delta is higher than delta threshhold
+        if (strategy =="IC" and new_delta > IF_delta_threshold) or (strategy =="IF" and new_delta > IC_delta_threshold):
+            email_subject="<<< PRICE OUT OF RANGE | EXIT OR ADJUST MANUALLY >>>"
+            logger.info(format_line)
+            logger.info("RECOMMENDED ADJUSTMENT:")
+            for i, order in exit_order_df.iterrows():
+                rev_buy_sell = {"B": "S", "S": "B"}.get(order['buy_sell'])
+                logger.info(f"{rev_buy_sell} | {order['tsym']} | {lots*lot_size} | Original Order")
+            logger.info(f"B | {H_tsym} | {lots*lot_size} | Adjustment Hedge order")
+            logger.info(f"S | {L_tsym} | {lots*lot_size} | Adjustment Sell order")
+            logger.info(f"ORIGINAL DELTA: {delta}%")
+            logger.info(f"REVISED DELTA: {new_delta}%")
+            logger.info(format_line)
+        else:
+            # Exit and create adjustment Legs:
+            email_subject = f"*ADJUSTMENT* | DELTA: {delta}% | M2M: {m2m} | Revised DELTA: {new_delta}% "
+            logger.info(format_line)
+            logger.info("<<<ADJUSTMENTS>>>")
+            exit_positions(exit_order_df)
+            # Place leg and hedge orders
+            # Place leg and hedge orders
+            place_order("B", H_tsym, lots*lot_size, remarks="Adjustment Hedge order")
+            place_order("S", L_tsym, lots*lot_size, remarks="Adjustment Sell order")
+            logger.info(f"REVISED DELTA: {new_delta}%")
+            # Publish new Positions after 5 second wait
+            get_revised_position()
+            logger.info(format_line)
     
 
 # Function to check if today is the first day of the month (example)
