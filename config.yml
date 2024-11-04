@@ -20,3 +20,5 @@ nfo_sym_path: NFO_symbols.txt
 Symbol: NIFTY
 interval: 60
 iteration_hours: 3
+num_adjustments: 0
+Entry_Date: 2024-10-24

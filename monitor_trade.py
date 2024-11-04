@@ -36,6 +36,8 @@ Past_M2M = config['Past_M2M']
 enable_trailing = config['enable_trailing']
 interval = config['interval']
 iteration_hours = config['iteration_hours']
+num_adjustments=config['num_adjustments']
+Entry_Date= config['Entry_Date']
 
 # config['Update_EOD']
 
@@ -519,10 +521,23 @@ def enter_trade():
         config['target_profit']=round(oi_margin*percent_profit/100,2)
 
     email_subject = '<<<<<<<< ENTRY MADE >>>>>>>>>>>>'
+    current_time = datetime.now()
+    updated_time = current_time + timedelta(hours=5, minutes=30)
+    extracted_date = updated_time.date()
+    config['Entry_Date']=str(extracted_date)
     save_config()
     clear_state('state.csv')
 
     return
+
+def count_working_days():
+    # Generate a range of dates from start_date to end_date
+    if Entry_Date==0:
+        Entry_Date= datetime.now()+ timedelta(hours=5, minutes=30)
+    current_time = datetime.now()
+    updated_time = current_time + timedelta(hours=5, minutes=30)
+    date_range = pd.date_range(start=Entry_Date, end=updated_time.date(),freq='B')  # 'B' for business days
+    return len(date_range)
 
 def place_order(buy_sell, tsym, qty, remarks="regular order"):
     prd_type = 'M'
@@ -601,7 +616,7 @@ def past_time(t):
 def monitor_and_execute_trades():
     global delta
     global email_subject
-
+    logger.info(f"### Day #: {count_working_days()} ###")
     # Capture days into the trade and exit in the expiry week
     # Capture total number of adjustments and exit if counter exceeds some value
 
@@ -658,6 +673,8 @@ def monitor_and_execute_trades():
     if strategy=="IF" and delta > IF_delta_threshold: 
         # Exit the loss making leg
         adjust=True
+        config['num_adjustments']=num_adjustments+1
+        save_config()
         exit_order_df = positions_df[positions_df.ord_type==loss_leg][['buy_sell','tsym','qty','remarks']]
         #Find new legs
         if loss_leg=="C":
@@ -678,6 +695,8 @@ def monitor_and_execute_trades():
     elif strategy=="IC" and delta> IC_delta_threshold:
         #Exit Profit making leg
         adjust=True
+        config['num_adjustments']=num_adjustments+1
+        save_config()
         exit_order_df = positions_df[positions_df.ord_type==profit_leg][['buy_sell','tsym','qty','remarks']]
         #Find new legs
         L_tsym=None
