@@ -815,7 +815,10 @@ if __name__=="__main__":
     login()
     counter=0
     # monitor_loop() # For single execution
-    while past_time(past_930) and not past_time(eod_10) and counter < iteration_hours*60:
-        monitor_loop()
-        counter+=1
-        time.sleep(interval)
+    try:
+        while past_time(past_930) and not past_time(eod_10) and counter < iteration_hours*60:
+            monitor_loop()
+            counter+=1
+            time.sleep(interval)
+    finally:
+        api.logout()
