@@ -630,8 +630,10 @@ def monitor_and_execute_trades():
     logger.info(format_line)
     # Step 1: Create positions on Day 1
     if positions_df is None or positions_df.empty:
-        noon = datetime.strptime("06:30:00", "%H:%M:%S").time()
-        if (check_day_after_last_thursday() and past_time(noon)) or enter_today :
+        # noon = datetime.strptime("06:30:00", "%H:%M:%S").time()
+        # if (check_day_after_last_thursday() and past_time(noon)) or enter_today :
+        # Disabling auto entry
+        if enter_today :
             enter_trade()
             # Publish new Positions after 5 second wait
             get_revised_position()
