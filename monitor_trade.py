@@ -492,34 +492,33 @@ def enter_trade():
         best_ord_df=Comb_ord_df
         auto_margin = comb_margin
 
-    percent_profit=config['percent_profit']
     # Execute trade:
     logger.info(format_line)
     if EntryType=="AUTO":
         logger.info(f"AUTO: Placing Order as per {best_entry}")
         print(f"AUTO: Placing Order as per {best_entry}")
         execute_basket(best_ord_df)
-        config['target_profit']=round(auto_margin*percent_profit/100,2)
+        # config['target_profit']=round(auto_margin*percent_profit/100,2)
     elif EntryType== "CURRENT":
         logger.info("Placing Order as per Current Values")
         execute_basket(Curr_ord_df)
-        config['target_profit']=round(curr_margin*percent_profit/100,2)
+        # config['target_profit']=round(curr_margin*percent_profit/100,2)
     elif EntryType== "FUTURE":
         logger.info("Placing Order as per Future Values")
         execute_basket(Fut_ord_df)
-        config['target_profit']=round(f_margin*percent_profit/100,2)
+        # config['target_profit']=round(f_margin*percent_profit/100,2)
     elif EntryType== "COMBINED":
         logger.info("Placing Order as per Combined Values")
         execute_basket(Comb_ord_df)
-        config['target_profit']=round(comb_margin*percent_profit/100,2)
+        # config['target_profit']=round(comb_margin*percent_profit/100,2)
     elif EntryType== "DELTA":
         logger.info("Placing Order as per Delta Neutral")
         execute_basket(Delta_ord_df)
-        config['target_profit']=round(d_margin*percent_profit/100,2)
+        # config['target_profit']=round(d_margin*percent_profit/100,2)
     elif EntryType== "OI":
         logger.info("Placing Order as per OI")
         execute_basket(Oi_ord_df)
-        config['target_profit']=round(oi_margin*percent_profit/100,2)
+        # config['target_profit']=round(oi_margin*percent_profit/100,2)
 
     email_subject = '<<<<<<<< ENTRY MADE >>>>>>>>>>>>'
     current_time = datetime.now()
@@ -649,7 +648,7 @@ def monitor_and_execute_trades():
 
     # Calculate max_profit
     max_profit = float((positions_df['qty'].astype(int)*positions_df['netupldprc'].astype(float)).sum()) * -1
-    auto_target = max_profit/2
+    auto_target = max_profit * config['percent_of_max_profit']/100
     logger.info(f"Max profit = {max_profit} | Auto target = {auto_target}")
     # logger.info(f"if {m2m} > {auto_target} or {m2m}> {target_profit}:")
     # logger.info(f"if {m2m} < -1 * {auto_target} or {m2m} < {stop_loss}")

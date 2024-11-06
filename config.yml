@@ -1,9 +1,9 @@
 live: 1
-IC_delta_threshold: 40
+IC_delta_threshold: 45
 IF_delta_threshold: 60
-percent_profit: 10
-target_profit: 18000
-stop_loss: -18000
+percent_of_max_profit: 50
+target_profit: 50000
+stop_loss: -50000
 enter_today: 0
 enable_trailing: 0
 trailing_percent: 0
