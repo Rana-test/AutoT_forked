@@ -775,6 +775,13 @@ def monitor_and_execute_trades():
             logger.info(f"ORIGINAL DELTA: {delta}%")
             logger.info(f"REVISED DELTA: {new_delta}%")
             logger.info(format_line)
+        elif L_tsym == exit_order_df[exit_order_df['buy_sell']=='B'].iloc[0]['tsym']:
+            logger.info(format_line)
+            logger.info("TCannot find better adjustment.. Exiting Trade")
+            email_subject = f'<<< CANNOT ADJUST. EXIT TRADE | M2M: {m2m} >>>'
+            exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
+            logger.info(format_line)
+            return
         else:
             # Exit and create adjustment Legs:
             email_subject = f"*ADJUSTMENT* | DELTA: {delta}% | M2M: {m2m} | Revised DELTA: {new_delta}% "
