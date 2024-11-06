@@ -839,7 +839,8 @@ if __name__=="__main__":
     # Login to Shoonya app
     print('Logging in ...')
     login()
-    counter=0
+    # Adjusting for executi time delay @ 1 min per hour
+    counter=iteration_hours*3
     # monitor_loop() # For single execution
     # exit(0) # For single execution
     try:
