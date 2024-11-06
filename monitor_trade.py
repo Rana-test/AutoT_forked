@@ -648,17 +648,24 @@ def monitor_and_execute_trades():
     logger.info(f"LOWER BE: {lower_be}, HIGHER BE: {higher_be}")
 
     # Calculate max_profit
-    max_profit = float((positions_df['qty'].astype(int)*positions_df['netupldprc'].astype(float)).sum())
+    max_profit = float((positions_df['qty'].astype(int)*positions_df['netupldprc'].astype(float)).sum()) * -1
     auto_target = max_profit/2
-    logger.info(f"Max pprofit = {max_profit} | Auto target = {auto_target}")
-    if m2m > auto_target:
-        logger.info("Exiting orders.. Profit target achieved")
-        email_subject = "EXIT after PROFIT Target"
-        exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
-    elif m2m < auto_target -1 :
-        logger.info("Exiting orders.. Stop loss hit")
-        email_subject = "EXIT after Stop Loss"
-        exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
+    logger.info(f"Max profit = {max_profit} | Auto target = {auto_target}")
+    if m2m > auto_target or m2m> target_profit:
+        logger.info(format_line)
+        logger.info("Target Profit Acheived. Exit Trade")
+        email_subject = f'<<< TARGET PROFIT ACHIEVED. EXIT TRADE | M2M: {m2m} >>>'
+        # exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
+        logger.info(format_line)
+        return
+    elif m2m < -1 * auto_target or m2m < stop_loss:
+        # Implement traling stop loss
+        logger.info(format_line)
+        logger.info("Stop Loss hit. Exit Trade")
+        email_subject = f'<<< STOP LOSS HIT. EXIT TRADE | M2M: {m2m} >>>'
+        # exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
+        logger.info(format_line)
+        return
     
     if trailing_profit_exit('state.csv'):
         logger.info(format_line)
@@ -667,14 +674,14 @@ def monitor_and_execute_trades():
         exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
         logger.info(format_line)
         return
-    elif m2m < stop_loss:
-        # Implement traling stop loss
-        logger.info(format_line)
-        logger.info("Stop Loss hit. Exit Trade")
-        email_subject = f'<<< STOP LOSS HIT. EXIT TRADE | M2M: {m2m} >>>'
-        exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
-        logger.info(format_line)
-        return
+    # elif m2m < stop_loss:
+    #     # Implement traling stop loss
+    #     logger.info(format_line)
+    #     logger.info("Stop Loss hit. Exit Trade")
+    #     email_subject = f'<<< STOP LOSS HIT. EXIT TRADE | M2M: {m2m} >>>'
+    #     exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
+    #     logger.info(format_line)
+    #     return
 
     # Step 2: Check adjustment signal
     delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff, current_strike = calculate_delta(positions_df)
