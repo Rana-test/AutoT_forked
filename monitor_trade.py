@@ -624,6 +624,7 @@ def monitor_and_execute_trades():
 
     # Get Positions
     positions_df, m2m = get_current_positions()
+
     # Step 1: Create positions on Day 1
     if positions_df is None or positions_df.empty:
         # noon = datetime.strptime("06:30:00", "%H:%M:%S").time()
@@ -645,6 +646,19 @@ def monitor_and_execute_trades():
     # Get breakevens
     lower_be, higher_be = calculate_breakevens(positions_df)
     logger.info(f"LOWER BE: {lower_be}, HIGHER BE: {higher_be}")
+
+    # Calculate max_profit
+    max_profit = float((positions_df['qty'].astype(int)*positions_df['netupldprc'].astype(float)).sum())
+    auto_target = max_profit/2
+    logger.info(f"Max pprofit = {max_profit} | Auto target = {auto_target}")
+    if m2m > auto_target:
+        logger.info("Exiting orders.. Profit target achieved")
+        email_subject = "EXIT after PROFIT Target"
+        exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
+    elif m2m < auto_target -1 :
+        logger.info("Exiting orders.. Stop loss hit")
+        email_subject = "EXIT after Stop Loss"
+        exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
     
     if trailing_profit_exit('state.csv'):
         logger.info(format_line)
