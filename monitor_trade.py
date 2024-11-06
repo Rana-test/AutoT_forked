@@ -646,9 +646,18 @@ def monitor_and_execute_trades():
     lower_be, higher_be = calculate_breakevens(positions_df)
     logger.info(f"LOWER BE: {lower_be}, HIGHER BE: {higher_be}")
 
-    # Calculate max_profit
+    # Step 2: Check adjustment signal
+    delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff, current_strike = calculate_delta(positions_df)
+
+    print(delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff, current_strike)
+
+       # Calculate max_profit
     max_profit = float((positions_df['qty'].astype(int)*positions_df['netupldprc'].astype(float)).sum()) * -1
     auto_target = max_profit * config['percent_of_max_profit']/100
+    # Half targets for Iron Fly
+    if strategy =="IF":
+        auto_target=auto_target/2
+
     logger.info(f"Max profit = {max_profit} | Auto target = {auto_target}")
     # logger.info(f"if {m2m} > {auto_target} or {m2m}> {target_profit}:")
     # logger.info(f"if {m2m} < -1 * {auto_target} or {m2m} < {stop_loss}")
@@ -672,22 +681,9 @@ def monitor_and_execute_trades():
         logger.info(format_line)
         logger.info("Target Profit Acheived. Exit Trade")
         email_subject = f'<<< TARGET PROFIT ACHIEVED. EXIT TRADE | M2M: {m2m} >>>'
-        exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
+        # exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
         logger.info(format_line)
         return
-    # elif m2m < stop_loss:
-    #     # Implement traling stop loss
-    #     logger.info(format_line)
-    #     logger.info("Stop Loss hit. Exit Trade")
-    #     email_subject = f'<<< STOP LOSS HIT. EXIT TRADE | M2M: {m2m} >>>'
-    #     exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
-    #     logger.info(format_line)
-    #     return
-
-    # Step 2: Check adjustment signal
-    delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff, current_strike = calculate_delta(positions_df)
-
-    print(delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff, current_strike)
 
     email_subject = f'DELTA: {delta}% | M2M: {m2m} | SP: {current_strike} | Strategy: {strategy}'
 
