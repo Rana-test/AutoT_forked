@@ -651,8 +651,8 @@ def monitor_and_execute_trades():
     max_profit = float((positions_df['qty'].astype(int)*positions_df['netupldprc'].astype(float)).sum()) * -1
     auto_target = max_profit/2
     logger.info(f"Max profit = {max_profit} | Auto target = {auto_target}")
-    logger.info(f"if {m2m} > {auto_target} or {m2m}> {target_profit}:")
-    logger.info(f"if {m2m} < -1 * {auto_target} or {m2m} < {stop_loss}")
+    # logger.info(f"if {m2m} > {auto_target} or {m2m}> {target_profit}:")
+    # logger.info(f"if {m2m} < -1 * {auto_target} or {m2m} < {stop_loss}")
     if m2m > auto_target or m2m> target_profit:
         logger.info(format_line)
         logger.info("Target Profit Acheived. Exit Trade")
