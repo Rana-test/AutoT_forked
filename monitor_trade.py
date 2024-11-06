@@ -777,7 +777,7 @@ def monitor_and_execute_trades():
             logger.info(format_line)
         elif L_tsym == exit_order_df[exit_order_df['buy_sell']=='B'].iloc[0]['tsym']:
             logger.info(format_line)
-            logger.info("TCannot find better adjustment.. Exiting Trade")
+            logger.info("Cannot find better adjustment.. Exiting Trade")
             email_subject = f'<<< CANNOT ADJUST. EXIT TRADE | M2M: {m2m} >>>'
             exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
             logger.info(format_line)
