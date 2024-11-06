@@ -761,21 +761,19 @@ def monitor_and_execute_trades():
         H_tsym, lp = get_nearest_strike_strike(odf, H_strike)
 
     if adjust:
+        logger.info(format_line)
+        logger.info("RECOMMENDED ADJUSTMENT:")
+        for i, order in exit_order_df.iterrows():
+            rev_buy_sell = {"B": "S", "S": "B"}.get(order['buy_sell'])
+            logger.info(f"{rev_buy_sell} | {order['tsym']} | {lots*lot_size} | Original Order")
+        logger.info(f"B | {H_tsym} | {lots*lot_size} | Adjustment Hedge order")
+        logger.info(f"S | {L_tsym} | {lots*lot_size} | Adjustment Sell order")
+        logger.info(f"ORIGINAL DELTA: {delta}%")
+        logger.info(f"REVISED DELTA: {new_delta}%")
+        logger.info(format_line)
         # Check if adjustment is not possible
-        # If new Delta is higher than delta threshhold
-        if (strategy =="IC" and new_delta > IF_delta_threshold) or (strategy =="IF" and new_delta > IC_delta_threshold):
-            email_subject="<<< PRICE OUT OF RANGE | EXIT OR ADJUST MANUALLY >>>"
-            logger.info(format_line)
-            logger.info("RECOMMENDED ADJUSTMENT:")
-            for i, order in exit_order_df.iterrows():
-                rev_buy_sell = {"B": "S", "S": "B"}.get(order['buy_sell'])
-                logger.info(f"{rev_buy_sell} | {order['tsym']} | {lots*lot_size} | Original Order")
-            logger.info(f"B | {H_tsym} | {lots*lot_size} | Adjustment Hedge order")
-            logger.info(f"S | {L_tsym} | {lots*lot_size} | Adjustment Sell order")
-            logger.info(f"ORIGINAL DELTA: {delta}%")
-            logger.info(f"REVISED DELTA: {new_delta}%")
-            logger.info(format_line)
-        elif L_tsym == exit_order_df[exit_order_df['buy_sell']=='B'].iloc[0]['tsym']:
+        # If new Delta is higher than delta threshhold or new adjstment same as existing positions
+        if (strategy =="IC" and new_delta > IF_delta_threshold) or (strategy =="IF" and new_delta > IC_delta_threshold) or (L_tsym == exit_order_df[exit_order_df['buy_sell']=='B'].iloc[0]['tsym']):
             logger.info(format_line)
             logger.info("Cannot find better adjustment.. Exiting Trade")
             email_subject = f'<<< CANNOT ADJUST. EXIT TRADE | M2M: {m2m} >>>'
