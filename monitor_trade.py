@@ -294,7 +294,7 @@ def get_current_positions():
 
 def get_revised_position():
     # Publish new Positions after 5 second wait
-    time.sleep(5)
+    time.sleep(10)
     rev_position, rev_m2m = get_current_positions()
     logger.info(format_line)
     logger.info("<<<REVISED POSITIONS>>>")
@@ -599,7 +599,7 @@ def calculate_delta(df):
     pe_hedge_diff= pstrike-p_hedge_strike
     ce_hedge_diff= c_hedge_strike-cstrike
 
-    return delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff, current_strike
+    return delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff, current_strike, pstrike, cstrike
 
 def past_time(t):
     # Get the current time
@@ -648,34 +648,13 @@ def monitor_and_execute_trades():
     logger.info(f"LOWER BE: {lower_be}, HIGHER BE: {higher_be}")
 
     # Step 2: Check adjustment signal
-    delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff, current_strike = calculate_delta(positions_df)
+    delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff, current_strike, pstrike, cstrike = calculate_delta(positions_df)
 
-    print(delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff, current_strike)
+    print(delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff, current_strike, pstrike, cstrike)
 
-       # Calculate max_profit
+    # Calculate max_profit and exit if condition met
     max_profit = float((positions_df['qty'].astype(int)*positions_df['netupldprc'].astype(float)).sum()) * -1
-    auto_target = max_profit * config['percent_of_max_profit']/100
-    # Half targets for Iron Fly
-    if strategy =="IF":
-        auto_target=auto_target/2
-
-    logger.info(f"Max profit = {max_profit} | Auto target = {auto_target}")
-    # logger.info(f"if {m2m} > {auto_target} or {m2m}> {target_profit}:")
-    # logger.info(f"if {m2m} < -1 * {auto_target} or {m2m} < {stop_loss}")
-    if m2m > auto_target or m2m> target_profit:
-        logger.info(format_line)
-        logger.info("Target Profit Acheived. Exit Trade")
-        email_subject = f'<<< TARGET PROFIT ACHIEVED. EXIT TRADE | M2M: {m2m} >>>'
-        # exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
-        logger.info(format_line)
-        return
-    elif m2m < -1 * auto_target or m2m < stop_loss:
-        # Implement traling stop loss
-        logger.info(format_line)
-        logger.info("Stop Loss hit. Exit Trade")
-        email_subject = f'<<< STOP LOSS HIT. EXIT TRADE | M2M: {m2m} >>>'
-        # exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
-        logger.info(format_line)
+    if auto_exit(max_profit, strategy, m2m):
         return
     
     if trailing_profit_exit('state.csv'):
@@ -689,6 +668,12 @@ def monitor_and_execute_trades():
     email_subject = f'DELTA: {delta}% | M2M: {m2m} | SP: {current_strike} | Strategy: {strategy}'
 
     adjust=False
+    L_tsym=None
+    H_tsym=None
+    L_lp = None
+    H_lp = None
+    rev_pstrike = pstrike
+    rev_cstrike = cstrike
 
     if strategy=="IF" and delta > IF_delta_threshold: 
         # Exit the loss making leg
@@ -696,7 +681,7 @@ def monitor_and_execute_trades():
         num_adjustments+=1
         config['num_adjustments']=num_adjustments
         save_config()
-        exit_order_df = positions_df[positions_df.ord_type==loss_leg][['buy_sell','tsym','qty','remarks']]
+        exit_order_df = positions_df[positions_df.ord_type==loss_leg][['buy_sell','tsym','qty','remarks', 'netupldprc']]
         #Find new legs
         if loss_leg=="C":
             search_ltp = pltp
@@ -704,14 +689,16 @@ def monitor_and_execute_trades():
             L_tsym, L_lp = get_nearest_price_strike(odf, search_ltp)
             H_strike = int(L_tsym[13:])+ce_hedge_diff 
             new_delta = round(100*abs(L_lp-pltp)/(L_lp+pltp),2)
+            rev_cstrike = int(L_tsym[13:])
         else:
             search_ltp = cltp
             odf = get_Option_Chain("PE")
             L_tsym, L_lp = get_nearest_price_strike(odf, search_ltp)
             H_strike = int(L_tsym[13:])-pe_hedge_diff
             new_delta = round(100*abs(L_lp-cltp)/(L_lp+cltp),2)
+            rev_pstrike = int(L_tsym[13:])
 
-        H_tsym, lp = get_nearest_strike_strike(odf, H_strike)
+        H_tsym, H_lp = get_nearest_strike_strike(odf, H_strike)
 
     elif strategy=="IC" and delta> IC_delta_threshold:
         #Exit Profit making leg
@@ -720,9 +707,8 @@ def monitor_and_execute_trades():
         config['num_adjustments']=num_adjustments
         save_config()
         exit_order_df = positions_df[positions_df.ord_type==profit_leg][['buy_sell','tsym','qty','remarks']]
+
         #Find new legs
-        L_tsym=None
-        H_tsym=None
         if profit_leg=="C":
             search_ltp = pltp
             odf = get_Option_Chain("CE")
@@ -737,6 +723,9 @@ def monitor_and_execute_trades():
             
             L_tsym, L_lp = get_nearest_strike_strike(odf, new_strike_price)
             H_strike = new_strike_price+ce_hedge_diff
+
+            rev_cstrike = int(L_tsym[13:])
+
             new_delta = round(100*abs(L_lp-pltp)/(L_lp+pltp),2)
         else:
             search_ltp = cltp
@@ -752,9 +741,12 @@ def monitor_and_execute_trades():
 
             L_tsym, L_lp = get_nearest_strike_strike(odf, new_strike_price)
             H_strike = new_strike_price-pe_hedge_diff
+
+            rev_pstrike = int(L_tsym[13:])
+
             new_delta = round(100*abs(L_lp-cltp)/(L_lp+cltp),2)
 
-        H_tsym, lp = get_nearest_strike_strike(odf, H_strike)
+        H_tsym, H_lp = get_nearest_strike_strike(odf, H_strike)
 
     if adjust:
         logger.info(format_line)
@@ -767,6 +759,24 @@ def monitor_and_execute_trades():
         logger.info(f"ORIGINAL DELTA: {delta}%")
         logger.info(f"REVISED DELTA: {new_delta}%")
         logger.info(format_line)
+        #Check if new adjustment reduces the max_profit and hence triggers an early exit before making adjustments
+
+        # Initial Max Profit
+        max_profit = float((positions_df['qty'].astype(int)*positions_df['netupldprc'].astype(float)).sum()) * -1
+        # Less exit order sum
+        exit_order_sum = float((exit_order_df['qty'].astype(int)*exit_order_df['netupldprc'].astype(float)).sum()) * -1
+        # Plus new order sum
+        new_order_sum = (L_lp - H_lp) *lots*lot_size
+        revised_max_profit = max_profit - exit_order_sum + new_order_sum
+        logger.info(f" Initial Max Profit: {max_profit} | Exit Order Sum: {exit_order_sum} | New Order Sum: {new_order_sum} | Revised Max Profit: {revised_max_profit}")
+        #find new strategy
+        revised_strategy = 'IF' if abs(rev_pstrike-rev_cstrike) < min(abs(current_strike-rev_pstrike), abs(current_strike-rev_cstrike)) else 'IC'
+        # Special condition
+        if rev_pstrike==rev_cstrike and rev_cstrike==current_strike:
+            revised_strategy = 'IF'
+        if auto_exit(revised_max_profit, revised_strategy, m2m):
+            return
+
         # Check if adjustment is not possible
         # If new Delta is higher than delta threshhold or new adjstment same as existing positions
         if (strategy =="IC" and new_delta > IF_delta_threshold) or (strategy =="IF" and new_delta > IC_delta_threshold) or (L_tsym == exit_order_df[exit_order_df['buy_sell']=='B'].iloc[0]['tsym']):
@@ -776,13 +786,13 @@ def monitor_and_execute_trades():
             exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
             logger.info(format_line)
             return
+        # Check revised max profit after adjustment and exit if target profit/stop loss hit 
         else:
             # Exit and create adjustment Legs:
             email_subject = f"*ADJUSTMENT* | DELTA: {delta}% | M2M: {m2m} | Revised DELTA: {new_delta}% "
             logger.info(format_line)
             logger.info("<<<ADJUSTMENTS>>>")
             exit_positions(exit_order_df)
-            # Place leg and hedge orders
             # Place leg and hedge orders
             place_order("B", H_tsym, lots*lot_size, remarks="Adjustment Hedge order")
             place_order("S", L_tsym, lots*lot_size, remarks="Adjustment Sell order")
@@ -817,6 +827,34 @@ def check_day_after_last_thursday():
     
     # Check if today is one day after the last Thursday
     return today == last_thursday_current_month + timedelta(days=1)
+
+def auto_exit(max_profit, strategy, m2m):
+    auto_target = max_profit * config['percent_of_max_profit']/100
+    # Half targets for Iron Fly
+    if strategy =="IF":
+        auto_target=auto_target/2
+    logger.info(f"Max profit = {max_profit} | Auto target = {auto_target}")
+    # logger.info(f"if {m2m} > {auto_target} or {m2m}> {target_profit}:")
+    # logger.info(f"if {m2m} < -1 * {auto_target} or {m2m} < {stop_loss}")
+    if m2m > auto_target or m2m> target_profit:
+        logger.info(format_line)
+        logger.info("Target Profit Acheived. Exit Trade")
+        email_subject = f'<<< TARGET PROFIT ACHIEVED. EXIT TRADE | M2M: {m2m} >>>'
+        # exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
+        get_revised_position()
+        logger.info(format_line)
+        return True
+    elif m2m < -1 * auto_target or m2m < stop_loss:
+        # Implement traling stop loss
+        logger.info(format_line)
+        logger.info("Stop Loss hit. Exit Trade")
+        email_subject = f'<<< STOP LOSS HIT. EXIT TRADE | M2M: {m2m} >>>'
+        # exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
+        logger.info(format_line)
+        return True
+    else:
+        return False
+
 
 def login():
     global userid
