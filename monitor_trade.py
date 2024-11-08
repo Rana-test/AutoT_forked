@@ -608,7 +608,7 @@ def past_time(t):
     logger.info(f"Current Time: {now} | Checked for time: {t}")
     logger.info(format_line)
     # Check if the current time is greater than t
-    if now > t:
+    if now >= t:
         return True
     else:
         return False
