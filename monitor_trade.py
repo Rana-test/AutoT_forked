@@ -39,6 +39,7 @@ iteration_hours = config['iteration_hours']
 num_adjustments=config['num_adjustments']
 Entry_Date= config['Entry_Date']
 
+
 # config['Update_EOD']
 
 def save_config():
@@ -855,21 +856,19 @@ def monitor_loop():
 
 # Call the main function periodically to monitor and execute trades
 if __name__=="__main__":
-    past_930 = datetime.strptime("03:30:00", "%H:%M:%S").time()
-    eod_10 = datetime.strptime("10:02:00", "%H:%M:%S").time()
+    thread_start_time = datetime.now() 
+    start_time  = datetime.strptime(config['start_time'], "%H:%M:%S").time()
+    end_time = datetime.strptime(config['end_time'], "%H:%M:%S").time()
     if not os.path.exists('logs'):
         os.makedirs('logs')
     # Login to Shoonya app
     print('Logging in ...')
     login()
-    # Adjusting for executi time delay @ 1 min per hour
-    counter=iteration_hours*3
     # monitor_loop() # For single execution
     # exit(0) # For single execution
     try:
-        while past_time(past_930) and not past_time(eod_10) and counter < iteration_hours*60:
+        while past_time(start_time) and not past_time(end_time) and (datetime.now() - thread_start_time).total_seconds() < iteration_hours*60*60:
             monitor_loop()
-            counter+=1
             time.sleep(interval)
     except Exception as e:
         print(e)
