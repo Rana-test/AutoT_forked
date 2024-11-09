@@ -231,6 +231,13 @@ def get_current_positions():
                     buy_sell = 'B'
                 elif int(i['netqty'])==0:
                     buy_sell = 'NA'
+                
+                # Error handling in case of wrong LTP value returned by API
+                if float(i['lp'])<1:
+                    logger.info("Below 1 LP issue. Check manually")
+                    email_subject = "Below 1 LP issue. Check manually"
+                    return None, 0
+
                 open_pos_data.append({
                     'buy_sell': buy_sell, 
                     'tsym':i['tsym'], 
