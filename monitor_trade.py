@@ -20,8 +20,6 @@ live = config['live']
 target_profit = config['target_profit']
 stop_loss = config['stop_loss']
 enter_today = config['enter_today']
-IC_delta_threshold = config['IC_delta_threshold']
-IF_delta_threshold = config['IF_delta_threshold']
 EntryType= config['EntryType']
 nse_sym_path = config['nse_sym_path']
 nfo_sym_path = config['nfo_sym_path']
@@ -674,6 +672,7 @@ def monitor_and_execute_trades():
     H_lp = None
     rev_pstrike = pstrike
     rev_cstrike = cstrike
+    IC_delta_threshold, IF_delta_threshold = get_delta_thresholds()
 
     if strategy=="IF" and delta > IF_delta_threshold: 
         # Exit the loss making leg
@@ -891,6 +890,45 @@ def monitor_loop():
             
     # Clear Logs
     open('logs/app.log', 'w').close()
+
+def get_delta_thresholds():
+    next_friday = find_friday_ordinal()
+    IC_map = {
+        1:50, 
+        2:40,
+        3:35,
+        4:33,
+        5:33
+        }
+    IF_map = {
+        1:60, 
+        2:50,
+        3:40,
+        4:40,
+        5:40
+        }
+    return (IC_map.get(next_friday), IF_map.get(next_friday))
+
+def find_friday_ordinal():
+    # Get today's date
+    today = datetime.today()+ timedelta(days=1)
+    
+    # Calculate the next Friday
+    next_friday = today + timedelta((4 - today.weekday()) % 7)
+    
+    # Check which Friday it is in the month
+    first_day_of_month = next_friday.replace(day=1)
+    day_of_week_of_first = first_day_of_month.weekday()
+    
+    # Find the first Friday of the month
+    days_until_first_friday = (4 - day_of_week_of_first) % 7
+    first_friday = first_day_of_month + timedelta(days=days_until_first_friday)
+    
+    # Calculate how many Fridays have occurred up to next Friday
+    ordinal = ((next_friday - first_friday).days // 7) + 1
+    
+    return ordinal
+
 
 # Call the main function periodically to monitor and execute trades
 if __name__=="__main__":
