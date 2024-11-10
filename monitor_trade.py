@@ -835,8 +835,9 @@ def check_day_after_last_thursday():
     return today == last_thursday_current_month + timedelta(days=1)
 
 def auto_exit(max_profit, strategy, m2m):
+    global num_adjustments
     # Reducing max_profit_percent by 5% for every adjustment
-    auto_target = max_profit * (int(config['percent_of_max_profit'])-5*int(config['num_adjustments']))/100
+    auto_target = max_profit * (int(config['percent_of_max_profit'])-3*num_adjustments)/100
     # Divide 1.5 targets for Iron Fly 
     if strategy =="IF":
         auto_target=auto_target/1.5
