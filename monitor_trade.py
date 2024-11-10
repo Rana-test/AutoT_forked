@@ -835,13 +835,14 @@ def check_day_after_last_thursday():
     return today == last_thursday_current_month + timedelta(days=1)
 
 def auto_exit(max_profit, strategy, m2m):
-    auto_target = max_profit * config['percent_of_max_profit']/100
-    # Half targets for Iron Fly
+    # Reducing max_profit_percent by 5% for every adjustment
+    auto_target = max_profit * (int(config['percent_of_max_profit'])-5*int(config['num_adjustments']))/100
+    # Divide 1.5 targets for Iron Fly 
     if strategy =="IF":
-        auto_target=auto_target/2
+        auto_target=auto_target/1.5
     logger.info(f"Max profit = {max_profit} | Auto target = {auto_target}")
-    # logger.info(f"if {m2m} > {auto_target} or {m2m}> {target_profit}:")
-    # logger.info(f"if {m2m} < -1 * {auto_target} or {m2m} < {stop_loss}")
+    logger.info(f"if {m2m} > {auto_target} or {m2m}> {target_profit}:")
+    logger.info(f"if {m2m} < -1 * {auto_target} or {m2m} < {stop_loss}")
     if m2m > auto_target or m2m> target_profit:
         logger.info(format_line)
         logger.info("Target Profit Acheived. Exit Trade")
