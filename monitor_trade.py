@@ -899,42 +899,45 @@ def monitor_loop():
     open('logs/app.log', 'w').close()
 
 def get_delta_thresholds():
-    next_friday = find_friday_ordinal()
-    IC_map = {
-        1:50, 
-        2:40,
-        3:35,
-        4:33,
-        5:33
-        }
-    IF_map = {
-        1:60, 
-        2:50,
-        3:40,
-        4:40,
-        5:40
-        }
-    return (IC_map.get(next_friday), IF_map.get(next_friday))
+    global Expiry
+    friday_count = friday_till_expiry(Expiry)
+    ICT = 33
+    IFT=40
+    if friday_count > 3:
+        ICT = 50
+        IFT=60
+    elif friday_count > 2:
+        ICT = 40
+        IFT=50
+    elif friday_count > 1:
+        ICT = 35
+        IFT=40
+    else:
+        ICT = 33
+        IFT=40
+    logger.info(f"ICT: {ICT} | IFT: {IFT}")
+    return ICT, IFT
 
-def find_friday_ordinal():
+def friday_till_expiry(date_str):
+    # Parse the target date from string
+    target_date = datetime.strptime(date_str, "%d-%b-%Y")
+    
     # Get today's date
-    today = datetime.today()+ timedelta(days=1)
+    today = datetime.today()
     
-    # Calculate the next Friday
-    next_friday = today + timedelta((4 - today.weekday()) % 7)
+    # Initialize a counter for Fridays
+    friday_count = 0
     
-    # Check which Friday it is in the month
-    first_day_of_month = next_friday.replace(day=1)
-    day_of_week_of_first = first_day_of_month.weekday()
+    # Loop from today to the target date
+    current_date = today
+    while current_date <= target_date:
+        # Check if the current date is a Friday (weekday 4)
+        if current_date.weekday() == 4:
+            friday_count += 1
+        # Move to the next day
+        current_date += timedelta(days=1)
     
-    # Find the first Friday of the month
-    days_until_first_friday = (4 - day_of_week_of_first) % 7
-    first_friday = first_day_of_month + timedelta(days=days_until_first_friday)
-    
-    # Calculate how many Fridays have occurred up to next Friday
-    ordinal = ((next_friday - first_friday).days // 7) + 1
-    
-    return ordinal
+    return friday_count
 
 
 # Call the main function periodically to monitor and execute trades
