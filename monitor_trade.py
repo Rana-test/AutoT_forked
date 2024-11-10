@@ -902,7 +902,7 @@ def get_delta_thresholds():
     global Expiry
     friday_count = friday_till_expiry(Expiry)
     ICT = 33
-    IFT=40
+    IFT=50
     if friday_count > 3:
         ICT = 50
         IFT=60
@@ -911,10 +911,10 @@ def get_delta_thresholds():
         IFT=50
     elif friday_count > 1:
         ICT = 35
-        IFT=40
+        IFT=50
     else:
         ICT = 33
-        IFT=40
+        IFT=50
     logger.info(f"ICT: {ICT} | IFT: {IFT}")
     return ICT, IFT
 
