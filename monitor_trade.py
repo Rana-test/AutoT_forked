@@ -608,9 +608,9 @@ def calculate_delta(df):
 def past_time(t):
     # Get the current time
     now = datetime.now().time()
-    logger.info(format_line)
-    logger.info(f"Current Time: {now} | Checked for time: {t}")
-    logger.info(format_line)
+    # logger.info(format_line)
+    # logger.info(f"Current Time: {now} | Checked for time: {t}")
+    # logger.info(format_line)
     # Check if the current time is greater than t
     if now >= t:
         return True
@@ -958,7 +958,7 @@ if __name__=="__main__":
     # monitor_loop() # For single execution
     # exit(0) # For single execution
     try:
-        while not past_time(end_time):
+        while past_time(start_time) and not past_time(end_time):
             monitor_loop()
             time.sleep(interval)
     except Exception as e:
