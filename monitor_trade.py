@@ -33,7 +33,6 @@ trailing_percent=config['trailing_percent']
 Past_M2M = config['Past_M2M']
 enable_trailing = config['enable_trailing']
 interval = config['interval']
-iteration_hours = config['iteration_hours']
 num_adjustments=config['num_adjustments']
 Entry_Date= config['Entry_Date']
 
@@ -945,8 +944,12 @@ def friday_till_expiry(date_str):
 # Call the main function periodically to monitor and execute trades
 if __name__=="__main__":
     thread_start_time = datetime.now() 
-    start_time  = datetime.strptime(config['start_time'], "%H:%M:%S").time()
-    end_time = datetime.strptime(config['end_time'], "%H:%M:%S").time()
+    # Define start and end times as datetime objects on today's date
+    start_time = datetime.combine(thread_start_time.date(), datetime.strptime(config['start_time'], "%H:%M:%S").time())
+    end_time = datetime.combine(thread_start_time.date(), datetime.strptime(config['end_time'], "%H:%M:%S").time())
+    if (end_time - thread_start_time).total_seconds() > 11000:
+        end_time = datetime.combine(thread_start_time.date(), datetime.strptime('06:45:00', "%H:%M:%S").time())
+
     if not os.path.exists('logs'):
         os.makedirs('logs')
     # Login to Shoonya app
@@ -955,7 +958,7 @@ if __name__=="__main__":
     # monitor_loop() # For single execution
     # exit(0) # For single execution
     try:
-        while past_time(start_time) and not past_time(end_time) and (datetime.now() - thread_start_time).total_seconds() < iteration_hours*60*60:
+        while not past_time(end_time):
             monitor_loop()
             time.sleep(interval)
     except Exception as e:

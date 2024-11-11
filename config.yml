@@ -19,6 +19,5 @@ Symbol: NIFTY
 interval: 60
 num_adjustments: 0
 Entry_Date: 2024-10-24
-iteration_hours: 3
 start_time: '03:45:00'
 end_time: '10:00:00'
