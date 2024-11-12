@@ -1,4 +1,4 @@
-### Day #: 14 ###
+### Day #: 15 ###
 --------------------------------------------------------
 <<<TODAY'S CLOSED POSITION : -7777.5 | ADJUST TARGET PROFIT>>>
 --------------------------------------------------------
@@ -11,9 +11,9 @@
 4        S  NIFTY28NOV24P23700  -75     136.75  160.30
 5        B  NIFTY28NOV24P22800   75      18.55   24.50
 LOWER BE: 23328.3, HIGHER BE: 24671.7
-Max profit = 27877.5 | Auto target = 13102.425
-if 2996.25 > 13102.425 or 2996.25> 50000:
-if 2996.25 < -1 * 13102.425 or 2996.25 < -50000
+Max profit = 27877.5 | Auto target = 10593.45
+if 2996.25 > 10593.45 or 2996.25> 50000:
+if 2996.25 < -1 * 10593.45 or 2996.25 < -50000
 Loaded state: Max profit: 11313.75, Trailing stop: 50000, Trailing mode: False
 ICT: 15 | IFT: 50
 --------------------------------------------------------
@@ -25,3 +25,13 @@ S | NIFTY28NOV24C24100 | 75 | Adjustment Sell order
 ORIGINAL DELTA: 20.46%
 REVISED DELTA: 4.34%
 --------------------------------------------------------
+ Initial Max Profit: 27877.5 | Exit Order Sum: 26790.0 | New Order Sum: 11606.25 | Revised Max Profit: 12693.75
+Max profit = 12693.75 | Auto target = 4442.8125
+if 2996.25 > 4442.8125 or 2996.25> 50000:
+if 2996.25 < -1 * 4442.8125 or 2996.25 < -50000
+--------------------------------------------------------
+<<<ADJUSTMENTS>>>
+TEST ORDER PLACEMENT: B, NIFTY28NOV24C24300, 75, Existing Order
+TEST ORDER PLACEMENT: S, NIFTY28NOV24C25100, 75, Existing Order
+TEST ORDER PLACEMENT: B, NIFTY28NOV24C24900, 75, Adjustment Hedge order
+TEST ORDER PLACEMENT: S, NIFTY28NOV24C24100, 75, Adjustment Sell order
