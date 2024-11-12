@@ -608,11 +608,12 @@ def calculate_delta(df):
 def past_time(t):
     # Get the current time
     now = datetime.now().time()
+    delta = (end_time-start_time).total_seconds()
     # logger.info(format_line)
     # logger.info(f"Current Time: {now} | Checked for time: {t}")
     # logger.info(format_line)
     # Check if the current time is greater than t
-    if now >= t:
+    if delta< 0:
         return True
     else:
         return False
@@ -947,6 +948,9 @@ if __name__=="__main__":
     # Define start and end times as datetime objects on today's date
     start_time = datetime.combine(thread_start_time.date(), datetime.strptime(config['start_time'], "%H:%M:%S").time())
     end_time = datetime.combine(thread_start_time.date(), datetime.strptime(config['end_time'], "%H:%M:%S").time())
+    # start_time = datetime.strptime(config['start_time'], "%H:%M:%S")
+    # end_time = datetime.strptime(config['end_time'], "%H:%M:%S")
+
     if (end_time - thread_start_time).total_seconds() > 11000:
         end_time = datetime.combine(thread_start_time.date(), datetime.strptime('06:44:00', "%H:%M:%S").time())
 
