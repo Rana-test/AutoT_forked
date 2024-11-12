@@ -292,6 +292,7 @@ def get_current_positions():
                     # Update Settled Amount
                     config['Update_EOD']=1
                     config['Past_M2M']=config['Past_M2M']+closed_m2m
+                    exit(0)
             else:
                 config['Update_EOD']=0
             save_config()
