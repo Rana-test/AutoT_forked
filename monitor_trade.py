@@ -133,12 +133,12 @@ def load_state(csv_file):
         df.to_csv(csv_file, index=False)
     df = pd.read_csv(csv_file)
     if len(df)>0:
-        max_profit = df['m2m'].max()  # Max profit based on m2m column
+        m_profit = df['m2m'].max()  # Max profit based on m2m column
         trailing_profit_threshold=df.iloc[-1]['trailing_profit_threshold']
         in_trailing_mode = df.iloc[-1]['in_trailing_mode']
-        print(f"Loaded state: Max profit: {max_profit}, Trailing stop: {trailing_profit_threshold}, Trailing mode: {in_trailing_mode}")
-        logger.info(f"Loaded state: Max profit: {max_profit}, Trailing stop: {trailing_profit_threshold}, Trailing mode: {in_trailing_mode}")
-        return max_profit, trailing_profit_threshold, in_trailing_mode, df
+        print(f"Loaded state: Max profit: {m_profit}, Trailing stop: {trailing_profit_threshold}, Trailing mode: {in_trailing_mode}")
+        logger.info(f"Loaded state: Max profit: {m_profit}, Trailing stop: {trailing_profit_threshold}, Trailing mode: {in_trailing_mode}")
+        return m_profit, trailing_profit_threshold, in_trailing_mode, df
     else:
         # Initial state if CSV doesn't have any entry
         return 0, target_profit, False, df
@@ -160,13 +160,13 @@ def trailing_profit_exit(csv_file):
     :return: True if trade should be exited, otherwise False
     """
     global in_trailing_mode, trailing_percent, total_m2m, target_profit
-    max_profit, trailing_profit_threshold, in_trailing_mode, df = load_state(csv_file)
+    m_profit, trailing_profit_threshold, in_trailing_mode, df = load_state(csv_file)
 
     if enable_trailing and not df.empty:     
         # Apply loop for trailing
         # If already in trailing mode, update max profit and trailing stop
         if in_trailing_mode:
-            if total_m2m > max_profit:
+            if total_m2m > m_profit:
                 trailing_profit_threshold = total_m2m * (1 - trailing_percent / 100)
                 print(f"New max profit: {total_m2m}. Updated trailing stop: {trailing_profit_threshold}")
                 logger.info(format_line)
@@ -184,9 +184,9 @@ def trailing_profit_exit(csv_file):
         elif total_m2m >= target_profit:
             in_trailing_mode = True
             trailing_profit_threshold = total_m2m * (1 - trailing_percent / 100)
-            print(f"Target profit hit! Activating trailing profit logic. Max profit: {max_profit}")
+            print(f"Target profit hit! Activating trailing profit logic. Max profit: {m_profit}")
             logger.info(format_line)
-            logger.info(f"Target profit hit! Activating trailing profit logic. Max profit: {max_profit}")
+            logger.info(f"Target profit hit! Activating trailing profit logic. Max profit: {m_profit}")
             save_state(trailing_profit_threshold, in_trailing_mode, csv_file, df)
             return False
         else:
@@ -292,7 +292,7 @@ def get_current_positions():
             else:
                 config['Update_EOD']=0
             save_config()
-            return open_positions, total_m2m
+            return open_positions, total_m2m, closed_m2m
         else:
             return None, 0, 0, 999999999
         
@@ -300,7 +300,7 @@ def get_current_positions():
 def get_revised_position():
     # Publish new Positions after 5 second wait
     time.sleep(10)
-    rev_position, rev_m2m = get_current_positions()
+    rev_position, rev_m2m, closed_m2m = get_current_positions()
     logger.info(format_line)
     logger.info("<<<REVISED POSITIONS>>>")
     if rev_position is None or rev_position.empty:
@@ -629,7 +629,7 @@ def monitor_and_execute_trades():
     # Capture total number of adjustments and exit if counter exceeds some value
 
     # Get Positions
-    positions_df, m2m = get_current_positions()
+    positions_df, m2m, closed_m2m = get_current_positions()
 
     # Step 1: Create positions on Day 1
     if positions_df is None or positions_df.empty:
@@ -659,7 +659,7 @@ def monitor_and_execute_trades():
     print(delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff, current_strike, pstrike, cstrike)
 
     # Calculate max_profit and exit if condition met
-    max_profit = float((positions_df['qty'].astype(int)*positions_df['netupldprc'].astype(float)).sum()) * -1
+    max_profit = float((positions_df['qty'].astype(int)*positions_df['netupldprc'].astype(float)).sum()) * -1 + closed_m2m
     if auto_exit(max_profit, strategy, m2m):
         return
     
@@ -769,7 +769,7 @@ def monitor_and_execute_trades():
         #Check if new adjustment reduces the max_profit and hence triggers an early exit before making adjustments
 
         # Initial Max Profit
-        max_profit = float((positions_df['qty'].astype(int)*positions_df['netupldprc'].astype(float)).sum()) * -1
+        max_profit = float((positions_df['qty'].astype(int)*positions_df['netupldprc'].astype(float)).sum()) * -1 + closed_m2m
         # Less exit order sum
         exit_order_sum = float((exit_order_df['qty'].astype(int)*exit_order_df['netupldprc'].astype(float)).sum()) * -1
         # Plus new order sum
