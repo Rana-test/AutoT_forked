@@ -282,7 +282,8 @@ def get_current_positions():
                     logger.info("\n%s",open_positions[['buy_sell', 'tsym', 'qty', 'netupldprc', 'lp']])
 
             total_m2m = closed_m2m+open_m2m+Past_M2M
-            eod = datetime.strptime("10:00:00", "%H:%M:%S").time()
+            # eod = datetime.strptime("10:00:00", "%H:%M:%S").time()
+            eod = datetime.combine(thread_start_time.date(), datetime.strptime(config['end_time'], "%H:%M:%S").time())
             if past_time(eod):
                 if config['Update_EOD']==0:
                     # Update Settled Amount
@@ -607,7 +608,7 @@ def calculate_delta(df):
 
 def past_time(t):
     # Get the current time
-    now= datetime.combine(datetime.now().date(), datetime.now().time())
+    now= datetime.now()
     delta = (t-now).total_seconds()
     # logger.info(format_line)
     # logger.info(f"Current Time: {now} | Checked for time: {t}")
@@ -944,15 +945,16 @@ def friday_till_expiry(date_str):
 
 # Call the main function periodically to monitor and execute trades
 if __name__=="__main__":
-    thread_start_time = datetime.combine(datetime.now().date(), datetime.now().time())
+    thread_start_time = datetime.now()
     # Define start and end times as datetime objects on today's date
     start_time = datetime.combine(thread_start_time.date(), datetime.strptime(config['start_time'], "%H:%M:%S").time())
+    mid_time = datetime.combine(thread_start_time.date(), datetime.strptime('06:44:00', "%H:%M:%S").time())
     end_time = datetime.combine(thread_start_time.date(), datetime.strptime(config['end_time'], "%H:%M:%S").time())
     # start_time = datetime.strptime(config['start_time'], "%H:%M:%S")
     # end_time = datetime.strptime(config['end_time'], "%H:%M:%S")
 
-    if (end_time - thread_start_time).total_seconds() > 4000:
-        end_time = datetime.combine(thread_start_time.date(), datetime.strptime('06:44:00', "%H:%M:%S").time())
+    if end_time<mid_time:
+        end_time = mid_time
 
     print(start_time, end_time, thread_start_time,past_time(start_time),past_time(end_time))
 
