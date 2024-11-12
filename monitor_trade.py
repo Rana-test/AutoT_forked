@@ -954,6 +954,8 @@ if __name__=="__main__":
     if (end_time - thread_start_time).total_seconds() > 4000:
         end_time = datetime.combine(thread_start_time.date(), datetime.strptime('06:44:00', "%H:%M:%S").time())
 
+    print(start_time, end_time)
+
     if not os.path.exists('logs'):
         os.makedirs('logs')
     # Login to Shoonya app
