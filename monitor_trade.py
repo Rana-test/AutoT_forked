@@ -717,7 +717,7 @@ def monitor_and_execute_trades():
         num_adjustments+=1
         config['num_adjustments']=num_adjustments
         save_config()
-        exit_order_df = positions_df[positions_df.ord_type==profit_leg][['buy_sell','tsym','qty','remarks']]
+        exit_order_df = positions_df[positions_df.ord_type==profit_leg][['buy_sell','tsym','qty','remarks','netupldprc']]
 
         #Find new legs
         if profit_leg=="C":
