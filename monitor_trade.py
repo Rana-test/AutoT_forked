@@ -274,6 +274,7 @@ def get_current_positions():
                 del closed_positions
 
             open_positions = positions_df[~(positions_df['buy_sell']=="NA")]
+            open_positions = open_positions.copy() 
             open_m2m=0
             if not open_positions.empty:
                 open_positions['net_profit']=(open_positions['lp'].astype(float)-open_positions['netupldprc'].astype(float))*open_positions['qty'].astype(float)
