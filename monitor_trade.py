@@ -196,12 +196,13 @@ def trailing_profit_exit(csv_file):
         save_state(target_profit, False, csv_file, df)
         return False
     
-def calculate_breakevens(df):
+def calculate_breakevens(df, closed_m2m):
             # Calculate breakevens
         df['total_credit'] = df['netupldprc'].astype(float)*df['qty'].astype(int)/(lot_size*lots)
+        adj = closed_m2m/(lot_size*lots)
         net_credit = round(float(df['total_credit'].sum()),2)
-        lower_be = float(df[(df['ord_type']=="P")&(df['buy_sell']=="S")]['tsym'].iloc[0][13:])+net_credit
-        higher_be = float(df[(df['ord_type']=="C")&(df['buy_sell']=="S")]['tsym'].iloc[0][13:])-net_credit
+        lower_be = float(df[(df['ord_type']=="P")&(df['buy_sell']=="S")]['tsym'].iloc[0][13:])+net_credit+adj
+        higher_be = float(df[(df['ord_type']=="C")&(df['buy_sell']=="S")]['tsym'].iloc[0][13:])-net_credit-adj
         return lower_be, higher_be
 
 # Step 1: Preprocess data and extract necessary information
