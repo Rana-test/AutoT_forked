@@ -917,7 +917,7 @@ def get_delta_thresholds():
         ICT = 40
         IFT=50
     elif friday_count > 1:
-        ICT = 35
+        ICT = 25
         IFT=50
     else:
         ICT = 33
