@@ -608,7 +608,7 @@ def calculate_delta(df):
 def past_time(t):
     # Get the current time
     now = datetime.now().time()
-    delta = (end_time-start_time).total_seconds()
+    delta = (t-now).total_seconds()
     # logger.info(format_line)
     # logger.info(f"Current Time: {now} | Checked for time: {t}")
     # logger.info(format_line)
