@@ -258,6 +258,7 @@ def get_current_positions():
         if not positions_df.empty:
             # Calculate Total M2M
             closed_positions = positions_df[positions_df['buy_sell']=="NA"]
+            closed_positions = closed_positions.copy() 
             closed_m2m=0
             if not closed_positions.empty:
                 closed_positions.loc[:,'totcfbuyamt'] = closed_positions.upldprc.astype(float)*closed_positions.cfbuyqty.astype(int)
