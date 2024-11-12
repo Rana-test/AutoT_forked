@@ -1,0 +1,27 @@
+### Day #: 14 ###
+--------------------------------------------------------
+<<<TODAY'S CLOSED POSITION : -7777.5 | ADJUST TARGET PROFIT>>>
+--------------------------------------------------------
+--------------------------------------------------------
+<<<CURRENT POSITION>>>
+
+  buy_sell                tsym  qty netupldprc      lp
+1        S  NIFTY28NOV24C24300  -75     508.30  105.85
+3        B  NIFTY28NOV24C25100   75     151.10   13.60
+4        S  NIFTY28NOV24P23700  -75     136.75  160.30
+5        B  NIFTY28NOV24P22800   75      18.55   24.50
+LOWER BE: 23328.3, HIGHER BE: 24671.7
+Max profit = 27877.5 | Auto target = 13102.425
+if 2996.25 > 13102.425 or 2996.25> 50000:
+if 2996.25 < -1 * 13102.425 or 2996.25 < -50000
+Loaded state: Max profit: 11313.75, Trailing stop: 50000, Trailing mode: False
+ICT: 15 | IFT: 50
+--------------------------------------------------------
+RECOMMENDED ADJUSTMENT:
+B | NIFTY28NOV24C24300 | 75 | Original Order
+S | NIFTY28NOV24C25100 | 75 | Original Order
+B | NIFTY28NOV24C24900 | 75 | Adjustment Hedge order
+S | NIFTY28NOV24C24100 | 75 | Adjustment Sell order
+ORIGINAL DELTA: 20.46%
+REVISED DELTA: 4.34%
+--------------------------------------------------------

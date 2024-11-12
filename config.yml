@@ -5,7 +5,7 @@ stop_loss: -50000
 enter_today: 0
 enable_trailing: 0
 trailing_percent: 0
-Update_EOD: 1
+Update_EOD: 0
 Past_M2M: -7777.5
 EntryType: AUTO
 Expiry: 28-NOV-2024
@@ -17,7 +17,7 @@ nse_sym_path: NSE_symbols.txt
 nfo_sym_path: NFO_symbols.txt
 Symbol: NIFTY
 interval: 60
-num_adjustments: 1
+num_adjustments: 2
 Entry_Date: 2024-10-24
 start_time: 03:45:00
 end_time: '14:00:00'
