@@ -651,7 +651,7 @@ def monitor_and_execute_trades():
         return
     
     # Get breakevens
-    lower_be, higher_be = calculate_breakevens(positions_df)
+    lower_be, higher_be = calculate_breakevens(positions_df, closed_m2m)
     logger.info(f"LOWER BE: {lower_be}, HIGHER BE: {higher_be}")
 
     # Step 2: Check adjustment signal
