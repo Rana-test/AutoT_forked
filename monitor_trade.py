@@ -944,7 +944,7 @@ def friday_till_expiry(date_str):
 
 # Call the main function periodically to monitor and execute trades
 if __name__=="__main__":
-    thread_start_time = datetime.now() 
+    thread_start_time = datetime.combine(datetime.now().date(), datetime.now().time())
     # Define start and end times as datetime objects on today's date
     start_time = datetime.combine(thread_start_time.date(), datetime.strptime(config['start_time'], "%H:%M:%S").time())
     end_time = datetime.combine(thread_start_time.date(), datetime.strptime(config['end_time'], "%H:%M:%S").time())
