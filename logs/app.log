@@ -3,7 +3,7 @@
 <<<CURRENT POSITION>>>
 
   buy_sell                tsym  qty netupldprc      lp
-0        B  NIFTY28NOV24P23400   75     119.90   46.15
-1        S  NIFTY28NOV24C24300  -75     508.30  207.15
-2        S  NIFTY28NOV24P24300  -75     349.20  299.50
-3        B  NIFTY28NOV24C25100   75     151.10   20.05
+0        B  NIFTY28NOV24P23400   75     119.90   44.20
+1        S  NIFTY28NOV24C24300  -75     508.30  211.80
+2        S  NIFTY28NOV24P24300  -75     349.20  287.60
+3        B  NIFTY28NOV24C25100   75     151.10   20.25
