@@ -201,8 +201,8 @@ def calculate_breakevens(df, closed_m2m):
         df['total_credit'] = df['netupldprc'].astype(float)*df['qty'].astype(int)/(lot_size*lots)
         adj = closed_m2m/(lot_size*lots)
         net_credit = round(float(df['total_credit'].sum()),2)
-        lower_be = float(df[(df['ord_type']=="P")&(df['buy_sell']=="S")]['tsym'].iloc[0][13:])+net_credit+adj
-        higher_be = float(df[(df['ord_type']=="C")&(df['buy_sell']=="S")]['tsym'].iloc[0][13:])-net_credit-adj
+        lower_be = float(df[(df['ord_type']=="P")&(df['buy_sell']=="S")]['tsym'].iloc[0][13:])+net_credit-adj
+        higher_be = float(df[(df['ord_type']=="C")&(df['buy_sell']=="S")]['tsym'].iloc[0][13:])-net_credit+adj
         return lower_be, higher_be
 
 # Step 1: Preprocess data and extract necessary information
