@@ -260,11 +260,11 @@ def get_current_positions():
             closed_positions = positions_df[positions_df['buy_sell']=="NA"]
             closed_m2m=0
             if not closed_positions.empty:
-                closed_positions['totcfbuyamt'] = closed_positions.upldprc.astype(float)*closed_positions.cfbuyqty.astype(int)
-                closed_positions['totcfsellamt'] = closed_positions.upldprc.astype(float)*closed_positions.cfsellqty.astype(int)
-                closed_positions['netbuy']=closed_positions['daybuyamt'].astype(float)+closed_positions['totcfbuyamt']
-                closed_positions['netsell']=closed_positions['daysellamt'].astype(float)+closed_positions['totcfsellamt']
-                closed_positions['net_prft']=closed_positions['netsell']-closed_positions['netbuy']
+                closed_positions.loc[:,'totcfbuyamt'] = closed_positions.upldprc.astype(float)*closed_positions.cfbuyqty.astype(int)
+                closed_positions.loc[:,'totcfsellamt'] = closed_positions.upldprc.astype(float)*closed_positions.cfsellqty.astype(int)
+                closed_positions.loc[:,'netbuy']=closed_positions['daybuyamt'].astype(float)+closed_positions['totcfbuyamt']
+                closed_positions.loc[:,'netsell']=closed_positions['daysellamt'].astype(float)+closed_positions['totcfsellamt']
+                closed_positions.loc[:,'net_prft']=closed_positions['netsell']-closed_positions['netbuy']
                 closed_m2m = round(float(closed_positions['net_prft'].sum()),2)
                 print(f"Closed M2M: {closed_m2m}")
                 logger.info(format_line)
