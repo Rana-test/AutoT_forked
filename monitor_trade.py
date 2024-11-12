@@ -951,7 +951,7 @@ if __name__=="__main__":
     # start_time = datetime.strptime(config['start_time'], "%H:%M:%S")
     # end_time = datetime.strptime(config['end_time'], "%H:%M:%S")
 
-    if (end_time - thread_start_time).total_seconds() > 11000:
+    if (end_time - thread_start_time).total_seconds() > 4000:
         end_time = datetime.combine(thread_start_time.date(), datetime.strptime('06:44:00', "%H:%M:%S").time())
 
     if not os.path.exists('logs'):
