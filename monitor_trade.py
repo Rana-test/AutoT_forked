@@ -285,7 +285,8 @@ def get_current_positions():
             total_m2m = closed_m2m+open_m2m+Past_M2M
             # eod = datetime.strptime("10:00:00", "%H:%M:%S").time()
             eod = datetime.combine(thread_start_time.date(), datetime.strptime(config['end_time'], "%H:%M:%S").time())
-            if past_time(eod):
+            eod_minus_one = eod - timedelta(minutes=1)
+            if past_time(eod_minus_one):
                 if config['Update_EOD']==0:
                     # Update Settled Amount
                     config['Update_EOD']=1
