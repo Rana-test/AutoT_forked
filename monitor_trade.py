@@ -690,9 +690,6 @@ def monitor_and_execute_trades():
     if strategy=="IF" and delta > IF_delta_threshold: 
         # Exit the loss making leg
         adjust=True
-        num_adjustments+=1
-        config['num_adjustments']=num_adjustments
-        save_config()
         exit_order_df = positions_df[positions_df.ord_type==loss_leg][['buy_sell','tsym','qty','remarks', 'netupldprc']]
         #Find new legs
         if loss_leg=="C":
@@ -715,9 +712,6 @@ def monitor_and_execute_trades():
     elif strategy=="IC" and delta> IC_delta_threshold:
         #Exit Profit making leg
         adjust=True
-        num_adjustments+=1
-        config['num_adjustments']=num_adjustments
-        save_config()
         exit_order_df = positions_df[positions_df.ord_type==profit_leg][['buy_sell','tsym','qty','remarks','netupldprc']]
 
         #Find new legs
@@ -809,6 +803,10 @@ def monitor_and_execute_trades():
             place_order("B", H_tsym, lots*lot_size, remarks="Adjustment Hedge order")
             place_order("S", L_tsym, lots*lot_size, remarks="Adjustment Sell order")
             logger.info(f"REVISED DELTA: {new_delta}%")
+            # Update num adjustments
+            num_adjustments+=1
+            config['num_adjustments']=num_adjustments
+            save_config()
             # Publish new Positions after 5 second wait
             get_revised_position()
             logger.info(format_line)
@@ -841,8 +839,8 @@ def check_day_after_last_thursday():
     return today == last_thursday_current_month + timedelta(days=1)
 
 def auto_exit(max_profit, strategy, m2m, positions_df):
-    global num_adjustments
-    # Reducing max_profit_percent by 5% for every adjustment
+    global num_adjustments, email_subject 
+    # Reducing max_profit_percent by 3% for every adjustment
     auto_target = max_profit * (int(config['percent_of_max_profit'])-3*num_adjustments)/100
     # Divide 1.5 targets for Iron Fly 
     if strategy =="IF":
