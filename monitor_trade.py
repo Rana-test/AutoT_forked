@@ -665,7 +665,7 @@ def monitor_and_execute_trades():
 
     # Calculate max_profit and exit if condition met
     max_profit = float((positions_df['qty'].astype(int)*positions_df['netupldprc'].astype(float)).sum()) * -1 + closed_m2m
-    if auto_exit(max_profit, strategy, m2m):
+    if auto_exit(max_profit, strategy, m2m, positions_df):
         return
     
     if trailing_profit_exit('state.csv'):
@@ -786,7 +786,7 @@ def monitor_and_execute_trades():
         # Special condition
         if rev_pstrike==rev_cstrike and rev_cstrike==current_strike:
             revised_strategy = 'IF'
-        if auto_exit(revised_max_profit, revised_strategy, m2m):
+        if auto_exit(revised_max_profit, revised_strategy, m2m, positions_df):
             return
 
         # Check if adjustment is not possible
@@ -840,7 +840,7 @@ def check_day_after_last_thursday():
     # Check if today is one day after the last Thursday
     return today == last_thursday_current_month + timedelta(days=1)
 
-def auto_exit(max_profit, strategy, m2m):
+def auto_exit(max_profit, strategy, m2m, positions_df):
     global num_adjustments
     # Reducing max_profit_percent by 5% for every adjustment
     auto_target = max_profit * (int(config['percent_of_max_profit'])-3*num_adjustments)/100
@@ -863,7 +863,7 @@ def auto_exit(max_profit, strategy, m2m):
         logger.info(format_line)
         logger.info("Stop Loss hit. Exit Trade")
         email_subject = f'<<< STOP LOSS HIT. EXIT TRADE | M2M: {m2m} >>>'
-        # exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
+        exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
         logger.info(format_line)
         return True
     else:
