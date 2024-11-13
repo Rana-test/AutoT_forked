@@ -853,8 +853,8 @@ def auto_exit(max_profit, strategy, m2m):
     if m2m > auto_target or m2m> target_profit:
         logger.info(format_line)
         logger.info("Target Profit Acheived. Exit Trade")
-        email_subject = f'<<< TARGET PROFIT ACHIEVED. EXIT TRADE | M2M: {m2m} >>>'
-        # exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
+        email_subject = f'<<< TARGET PROFIT ACHIEVED. EXIT TRADE | M2M: {m2m} >>>'   
+        exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
         get_revised_position()
         logger.info(format_line)
         return True
