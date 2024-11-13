@@ -366,8 +366,14 @@ def get_nearest_strike_strike(df, strike):
     return df.iloc[0]['tsym'], df.iloc[0]['lp']
 
 def get_support_resistence_atm(cedf,pedf):
-    cedf.sort_values(by='oi', ascending = False, inplace=True)
-    pedf.sort_values(by='oi', ascending = False, inplace=True)
+    cedf['oi'] = pd.to_numeric(cedf['oi'], errors='coerce')
+    cedf.dropna(subset=['oi'], inplace=True)
+    cedf.sort_values(by='oi', ascending=False, inplace=True)
+
+    pedf['oi'] = pd.to_numeric(pedf['oi'], errors='coerce')
+    pedf.dropna(subset=['oi'], inplace=True)
+    pedf.sort_values(by='oi', ascending=False, inplace=True)
+
     support = int(pedf.iloc[0]['tsym'][13:])
     support_oi = pedf.iloc[0]['oi']
     resistance = int(cedf.iloc[0]['tsym'][13:])
@@ -477,6 +483,7 @@ def enter_trade():
 
     # Get initial trade basis delta
     logger.info(format_line)
+    print("Positions based on Delta")
     logger.info("Positions based on Delta")
     delta_oc = CEOptdf.merge(PEOptdf, on = 'StrikePrice', how = 'left')
     delta_oc['delta_diff'] = abs(delta_oc[(delta_oc['lp_x']>0) &(delta_oc['lp_y']>0)]['lp_x']-delta_oc[(delta_oc['lp_x']>0) &(delta_oc['lp_y']>0)]['lp_y'])
@@ -760,8 +767,9 @@ def monitor_and_execute_trades():
         for i, order in exit_order_df.iterrows():
             rev_buy_sell = {"B": "S", "S": "B"}.get(order['buy_sell'])
             logger.info(f"{rev_buy_sell} | {order['tsym']} | {lots*lot_size} | Original Order")
-        logger.info(f"B | {H_tsym} | {lots*lot_size} | Adjustment Hedge order")
-        logger.info(f"S | {L_tsym} | {lots*lot_size} | Adjustment Sell order")
+        logger.info(f"B | {H_tsym} | {lots*lot_size} | {H_lp} | Adjustment Hedge order")
+        logger.info(f"S | {L_tsym} | {lots*lot_size} | {L_lp} | Adjustment Sell order")
+
         logger.info(f"ORIGINAL DELTA: {delta}%")
         logger.info(f"REVISED DELTA: {new_delta}%")
         logger.info(format_line)
