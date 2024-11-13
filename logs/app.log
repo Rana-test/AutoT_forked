@@ -1,18 +1,30 @@
-### Day #: 14 ###
---------------------------------------------------------
-<<<TODAY'S CLOSED POSITION : -7777.5 | ADJUST TARGET PROFIT>>>
---------------------------------------------------------
+### Day #: 15 ###
 --------------------------------------------------------
 <<<CURRENT POSITION>>>
 
   buy_sell                tsym  qty netupldprc      lp
-1        S  NIFTY28NOV24C24300  -75     508.30  105.85
-3        B  NIFTY28NOV24C25100   75     151.10   13.60
-4        S  NIFTY28NOV24P23700  -75     136.75  160.30
-5        B  NIFTY28NOV24P22800   75      18.55   24.50
-LOWER BE: 23328.3, HIGHER BE: 24671.7
-Max profit = 27877.5 | Auto target = 13102.425
-if 2996.25 > 13102.425 or 2996.25> 50000:
-if 2996.25 < -1 * 13102.425 or 2996.25 < -50000
+0        B  NIFTY28NOV24P22800   75      18.55   36.45
+1        S  NIFTY28NOV24P23700  -75     136.75  219.35
+2        S  NIFTY28NOV24C24300  -75     508.30   75.55
+3        B  NIFTY28NOV24C25100   75     151.10   12.35
+LOWER BE: 23224.6, HIGHER BE: 24775.4
+Max profit = 35655.0 | Auto target = 15688.2
+if 9420.0 > 15688.2 or 9420.0> 50000:
+if 9420.0 < -1 * 15688.2 or 9420.0 < -50000
 Loaded state: Max profit: 11313.75, Trailing stop: 50000, Trailing mode: False
-ICT: 15 | IFT: 50
+ICT: 36 | IFT: 50
+--------------------------------------------------------
+RECOMMENDED ADJUSTMENT:
+B | NIFTY28NOV24C24300 | 75 | Original Order
+S | NIFTY28NOV24C25100 | 75 | Original Order
+B | NIFTY28NOV24C24700 | 75 | Adjustment Hedge order
+S | NIFTY28NOV24C23900 | 75 | Adjustment Sell order
+ORIGINAL DELTA: 48.76%
+REVISED DELTA: 2.01%
+--------------------------------------------------------
+ Initial Max Profit: 35655.0 | Exit Order Sum: 26790.0 | New Order Sum: 13796.25 | Revised Max Profit: 22661.25
+Max profit = 22661.25 | Auto target = 9291.1125
+if 9420.0 > 9291.1125 or 9420.0> 50000:
+if 9420.0 < -1 * 9291.1125 or 9420.0 < -50000
+--------------------------------------------------------
+Target Profit Acheived. Exit Trade

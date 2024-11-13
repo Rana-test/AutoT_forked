@@ -17,7 +17,7 @@ nse_sym_path: NSE_symbols.txt
 nfo_sym_path: NFO_symbols.txt
 Symbol: NIFTY
 interval: 60
-num_adjustments: 2
+num_adjustments: 3
 Entry_Date: 2024-10-24
 start_time: 03:45:00
 end_time: '10:00:00'
