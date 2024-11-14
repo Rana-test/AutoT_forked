@@ -1,2 +1,68 @@
 ### Day #: 1 ###
 Issue fetching Positions
+--------------------------------------------------------
+Positions based on Support/Resistance
+--------------------------------------------------------
+Margin Requirements: Total: 788927.9 | Equity Collateral: 329236.45 | Cash Collateral: 329236.45 | Cash: 130454.99999999999
+  buy_sell                tsym  qty                               remarks
+0        B  NIFTY26DEC24P23100  450  Initial PE Hedg with premium: 197.25
+1        S  NIFTY26DEC24P24000  450  Initial PE Sell with premium: 530.15
+2        S  NIFTY26DEC24C24000  450  Initial CE Sell with premium: 346.75
+3        B  NIFTY26DEC24C24900  450   Initial CE Hedg with premium: 92.65
+--------------------------------------------------------
+Sell premium = 876.9 | Net premium = 587.0
+--------------------------------------------------------
+Positions based on Future Price
+--------------------------------------------------------
+Margin Requirements: Total: 803664.9 | Equity Collateral: 336728.7 | Cash Collateral: 336728.7 | Cash: 130207.50000000001
+  buy_sell                tsym  qty                               remarks
+0        B  NIFTY26DEC24P22900  450  Initial PE Hedg with premium: 159.35
+1        S  NIFTY26DEC24P23800  450   Initial PE Sell with premium: 432.1
+2        S  NIFTY26DEC24C23800  450  Initial CE Sell with premium: 443.35
+3        B  NIFTY26DEC24C24700  450   Initial CE Hedg with premium: 130.0
+--------------------------------------------------------
+Sell premium = 875.45 | Net premium = 586.1
+--------------------------------------------------------
+Positions based on Current Price
+--------------------------------------------------------
+Margin Requirements: Total: 823663.4 | Equity Collateral: 344995.45 | Cash Collateral: 344995.45 | Cash: 133672.5
+  buy_sell                tsym  qty                               remarks
+0        B  NIFTY26DEC24P22700  450   Initial PE Hedg with premium: 122.8
+1        S  NIFTY26DEC24P23600  450   Initial PE Sell with premium: 341.5
+2        S  NIFTY26DEC24C23600  450   Initial CE Sell with premium: 564.8
+3        B  NIFTY26DEC24C24500  450  Initial CE Hedg with premium: 174.25
+--------------------------------------------------------
+Sell premium = 906.3 | Net premium = 609.25
+--------------------------------------------------------
+Positions based on Delta
+--------------------------------------------------------
+Margin Requirements: Total: 803664.9 | Equity Collateral: 336728.7 | Cash Collateral: 336728.7 | Cash: 130207.50000000001
+  buy_sell                tsym  qty                               remarks
+0        B  NIFTY26DEC24P22900  450  Initial PE Hedg with premium: 159.35
+1        S  NIFTY26DEC24P23800  450   Initial PE Sell with premium: 432.1
+2        S  NIFTY26DEC24C23800  450  Initial CE Sell with premium: 443.35
+3        B  NIFTY26DEC24C24700  450   Initial CE Hedg with premium: 130.0
+--------------------------------------------------------
+Sell premium = 875.45 | Net premium = 586.1
+--------------------------------------------------------
+Combined Positions
+--------------------------------------------------------
+Margin Requirements: Total: 803664.9 | Equity Collateral: 336728.7 | Cash Collateral: 336728.7 | Cash: 130207.50000000001
+  buy_sell                tsym  qty                               remarks
+0        B  NIFTY26DEC24P22900  450  Initial PE Hedg with premium: 159.35
+1        S  NIFTY26DEC24P23800  450   Initial PE Sell with premium: 432.1
+2        S  NIFTY26DEC24C23800  450  Initial CE Sell with premium: 443.35
+3        B  NIFTY26DEC24C24700  450   Initial CE Hedg with premium: 130.0
+--------------------------------------------------------
+Sell premium = 875.45 | Net premium = 586.1
+--------------------------------------------------------
+AUTO: Placing Order as per COMBINED
+TEST ORDER PLACEMENT: B, NIFTY26DEC24P22900, 450, Initial PE Hedg with premium: 159.35
+TEST ORDER PLACEMENT: B, NIFTY26DEC24C24700, 450, Initial CE Hedg with premium: 130.0
+TEST ORDER PLACEMENT: S, NIFTY26DEC24P23800, 450, Initial PE Sell with premium: 432.1
+TEST ORDER PLACEMENT: S, NIFTY26DEC24C23800, 450, Initial CE Sell with premium: 443.35
+Issue fetching Positions
+--------------------------------------------------------
+<<<REVISED POSITIONS>>>
+NO POSITIONS CREATED
+--------------------------------------------------------

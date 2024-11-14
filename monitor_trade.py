@@ -214,7 +214,7 @@ def get_current_positions():
     if ret is None:
         logger.info("Issue fetching Positions")
         email_subject = "Issue fetching Positions..."
-        return None, 0
+        return None, 0, 0
     else:
         mtm = 0
         pnl = 0
@@ -236,7 +236,7 @@ def get_current_positions():
                 if float(i['lp'])<1:
                     logger.info("Below 1 LP issue. Check manually")
                     email_subject = "Below 1 LP issue. Check manually"
-                    return None, 0
+                    return None, 0, 0
 
                 open_pos_data.append({
                     'buy_sell': buy_sell, 
@@ -299,8 +299,7 @@ def get_current_positions():
             save_config()
             return open_positions, total_m2m, closed_m2m
         else:
-            return None, 0, 0, 999999999
-        
+            return None, 0, 0
 
 def get_revised_position():
     # Publish new Positions after 5 second wait
@@ -884,6 +883,8 @@ def login():
     vendor_code=os.getenv("vendor_code")
     api_secret=os.getenv("api_secret")
     imei=os.getenv("imei")
+
+
 
     twoFA = pyotp.TOTP(TOKEN).now()
     login_response = api.login(userid=userid, password=password, twoFA=twoFA, vendor_code=vendor_code, api_secret=api_secret, imei=imei)   
