@@ -425,6 +425,7 @@ def calculate_initial_positions(base_strike_price, CEOptdf, PEOptdf):
 def enter_trade():
     global email_subject
     # global CEstrikedf, PEstrikedf
+    email_subject="<<ENTERING TRADE>>"
     print("Getting CE Option Chain...")
     CEOptdf=get_Option_Chain("CE")
     print("Getting PE Option Chain...")
