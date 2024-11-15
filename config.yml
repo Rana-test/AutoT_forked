@@ -8,9 +8,9 @@ trailing_percent: 0
 Update_EOD: 0
 Past_M2M: 0
 EntryType: AUTO
-Expiry: 26-DEC-2024
+Expiry: 28-NOV-2024
 lots: 1
-lot_size: 75
+lot_size: 25
 min_strike_price: 21000
 max_strike_price: 26000
 nse_sym_path: NSE_symbols.txt
