@@ -9,7 +9,7 @@ Update_EOD: 0
 Past_M2M: 0
 EntryType: AUTO
 Expiry: 26-DEC-2024
-lots: 6
+lots: 1
 lot_size: 75
 min_strike_price: 21000
 max_strike_price: 26000
