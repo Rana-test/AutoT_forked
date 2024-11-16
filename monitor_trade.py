@@ -664,6 +664,8 @@ def monitor_and_execute_trades():
 
     print(delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff, current_strike, pstrike, cstrike)
 
+    calculate_metrics(positions_df)
+
     # Calculate max_profit and exit if condition met
     max_profit = float((positions_df['qty'].astype(int)*positions_df['netupldprc'].astype(float)).sum()) * -1 + closed_m2m
     if auto_exit(max_profit, strategy, m2m, positions_df):
@@ -953,6 +955,51 @@ def friday_till_expiry(date_str):
         current_date += timedelta(days=1)
     
     return friday_count
+
+def calculate_metrics(df):
+    puth_order = df[(df.buy_sell=="B")&(df.ord_type=="P")] 
+    callh_order = df[(df.buy_sell=="B")&(df.ord_type=="C")] 
+
+    phentry = float(puth_order.iloc[0]['netupldprc'])
+    chentry = float(callh_order.iloc[0]['netupldprc'])
+
+    phltp= float(puth_order.iloc[0]['lp'])
+    chltp= float(callh_order.iloc[0]['lp'])
+
+    put_order = df[(df.buy_sell=="S")&(df.ord_type=="P")]
+    call_order = df[(df.buy_sell=="S")&(df.ord_type=="C")] 
+
+    pentry = float(put_order.iloc[0]['netupldprc'])
+    centry = float(call_order.iloc[0]['netupldprc'])
+
+    pltp= float(put_order.iloc[0]['lp'])
+    cltp= float(call_order.iloc[0]['lp'])
+
+    # CE: 100* (centry-clp)/centry << ++ is good
+    ce_premium_movement = round(100* (centry-cltp)/centry,2)
+    # PE: 100* (pentry-plp)/pentry << ++ is good
+    pe_premium_movement = round(100* (pentry-pltp)/pentry,2)
+
+    combined_premiums = round(100*((centry+pentry)-(cltp-pltp))/(centry+pentry),2)
+
+    # Cobimed Delta: 100*((centry+pentry-chentry-phentry)-(clp+plp-chlp-plp))/(centry+pentry-chentry-phentry) << ++ is good
+    net_delta_drift = round(100*((centry+pentry-chentry-phentry)-(cltp+pltp-chltp-pltp))/(centry+pentry-chentry-phentry),2)
+
+    # CE/HCE: 100 * (centry-clp)/(chlp-chentry) << ++ is good
+    ce_short_long = round(100 * (centry-cltp)/(chltp-chentry),2)
+
+    # PE/HPE: 100 * (pentry-plp)/(phlp-phentry) << ++ is good
+    pe_short_long = round(100 * (pentry-pltp)/(phltp-phentry),2)
+
+    logger.info("_______________________METRICS______________________")
+    logger.info(f"1. CE Premium Movement: {ce_premium_movement} ")
+    logger.info(f"2. PE Premium Movement: {pe_premium_movement}")
+    logger.info(f"3. Combined Premium Movement: {combined_premiums}")
+    logger.info(f"4. Net Delta Drift: {net_delta_drift}")
+    logger.info(f"5. CE Short/Long Ratio: {ce_short_long}")
+    logger.info(f"6. PE Short/Long Ratio: {pe_short_long}")
+    logger.info(format_line)
+
 
 
 # Call the main function periodically to monitor and execute trades
