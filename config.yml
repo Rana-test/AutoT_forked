@@ -3,8 +3,6 @@ percent_of_max_profit: 50
 target_profit: 5000000
 stop_loss: -5000000
 enter_today: 1
-enable_trailing: 0
-trailing_percent: 0
 Update_EOD: 0
 Past_M2M: 0
 EntryType: AUTO

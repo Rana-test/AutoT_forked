@@ -29,9 +29,7 @@ min_strike_price = config['min_strike_price']
 max_strike_price = config['max_strike_price']
 lot_size = config['lot_size']
 lots = config['lots']
-trailing_percent=config['trailing_percent']
 Past_M2M = config['Past_M2M']
-enable_trailing = config['enable_trailing']
 interval = config['interval']
 num_adjustments=config['num_adjustments']
 Entry_Date= config['Entry_Date']
@@ -51,10 +49,8 @@ userid=None
 api = ShoonyaApiPy()
 state = pd.read_csv('state.csv')
 symbolDf= None
-in_trailing_mode=None
 total_m2m = 0
 delta=0
-trailing_profit_threshold=0
 edate = Expiry.split("-")
 tsym_prefix= Symbol+edate[0]+edate[1]+edate[2][-2:]
 email_subject = "Trade Analytics: NO ACTION"
@@ -120,82 +116,34 @@ def send_custom_email(subject, body):
         server.quit()
 
 def clear_state(csv_file):
-    columns = ['sno', 'm2m', 'trailing_profit_threshold', 'in_trailing_mode']
+    columns = ['sno', 'm2m']
     df = pd.DataFrame(columns=columns)
     df.to_csv(csv_file, index=False)
 
 def load_state(csv_file):
     """Load state from CSV if it exists, otherwise initialize defaults."""
-    global in_trailing_mode, trailing_profit_threshold, target_profit
+    global  target_profit
     if not os.path.exists(csv_file):
-        columns = ['sno', 'm2m', 'trailing_profit_threshold', 'in_trailing_mode']
+        columns = ['sno', 'm2m']
         df = pd.DataFrame(columns=columns)
         df.to_csv(csv_file, index=False)
     df = pd.read_csv(csv_file)
     if len(df)>0:
         m_profit = df['m2m'].max()  # Max profit based on m2m column
-        trailing_profit_threshold=df.iloc[-1]['trailing_profit_threshold']
-        in_trailing_mode = df.iloc[-1]['in_trailing_mode']
-        print(f"Loaded state: Max profit: {m_profit}, Trailing stop: {trailing_profit_threshold}, Trailing mode: {in_trailing_mode}")
-        logger.info(f"Loaded state: Max profit: {m_profit}, Trailing stop: {trailing_profit_threshold}, Trailing mode: {in_trailing_mode}")
-        return m_profit, trailing_profit_threshold, in_trailing_mode, df
+        print(f"Loaded state: Max profit: {m_profit}")
+        logger.info(f"Loaded state: Max profit: {m_profit}")
+        return m_profit,  df
     else:
         # Initial state if CSV doesn't have any entry
         return 0, target_profit, False, df
 
-def save_state(trailing_profit_threshold, in_trailing_mode, csv_file, df):
+def save_state(csv_file, df):
     """Save the current state to CSV using pandas."""
-    new_row={'sno':len(df)+1,'m2m':total_m2m,'trailing_profit_threshold':round(trailing_profit_threshold,2),'in_trailing_mode':in_trailing_mode}
+    new_row={'sno':len(df)+1,'m2m':total_m2m}
     new_row_df = pd.DataFrame([new_row])
     df = pd.concat([df, new_row_df], ignore_index=True)
     df.to_csv(csv_file, index=False)
 
-def trailing_profit_exit(csv_file):
-    """
-    Update the current profit and decide if we should exit.
-    :param current_profit: Current profit of the position
-    :param target_profit: Target profit to start trailing
-    :param trailing_percent: Trailing stop percentage once target is hit
-    :param csv_file: CSV file to store state using pandas
-    :return: True if trade should be exited, otherwise False
-    """
-    global in_trailing_mode, trailing_percent, total_m2m, target_profit
-    m_profit, trailing_profit_threshold, in_trailing_mode, df = load_state(csv_file)
-
-    if enable_trailing and not df.empty:     
-        # Apply loop for trailing
-        # If already in trailing mode, update max profit and trailing stop
-        if in_trailing_mode:
-            if total_m2m > m_profit:
-                trailing_profit_threshold = total_m2m * (1 - trailing_percent / 100)
-                print(f"New max profit: {total_m2m}. Updated trailing stop: {trailing_profit_threshold}")
-                logger.info(format_line)
-                logger.info(f"New max profit: {total_m2m}. Updated trailing stop: {trailing_profit_threshold}")
-                save_state(trailing_profit_threshold, in_trailing_mode, csv_file, df)
-                return False
-            # If current profit drops below trailing threshold, exit trade
-            elif total_m2m < trailing_profit_threshold:
-                print(f"Exiting trade. Current profit: {total_m2m} is below trailing stop: {trailing_profit_threshold}")
-                logger.info(format_line)
-                logger.info(f"Exiting trade. Current profit: {total_m2m} is below trailing stop: {trailing_profit_threshold}")
-                # Save the state after every update
-                save_state(trailing_profit_threshold, in_trailing_mode, csv_file, df)
-                return True
-        elif total_m2m >= target_profit:
-            in_trailing_mode = True
-            trailing_profit_threshold = total_m2m * (1 - trailing_percent / 100)
-            print(f"Target profit hit! Activating trailing profit logic. Max profit: {m_profit}")
-            logger.info(format_line)
-            logger.info(f"Target profit hit! Activating trailing profit logic. Max profit: {m_profit}")
-            save_state(trailing_profit_threshold, in_trailing_mode, csv_file, df)
-            return False
-        else:
-            save_state(trailing_profit_threshold, in_trailing_mode, csv_file, df)
-            return False
-    else:
-        save_state(target_profit, False, csv_file, df)
-        return False
-    
 def calculate_breakevens(df, closed_m2m):
             # Calculate breakevens
         df['total_credit'] = df['netupldprc'].astype(float)*df['qty'].astype(int)/(lot_size*lots)
@@ -386,7 +334,6 @@ def get_support_resistence_atm(cedf,pedf):
     return atm
 
 def calculate_initial_positions(base_strike_price, CEOptdf, PEOptdf):
-    global trailing_profit_threshold
     ce_sell, ce_premium = get_nearest_strike_strike(CEOptdf, base_strike_price)
     pe_sell, pe_premium = get_nearest_strike_strike(PEOptdf, base_strike_price)
     tot_premium=round(pe_premium+ce_premium,2)
@@ -671,14 +618,6 @@ def monitor_and_execute_trades():
     if auto_exit(max_profit, strategy, m2m, positions_df):
         return
     
-    if trailing_profit_exit('state.csv'):
-        logger.info(format_line)
-        logger.info("Target Profit Acheived. Exit Trade")
-        email_subject = f'<<< TARGET PROFIT ACHIEVED. EXIT TRADE | M2M: {m2m} >>>'
-        # exit_positions(positions_df[['buy_sell','tsym','qty','remarks']])
-        logger.info(format_line)
-        return
-
     email_subject = f'DELTA: {delta}% | M2M: {m2m} | SP: {current_strike} | Strategy: {strategy}'
 
     adjust=False
@@ -905,8 +844,6 @@ def monitor_loop():
     with open('logs/app.log', 'r') as f:
         body = f.read() 
         # Send the email
-        if in_trailing_mode:
-            email_subject='TRAILING PROFIT |'+ email_subject 
         if live:
             send_custom_email('|||LIVE|||'+ email_subject, body)
         else:
