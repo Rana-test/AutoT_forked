@@ -341,7 +341,7 @@ def get_Option_Chain(type):
         (symbolDf.OptionType==type) 
         & (symbolDf.Symbol==Symbol)
         & (symbolDf.Expiry==Expiry) 
-        & (symbolDf['hundred_strikes']=="00")
+        # & (symbolDf['hundred_strikes']=="00") # Removed restrictrion of picking up only 100s
         & (symbolDf['StrikePrice']>min_strike_price) & (symbolDf['StrikePrice']<max_strike_price)
         ]
     
@@ -377,12 +377,12 @@ def get_support_resistence_atm(cedf,pedf):
     support_oi = pedf.iloc[0]['oi']
     resistance = int(cedf.iloc[0]['tsym'][13:])
     resistance_oi = cedf.iloc[0]['oi']
-    if (support+resistance)/2 % 100 == 0.0:
+    if (support+resistance)/2 % 50 == 0.0:
         atm = (support+resistance)/2
     elif support_oi>resistance_oi:
-        atm = (support+resistance-100)/2
+        atm = (support+resistance-50)/2
     else:
-        atm = (support+resistance+100)/2
+        atm = (support+resistance+50)/2
     return atm
 
 def calculate_initial_positions(base_strike_price, CEOptdf, PEOptdf):
@@ -516,27 +516,21 @@ def enter_trade():
         logger.info(f"AUTO: Placing Order as per {best_entry}")
         print(f"AUTO: Placing Order as per {best_entry}")
         execute_basket(best_ord_df)
-        # config['target_profit']=round(auto_margin*percent_profit/100,2)
     elif EntryType== "CURRENT":
         logger.info("Placing Order as per Current Values")
         execute_basket(Curr_ord_df)
-        # config['target_profit']=round(curr_margin*percent_profit/100,2)
     elif EntryType== "FUTURE":
         logger.info("Placing Order as per Future Values")
         execute_basket(Fut_ord_df)
-        # config['target_profit']=round(f_margin*percent_profit/100,2)
     elif EntryType== "COMBINED":
         logger.info("Placing Order as per Combined Values")
         execute_basket(Comb_ord_df)
-        # config['target_profit']=round(comb_margin*percent_profit/100,2)
     elif EntryType== "DELTA":
         logger.info("Placing Order as per Delta Neutral")
         execute_basket(Delta_ord_df)
-        # config['target_profit']=round(d_margin*percent_profit/100,2)
     elif EntryType== "OI":
         logger.info("Placing Order as per OI")
         execute_basket(Oi_ord_df)
-        # config['target_profit']=round(oi_margin*percent_profit/100,2)
 
     email_subject = '<<<<<<<< ENTRY MADE >>>>>>>>>>>>'
     current_time = datetime.now()
@@ -878,14 +872,19 @@ def auto_exit(max_profit, strategy, m2m, positions_df):
 
 def login():
     global userid
-    TOKEN = os.getenv("TOKEN")
-    userid=os.getenv("userid")
-    password=os.getenv("password")
-    vendor_code=os.getenv("vendor_code")
-    api_secret=os.getenv("api_secret")
-    imei=os.getenv("imei")
+    # TOKEN = os.getenv("TOKEN")
+    # userid=os.getenv("userid")
+    # password=os.getenv("password")
+    # vendor_code=os.getenv("vendor_code")
+    # api_secret=os.getenv("api_secret")
+    # imei=os.getenv("imei")
 
-
+    TOKEN = 'HWWYD7R4EPSW4I23H4634R336XALMED6'
+    userid='FA417461' 
+    password='NewIden@123' 
+    vendor_code='FA417461_U'
+    api_secret='456cdec44eae982782376e77101a6698'
+    imei='abc1234'
 
     twoFA = pyotp.TOTP(TOKEN).now()
     login_response = api.login(userid=userid, password=password, twoFA=twoFA, vendor_code=vendor_code, api_secret=api_secret, imei=imei)   
