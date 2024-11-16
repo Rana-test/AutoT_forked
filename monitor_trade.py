@@ -341,7 +341,7 @@ def get_Option_Chain(type):
         (symbolDf.OptionType==type) 
         & (symbolDf.Symbol==Symbol)
         & (symbolDf.Expiry==Expiry) 
-        # & (symbolDf['hundred_strikes']=="00") # Removed restrictrion of picking up only 100s
+        & (symbolDf['hundred_strikes']=="00") # Keeping it safe
         & (symbolDf['StrikePrice']>min_strike_price) & (symbolDf['StrikePrice']<max_strike_price)
         ]
     
