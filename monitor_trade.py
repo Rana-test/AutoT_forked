@@ -819,8 +819,10 @@ def login():
     vendor_code=os.getenv("vendor_code")
     api_secret=os.getenv("api_secret")
     imei=os.getenv("imei")
-
+    
     twoFA = pyotp.TOTP(TOKEN).now()
+
+    print(TOKEN, userid, password, vendor_code, api_secret, imei)
     login_response = api.login(userid=userid, password=password, twoFA=twoFA, vendor_code=vendor_code, api_secret=api_secret, imei=imei)   
     if login_response['stat'] == 'Ok':
         print('Logged in sucessfully')
