@@ -53,7 +53,7 @@ def monitor_trade(logger, api, global_vars, positions_df, m2m, closed_m2m , curr
     
     adj_order, new_delta = h.require_adjustments(logger, api, global_vars, strategy, delta, positions_df, profit_leg, loss_leg, pltp, cltp, symbol, expiry, minsp,maxsp)
     if adj_order is not None:
-        logger.info("Perform Adjustments")
+        logger.info("<<<<<PERFORM ADJUSTMENTS>>>>>")
         adj_order['qty']= adj_order['qty'].apply(lambda x: abs(int(x)))
         logger.info(adj_order)
         email_subject = f'ADJUSTMENT NEEDED | NEW DELTA: {new_delta}%'
@@ -61,7 +61,7 @@ def monitor_trade(logger, api, global_vars, positions_df, m2m, closed_m2m , curr
         # place adjustment orders
         # h.make_adjustment(logger, api, global_vars, strategy, positions_df)
     else:
-        logger.info("NO adjustments required")
+        logger.info("<<<<<NO ADJUSTMENTS NEEDED>>>>>")
 
     return email_subject
 
