@@ -126,11 +126,15 @@ def main():
     
     # Login
     api = h.login(logger)
+
+    while is_within_timeframe("03:00", "03:45"):
+        sleep_time.sleep(60)
+
     counter=0
     # Start Monitoring
     while is_within_timeframe(session.get('start_time'), session.get('end_time')):
         counter+=1
-            # Flush logs
+        # Flush logs
         open('logs/app.log', 'w').close()
         logger.info(f"SESSION: {session}")
         logger.info(f"### Day Count: {h.count_working_days(global_vars)} ###")
@@ -168,7 +172,7 @@ def main():
             email_subject += email_head + email_sub +"|"
 
         sleep_time.sleep(60*1)
-        if counter % 5 == 0:
+        if counter % 10 == 0:
             h.send_email(email_subject, global_vars)
 
     # Update Past_M2M at EOD
