@@ -1,0 +1,205 @@
+import logging
+from logging.handlers import RotatingFileHandler
+from api_helper import ShoonyaApiPy
+import os
+import pyotp
+import pandas as pd
+from datetime import datetime, time, timezone
+import time as sleep_time
+### Add condition for exception, when index moves way beyond adjustment
+import yaml
+import helpers.helper as h
+import pytz
+
+def load_yaml_to_globals(yaml_file):
+    with open(yaml_file, 'r') as file:
+        data = yaml.safe_load(file)  # Load YAML content
+        globals().update(data)
+
+def monitor_trade(logger, api, global_vars, positions_df, m2m, closed_m2m , current_strike, symbol, expiry, minsp,maxsp):
+
+    # If no positions found then check if entry needs to be made and create entry
+    if (positions_df is None or positions_df.empty):
+        if global_vars.get('enter_today'):
+            email_subject ="|Entering Tade|"
+            if global_vars.get('enter_strategy') =='IF':
+                h.enter_trade_ironfly(api, logger, global_vars)
+            elif global_vars.get('enter_strategy') =='M':
+                h.enter_trade_manual(api, logger, global_vars)
+            # elif global_vars.get('enter_strategy') =='IC_3SD':
+        else:
+            email_subject ="|No Positions found|"
+    
+    # Get breakevens
+    lower_be, higher_be = h.calculate_breakevens(positions_df, global_vars)
+    logger.info(f"LOWER BE: {lower_be}, HIGHER BE: {higher_be}")
+    
+    # Step 2: Check adjustment signal
+    delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff, current_strike, pstrike, cstrike = h.calculate_delta(logger, global_vars, api, positions_df, current_strike)
+    logger.info(f"CURRENT STRIKE : {current_strike}")
+    logger.info(f"STRATEGY : {strategy}")
+    ICT, IFT = h.get_delta_thresholds(logger, global_vars)
+    delta_threshold = ICT if strategy=="IC" else IFT
+    logger.info(f"DELTA : {delta} | DELTA_THRESHOLD: {delta_threshold}")
+    
+    h.calculate_metrics(logger, positions_df)
+    email_subject = f'DELTA: {delta}% | M2M: {m2m} | SP: {current_strike} | Strategy: {strategy}'
+
+    # Calculate max_profit and exit if condition met
+    max_profit = float((positions_df['qty'].astype(int)*positions_df['netupldprc'].astype(float)).sum()) * -1 + closed_m2m + global_vars.get('Past_M2M')
+    
+    if h.auto_exit(logger, api, global_vars, max_profit, strategy, m2m, positions_df):
+        email_subject = f'TARGET PROFIT/LOSS HIT. Exiting..'
+    
+    adj_order, new_delta = h.require_adjustments(logger, api, global_vars, strategy, delta, positions_df, profit_leg, loss_leg, pltp, cltp, symbol, expiry, minsp,maxsp)
+    if adj_order is not None:
+        logger.info("Perform Adjustments")
+        adj_order['qty']= adj_order['qty'].apply(lambda x: abs(int(x)))
+        logger.info(adj_order)
+        email_subject = f'ADJUSTMENT NEEDED | NEW DELTA: {new_delta}%'
+        h.send_email(email_subject, global_vars)
+        # place adjustment orders
+        # h.make_adjustment(logger, api, global_vars, strategy, positions_df)
+    else:
+        logger.info("NO adjustments required")
+
+    return email_subject
+
+def is_within_timeframe(start, end):
+    now = datetime.now(timezone.utc) 
+    start_time = now.replace(hour=int(start.split(':')[0]), minute=int(start.split(':')[1]), second=0, microsecond=0)
+    end_time = now.replace(hour=int(end.split(':')[0]), minute=int(end.split(':')[1]), second=0, microsecond=0)
+    return start_time <= now <= end_time
+
+def identify_session():
+    # IST to UTC
+    # 8:30 == 3:00
+    # 9:00 ==  3:30
+    # 9:15 == 3:45
+    # 12:25 == 6:55
+    # 12:27 == 6:57
+    # 12:30 == 7:00
+    # 15:30 == 10:00
+
+    if is_within_timeframe("03:00", "06:55"):
+        return {"session": "session1", "start_time": "03:45", "end_time": "06:57"}
+    elif is_within_timeframe("07:00", "11:00"):
+        return {"session": "session2","start_time": "07:00", "end_time": "11:00"}
+    return None
+
+def main():
+    global nifty_nse_token, email_subject,future_price_token, nifty_bank_nse_token, future_price_bnk_token
+
+    session = identify_session()
+    if not session:
+        print("No active trading session.")
+        return
+    
+    # Load all environment variables
+    load_yaml_to_globals('config_v2.yml')
+    
+    email_subject ="|Initializing...|"
+
+    # Get all global variables and their values, excluding built-in ones
+    global_vars = {key: value for key, value in globals().items() if not key.startswith('__')}
+    
+    # Get Nifty Index Token ID
+    nse_df = pd.read_csv(global_vars.get('nse_sym_path'))
+    nifty_nse_token = nse_df[(nse_df.Symbol=="Nifty 50")&(nse_df.Instrument=="INDEX")].iloc[0]['Token']
+    # Get BankNifty Index Token ID
+    nifty_bank_nse_token = nse_df[(nse_df.Symbol=="Nifty Bank")&(nse_df.Instrument=="INDEX")].iloc[0]['Token']
+
+    nfo_df = pd.read_csv(global_vars.get('nfo_sym_path'))
+    future_price_token = nfo_df[(nfo_df.Symbol=="NIFTY")&(nfo_df.Expiry==global_vars.get('Expiry')) &(nfo_df['OptionType']=="XX")].iloc[0].Token
+    future_price_bnk_token = nfo_df[(nfo_df.Symbol=="BANKNIFTY")&(nfo_df.Expiry==global_vars.get('BankExpiry')) &(nfo_df['OptionType']=="XX")].iloc[0].Token
+
+    del nse_df, nfo_df
+
+    # Get all global variables and their values, excluding built-in ones
+    global_vars = {key: value for key, value in globals().items() if not key.startswith('__')}
+
+    # Initialize logger
+    logger = h.logger_init()
+    
+    # Load symbols if not present
+    h.get_symbol_data()
+    
+    # Login
+    api = h.login(logger)
+    counter=0
+    # Start Monitoring
+    while is_within_timeframe(session.get('start_time'), session.get('end_time')):
+        counter+=1
+            # Flush logs
+        open('logs/app.log', 'w').close()
+        logger.info(f"SESSION: {session}")
+        logger.info(f"### Day Count: {h.count_working_days(global_vars)} ###")
+
+        email_subject=""
+
+        for pos in os.listdir("Positions")+["nifty"]:
+            # Get Current Positions
+            if pos.split('.')[-1] =='csv':
+                open_positions= pd.read_csv('Positions/'+pos)
+            else:
+                open_positions=None
+            positions_df, m2m, closed_m2m = h.get_current_positions(api, logger, global_vars, open_positions)
+            symbol=None
+            expiry=None
+            minsp=None
+            maxsp=None
+            if pos.split("_")[0]=="nifty":
+                res = api.get_quotes(exchange="NSE", token=str(global_vars.get('nifty_nse_token')))
+                current_strike = float(res['lp'])
+                email_head = "<NIFTY>"
+                symbol="NIFTY"
+                expiry=global_vars.get('Expiry')
+                minsp=22000
+                maxsp=27000
+            elif pos.split("_")[0]=="banknifty":
+                res = api.get_quotes(exchange="NSE", token=str(global_vars.get('nifty_bank_nse_token')))
+                current_strike = float(res['lp'])
+                email_head = "<BANKNIFTY>"
+                symbol="BANKNIFTY"
+                expiry=global_vars.get('BankExpiry')
+                minsp=48000
+                maxsp=58000
+            email_sub = monitor_trade(logger, api, global_vars,positions_df, m2m, closed_m2m, current_strike, symbol, expiry, minsp,maxsp)
+            email_subject += email_head + email_sub +"|"
+
+        sleep_time.sleep(60*1)
+        if counter % 5 == 0:
+            h.send_email(email_subject, global_vars)
+
+    # Update Past_M2M at EOD
+        # if session ==2 and tod = eod: update config
+        #     if config['Update_EOD']==0:
+        #         # Update Settled Amount
+        #         config['Update_EOD']=1
+        #         config['Past_M2M']=config['Past_M2M']+closed_m2m
+        #         exit(0)
+        # else:
+        #     config['Update_EOD']=0
+        # save_config()
+    
+    # Logout
+    api.logout()
+
+def is_within_time_range():
+    # Get the current UTC time
+    now = datetime.now(pytz.utc).time()
+
+    # Define the start and end times
+    start_time = time(3, 45)  # 3:45 a.m. UTC
+    end_time = time(21, 00)   # 10:00 a.m. UTC
+
+    # Check if the current time is within the range
+    return start_time <= now <= end_time
+
+if __name__ =="__main__":
+    main()
+    
+    
+
+
+

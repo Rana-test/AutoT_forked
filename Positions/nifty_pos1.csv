@@ -1,0 +1,5 @@
+buy_sell,tsym,qty,remarks,upldprc,netupldprc,lp,ord_type,rpnl,cfbuyqty,cfsellqty,daybuyamt,daysellamt
+B,NIFTY26DEC24P23200,100,Manual Entry,0.0,76.0,0,P,0,0,0,0,0
+S,NIFTY26DEC24P24450,-100,Manual Entry,0.0,286.30,0,P,0,0,0,0,0
+S,NIFTY26DEC24C24600,-100,Manual Entry,0.0,199.20,0,C,0,0,0,0,0
+B,NIFTY26DEC24C25500,100,Manual Entry,0.0,51.15,0,C,0,0,0,0,0

@@ -813,16 +813,22 @@ def auto_exit(max_profit, strategy, m2m, positions_df):
 
 def login():
     global userid
-    TOKEN = os.getenv("TOKEN")
-    userid=os.getenv("userid")
-    password=os.getenv("password")
-    vendor_code=os.getenv("vendor_code")
-    api_secret=os.getenv("api_secret")
-    imei=os.getenv("imei")
+    # TOKEN = os.getenv("TOKEN")
+    # userid=os.getenv("userid")
+    # password=os.getenv("password")
+    # vendor_code=os.getenv("vendor_code")
+    # api_secret=os.getenv("api_secret")
+    # imei=os.getenv("imei")
     
+    TOKEN = 'HWWYD7R4EPSW4I23H4634R336XALMED6'
+    userid='FA417461' 
+    password='NewIden@123' 
+    vendor_code='FA417461_U'
+    api_secret='456cdec44eae982782376e77101a6698'
+    imei='abc1234'
+
     twoFA = pyotp.TOTP(TOKEN).now()
 
-    print(TOKEN, userid, password, vendor_code, api_secret, imei)
     login_response = api.login(userid=userid, password=password, twoFA=twoFA, vendor_code=vendor_code, api_secret=api_secret, imei=imei)   
     if login_response['stat'] == 'Ok':
         print('Logged in sucessfully')
