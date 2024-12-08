@@ -29,7 +29,7 @@ jobs:
         vendor_code: ${{ secrets.vendor_code }}
         api_secret: ${{ secrets.api_secret }}
         imei: ${{ secrets.imei }}
-      run: python3 monitor_trade.py
+      run: python3 monitor_trade_v2.py
     - name: Configure git
       run: |
         git config --local user.name "github-actions[bot]"
