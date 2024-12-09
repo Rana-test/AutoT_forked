@@ -185,7 +185,7 @@ def main():
             email_sub = monitor_trade(logger, api, global_vars,positions_df, m2m, closed_m2m, current_strike, symbol, expiry, minsp,maxsp, IC_delta_threshold, IF_delta_threshold)
             email_subject += email_head + email_sub +"|"
 
-        sleep_time.sleep(60*1)
+        sleep_time.sleep(global_vars.get("interval"))
         if counter % 10 == 0:
             h.send_email(email_subject, global_vars)
 
