@@ -14,5 +14,11 @@ logs/app.log
 *.sh
 simulator.py
 system.py
-monitor_trade_v2.py
-helpers/*
+env
+credentials.py
+logs/*
+results/*
+entry_trade.csv
+logs/app.log
+Positions/nifty_pos_2.csv
+logs/app.log

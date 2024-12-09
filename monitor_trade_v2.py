@@ -16,7 +16,13 @@ def load_yaml_to_globals(yaml_file):
         data = yaml.safe_load(file)  # Load YAML content
         globals().update(data)
 
-def monitor_trade(logger, api, global_vars, positions_df, m2m, closed_m2m , current_strike, symbol, expiry, minsp,maxsp):
+def save_globals_to_yaml(yaml_file, global_vars):
+    # Filter out non-serializable objects if needed
+    serializable_vars = {key: value for key, value in global_vars.items() if not key.startswith('__')}
+    with open(yaml_file, 'w') as file:
+        yaml.dump(serializable_vars, file, default_flow_style=False)
+
+def monitor_trade(logger, api, global_vars, positions_df, m2m, closed_m2m , current_strike, symbol, expiry, minsp,maxsp, IC_delta_threshold, IF_delta_threshold):
 
     # If no positions found then check if entry needs to be made and create entry
     if (positions_df is None or positions_df.empty):
@@ -38,8 +44,8 @@ def monitor_trade(logger, api, global_vars, positions_df, m2m, closed_m2m , curr
     delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff, current_strike, pstrike, cstrike = h.calculate_delta(logger, global_vars, api, positions_df, current_strike)
     logger.info(f"CURRENT STRIKE : {current_strike}")
     logger.info(f"STRATEGY : {strategy}")
-    ICT, IFT = h.get_delta_thresholds(logger, global_vars)
-    delta_threshold = ICT if strategy=="IC" else IFT
+    
+    delta_threshold = IC_delta_threshold if strategy=="IC" else IF_delta_threshold
     logger.info(f"DELTA : {delta} | DELTA_THRESHOLD: {delta_threshold}")
     
     h.calculate_metrics(logger, positions_df)
@@ -51,7 +57,9 @@ def monitor_trade(logger, api, global_vars, positions_df, m2m, closed_m2m , curr
     if h.auto_exit(logger, api, global_vars, max_profit, strategy, m2m, positions_df):
         email_subject = f'TARGET PROFIT/LOSS HIT. Exiting..'
     
-    adj_order, new_delta = h.require_adjustments(logger, api, global_vars, strategy, delta, positions_df, profit_leg, loss_leg, pltp, cltp, symbol, expiry, minsp,maxsp)
+    
+
+    adj_order, new_delta = h.require_adjustments(logger, api, global_vars, strategy, delta, positions_df, profit_leg, loss_leg, pltp, cltp, symbol, expiry, minsp,maxsp, IC_delta_threshold, IF_delta_threshold )
     if adj_order is not None:
         logger.info("<<<<<PERFORM ADJUSTMENTS>>>>>")
         adj_order['qty']= adj_order['qty'].apply(lambda x: abs(int(x)))
@@ -131,6 +139,8 @@ def main():
         sleep_time.sleep(60)
 
     counter=0
+    counter_test = global_vars.get('counter_test')
+
     # Start Monitoring
     while is_within_timeframe(session.get('start_time'), session.get('end_time')):
         counter+=1
@@ -145,8 +155,12 @@ def main():
             # Get Current Positions
             if pos.split('.')[-1] =='csv':
                 open_positions= pd.read_csv('Positions/'+pos)
+                IC_delta_threshold = 40
+                IF_delta_threshold = 50
             else:
                 open_positions=None
+                IC_delta_threshold = global_vars.get("ICT")
+                IF_delta_threshold = global_vars.get("IFT")
             positions_df, m2m, closed_m2m = h.get_current_positions(api, logger, global_vars, open_positions)
             symbol=None
             expiry=None
@@ -168,12 +182,14 @@ def main():
                 expiry=global_vars.get('BankExpiry')
                 minsp=48000
                 maxsp=58000
-            email_sub = monitor_trade(logger, api, global_vars,positions_df, m2m, closed_m2m, current_strike, symbol, expiry, minsp,maxsp)
+            email_sub = monitor_trade(logger, api, global_vars,positions_df, m2m, closed_m2m, current_strike, symbol, expiry, minsp,maxsp, IC_delta_threshold, IF_delta_threshold)
             email_subject += email_head + email_sub +"|"
 
         sleep_time.sleep(60*1)
         if counter % 10 == 0:
             h.send_email(email_subject, global_vars)
+
+        counter_test+=1
 
     # Update Past_M2M at EOD
         # if session ==2 and tod = eod: update config
@@ -188,6 +204,9 @@ def main():
     
     # Logout
     api.logout()
+    global_vars['counter_test']=counter_test
+    save_globals_to_yaml('config_v2.yml', global_vars)
+    
 
 def is_within_time_range():
     # Get the current UTC time
