@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 SESSION: {'session': 'session2', 'start_time': '07:00', 'end_time': '11:00'}
 ### Day Count: 10 ###
 __________________________________________________________
@@ -22,10 +23,39 @@ Max profit = 25789.5 | Auto target = 103158.0
 if 9837.0 > 103158.0 or 9837.0> 5000000:
 if 9837.0 < -1 * 103158.0 or 9837.0 < -5000000
 NO adjustments required
+=======
+SESSION: {'session': 'session2', 'start_time': '07:00', 'end_time': '10:00'}
+### Day Count: 11 ###
+__________________________________________________________
+<<<CURRENT POSITION>>>
+
+  buy_sell                tsym  qty  netupldprc      lp
+0        B  NIFTY26DEC24P23200  100       76.00   22.45
+1        S  NIFTY26DEC24P24450 -100      286.30  201.00
+2        S  NIFTY26DEC24C24600 -100      199.20  350.95
+3        B  NIFTY26DEC24C25500  100       51.15   43.20
+LOWER BE: 23017.0, HIGHER BE: 26033.0
+CURRENT STRIKE : 24623.45
+STRATEGY : IC
+DELTA : 27.17 | DELTA_THRESHOLD: 43
+_______________________METRICS______________________
+1. CE Premium Movement: -76.18 
+2. PE Premium Movement: 29.79
+3. Combined Premium Movement: 69.11
+4. Net Delta Drift: 14.12
+5. CE Long/Short Ratio: 5.24
+6. PE Long/Short Ratio: -62.78
+__________________________________________________________
+Max profit = 35835.0 | Auto target = 143340.0
+if -12795.0 > 143340.0 or -12795.0> 5000000:
+if -12795.0 < -1 * 143340.0 or -12795.0 < -5000000
+<<<<<NO ADJUSTMENTS NEEDED>>>>>
+>>>>>>> 2652bb1997114d4fe61ffe2709af17cbe1f70ab0
 __________________________________________________________
 <<<CURRENT POSITION>>>
 
   buy_sell                    tsym  qty  netupldprc      lp
+<<<<<<< HEAD
 0        B  BANKNIFTY24DEC24P50000   45      242.20   66.85
 1        S  BANKNIFTY24DEC24P53300  -45      730.05  552.50
 2        S  BANKNIFTY24DEC24C53500  -45      139.45  836.55
@@ -82,10 +112,33 @@ Perform Adjustments
 1        B  NIFTY26DEC24P24450  100            Manual Entry      286.3
 3        S  NIFTY26DEC24P24600  100        Adjustment Order          0
 4        B  NIFTY26DEC24P23350  100  Adjustment Hedge Order          0
+=======
+0        B  BANKNIFTY24DEC24P50000   45      242.20   57.55
+1        S  BANKNIFTY24DEC24P53300  -45      730.05  603.25
+2        S  BANKNIFTY24DEC24C53500  -45      139.45  701.20
+3        B  BANKNIFTY24DEC24C54500   45      168.67  303.25
+LOWER BE: 52474.0, HIGHER BE: 54326.0
+CURRENT STRIKE : 53422.3
+STRATEGY : IC
+DELTA : 7.51 | DELTA_THRESHOLD: 43
+_______________________METRICS______________________
+1. CE Premium Movement: -402.83 
+2. PE Premium Movement: 17.37
+3. Combined Premium Movement: 88.73
+4. Net Delta Drift: 13.23
+5. CE Long/Short Ratio: -23.96
+6. PE Long/Short Ratio: -145.62
+__________________________________________________________
+Max profit = 20638.35 | Auto target = 82553.4
+if -21825.9 > 82553.4 or -21825.9> 5000000:
+if -21825.9 < -1 * 82553.4 or -21825.9 < -5000000
+<<<<<NO ADJUSTMENTS NEEDED>>>>>
+>>>>>>> 2652bb1997114d4fe61ffe2709af17cbe1f70ab0
 __________________________________________________________
 <<<CURRENT POSITION>>>
 
   buy_sell                tsym   qty netupldprc     lp
+<<<<<<< HEAD
 0        S  NIFTY26DEC24C25600  -450      22.00  43.65
 1        S  NIFTY26DEC24P22900  -450      35.31  17.60
 LOWER BE: 21868.0, HIGHER BE: 26632.0
@@ -97,10 +150,24 @@ _______________________METRICS______________________
 2. PE Premium Movement: 50.16
 3. Combined Premium Movement: 54.55
 4. Net Delta Drift: 23.84
+=======
+0        S  NIFTY26DEC24P22900  -450      35.31  14.70
+1        S  NIFTY26DEC24C25600  -450      22.00  32.95
+LOWER BE: 21868.0, HIGHER BE: 26632.0
+CURRENT STRIKE : 24628.55
+STRATEGY : IC
+DELTA : 38.3 | DELTA_THRESHOLD: 43
+_______________________METRICS______________________
+1. CE Premium Movement: -49.77 
+2. PE Premium Movement: 58.37
+3. Combined Premium Movement: 68.16
+4. Net Delta Drift: 42.51
+>>>>>>> 2652bb1997114d4fe61ffe2709af17cbe1f70ab0
 5. CE Long/Short Ratio: -0.0
 6. PE Long/Short Ratio: 0.0
 __________________________________________________________
 Max profit = 25789.5 | Auto target = 103158.0
+<<<<<<< HEAD
 if -1773.0 > 103158.0 or -1773.0> 5000000:
 if -1773.0 < -1 * 103158.0 or -1773.0 < -5000000
 New Delta of adjusted trade: 0.92
@@ -108,3 +175,8 @@ Perform Adjustments
   buy_sell                tsym  qty           remarks netupldprc
 1        B  NIFTY26DEC24P22900  450    Existing Order      35.31
 2        S  NIFTY26DEC24P23550  450  Adjustment Order          0
+=======
+if 4347.0 > 103158.0 or 4347.0> 5000000:
+if 4347.0 < -1 * 103158.0 or 4347.0 < -5000000
+<<<<<NO ADJUSTMENTS NEEDED>>>>>
+>>>>>>> 2652bb1997114d4fe61ffe2709af17cbe1f70ab0
