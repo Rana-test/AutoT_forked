@@ -56,18 +56,16 @@ def monitor_trade(logger, api, global_vars, positions_df, m2m, closed_m2m , curr
     
     if h.auto_exit(logger, api, global_vars, max_profit, strategy, m2m, positions_df):
         email_subject = f'TARGET PROFIT/LOSS HIT. Exiting..'
-    
-    
 
     adj_order, new_delta = h.require_adjustments(logger, api, global_vars, strategy, delta, positions_df, profit_leg, loss_leg, pltp, cltp, symbol, expiry, minsp,maxsp, IC_delta_threshold, IF_delta_threshold )
     if adj_order is not None:
         logger.info("<<<<<PERFORM ADJUSTMENTS>>>>>")
         adj_order['qty']= adj_order['qty'].apply(lambda x: abs(int(x)))
         logger.info(adj_order)
-        email_subject = f'ADJUSTMENT NEEDED | NEW DELTA: {new_delta}%'
-        h.send_email(email_subject, global_vars)
+        email_subject = f'ADJUSTMENT MADE | PROB NEW DELTA: {new_delta}%'
         # place adjustment orders
         h.execute_basket(logger, global_vars, api,adj_order)
+        h.send_email(email_subject, global_vars)
     else:
         logger.info("<<<<<NO ADJUSTMENTS NEEDED>>>>>")
 
