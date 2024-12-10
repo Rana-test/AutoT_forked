@@ -152,6 +152,8 @@ def main():
 
         email_subject=""
 
+        CM2M = global_vars.get("Past_M2M") 
+
         for pos in os.listdir("Positions")+["nifty"]:
             # Get Current Positions
             if pos.split('.')[-1] =='csv':
@@ -184,11 +186,12 @@ def main():
                 minsp=48000
                 maxsp=58000
             email_sub = monitor_trade(logger, api, global_vars,positions_df, m2m, closed_m2m, current_strike, symbol, expiry, minsp,maxsp, IC_delta_threshold, IF_delta_threshold)
+            CM2M+=m2m
             email_subject += email_head + email_sub +"|"
 
         sleep_time.sleep(global_vars.get("interval"))
         if counter % 10 == 0:
-            h.send_email(email_subject, global_vars)
+            h.send_email(f"CM2M:{CM2M}"+ email_subject, global_vars)
 
         counter_test+=1
 
