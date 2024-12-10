@@ -1,24 +1,74 @@
-live: 0
-positions_data: csv
-percent_of_max_profit: 400
-target_profit: 5000000
-stop_loss: -5000000
-enter_today: 0
-enter_strategy: M
-Update_EOD: 0
-Past_M2M: 0
-EntryType: AUTO
-Expiry: 26-DEC-2024
 BankExpiry: 24-DEC-2024
-lots: 1
-lot_size: 25
-nse_sym_path: NSE_symbols.txt
-nfo_sym_path: NFO_symbols.txt
-Symbol: NIFTY
 BankSymbol: BANKNIFTY
-interval: 60
-num_adjustments: 0
+EntryType: AUTO
 Entry_Date: '2024-11-23'
-IFT: 50
+Expiry: 26-DEC-2024
 ICT: 40
-counter_test: 0
+IFT: 50
+Past_M2M: 0
+RotatingFileHandler: !!python/name:logging.handlers.RotatingFileHandler ''
+ShoonyaApiPy: !!python/name:api_helper.ShoonyaApiPy ''
+Symbol: NIFTY
+Update_EOD: 0
+counter_test: 11
+datetime: !!python/name:datetime.datetime ''
+email_subject: '|Initializing...|'
+enter_strategy: M
+enter_today: 0
+future_price_bnk_token: !!python/object/apply:numpy._core.multiarray.scalar
+- &id001 !!python/object/apply:numpy.dtype
+  args:
+  - i8
+  - false
+  - true
+  state: !!python/tuple
+  - 3
+  - <
+  - null
+  - null
+  - null
+  - -1
+  - -1
+  - 0
+- !!binary |
+  0YgAAAAAAAA=
+future_price_token: !!python/object/apply:numpy._core.multiarray.scalar
+- *id001
+- !!binary |
+  vYgAAAAAAAA=
+h: !!python/module:helpers.helper ''
+identify_session: !!python/name:__main__.identify_session ''
+interval: 60
+is_within_time_range: !!python/name:__main__.is_within_time_range ''
+is_within_timeframe: !!python/name:__main__.is_within_timeframe ''
+live: 0
+load_yaml_to_globals: !!python/name:__main__.load_yaml_to_globals ''
+logging: !!python/module:logging ''
+lot_size: 25
+lots: 1
+main: !!python/name:__main__.main ''
+monitor_trade: !!python/name:__main__.monitor_trade ''
+nfo_sym_path: NFO_symbols.txt
+nifty_bank_nse_token: !!python/object/apply:numpy._core.multiarray.scalar
+- *id001
+- !!binary |
+  mWUAAAAAAAA=
+nifty_nse_token: !!python/object/apply:numpy._core.multiarray.scalar
+- *id001
+- !!binary |
+  kGUAAAAAAAA=
+nse_sym_path: NSE_symbols.txt
+num_adjustments: 0
+os: !!python/module:os ''
+pd: !!python/module:pandas ''
+percent_of_max_profit: 400
+positions_data: csv
+pyotp: !!python/module:pyotp ''
+pytz: !!python/module:pytz ''
+save_globals_to_yaml: !!python/name:__main__.save_globals_to_yaml ''
+sleep_time: !!python/module:time ''
+stop_loss: -5000000
+target_profit: 5000000
+time: !!python/name:datetime.time ''
+timezone: !!python/name:datetime.timezone ''
+yaml: !!python/module:yaml ''
