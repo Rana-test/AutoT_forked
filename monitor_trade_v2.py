@@ -67,7 +67,7 @@ def monitor_trade(logger, api, global_vars, positions_df, m2m, closed_m2m , curr
         email_subject = f'ADJUSTMENT NEEDED | NEW DELTA: {new_delta}%'
         h.send_email(email_subject, global_vars)
         # place adjustment orders
-        # h.make_adjustment(logger, api, global_vars, strategy, positions_df)
+        h.execute_basket(logger, global_vars, api,adj_order)
     else:
         logger.info("<<<<<NO ADJUSTMENTS NEEDED>>>>>")
 
