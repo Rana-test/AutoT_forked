@@ -18,7 +18,10 @@ def load_yaml_to_globals(yaml_file):
 
 def save_globals_to_yaml(yaml_file, global_vars):
     # Filter out non-serializable objects if needed
-    serializable_vars = {key: value for key, value in global_vars.items() if not key.startswith('__')}
+    keys=['BankExpiry','BankSymbol','EntryType','Entry_Date','Expiry','ICT','IFT','Past_M2M','Symbol','Update_EOD','counter_test'
+          ,'enter_strategy','enter_today','interval','live','lot_size','lots','nfo_sym_path','nse_sym_path','num_adjustments'
+          ,'percent_of_max_profit','positions_data','stop_loss','target_profit']
+    serializable_vars = {key: value for key, value in global_vars.items() if key in keys}
     with open(yaml_file, 'w') as file:
         yaml.dump(serializable_vars, file, default_flow_style=False)
 
