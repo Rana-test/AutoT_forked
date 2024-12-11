@@ -16,7 +16,7 @@ format_line="__________________________________________________________"
 
 
 def send_email(subject, global_vars):
-    Email configuration
+    # Email configuration
     sender_email = os.getenv("EMAIL_USER")
     receiver_email = os.getenv("EMAIL_TO")
     password = os.getenv("EMAIL_PASS")
