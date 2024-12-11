@@ -192,7 +192,7 @@ def main():
             email_subject += email_head + email_sub +"|"
 
         sleep_time.sleep(global_vars.get("interval"))
-        if counter % 1 == 0:
+        if counter % 10 == 0:
             h.send_email(f"CM2M:{CM2M}"+ email_subject, global_vars)
 
         counter_test+=1
