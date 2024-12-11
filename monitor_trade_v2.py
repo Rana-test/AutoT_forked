@@ -142,11 +142,9 @@ def main():
         sleep_time.sleep(60)
 
     counter=0
-    counter_test = global_vars.get('counter_test')
 
     # Start Monitoring
     while is_within_timeframe(session.get('start_time'), session.get('end_time')):
-        counter+=1
         # Flush logs
         open('logs/app.log', 'w').close()
         logger.info(f"SESSION: {session}")
@@ -194,8 +192,7 @@ def main():
         sleep_time.sleep(global_vars.get("interval"))
         if counter % 10 == 0:
             h.send_email(f"CM2M:{CM2M}"+ email_subject, global_vars)
-
-        counter_test+=1
+        counter+=1
 
     # Update Past_M2M at EOD
         # if session ==2 and tod = eod: update config
