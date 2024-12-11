@@ -50,8 +50,10 @@ def monitor_trade(logger, api, global_vars, positions_df, m2m, closed_m2m , curr
     
     delta_threshold = IC_delta_threshold if strategy=="IC" else IF_delta_threshold
     logger.info(f"DELTA : {delta} | DELTA_THRESHOLD: {delta_threshold}")
-    
-    h.calculate_metrics(logger, positions_df)
+    try:
+        h.calculate_metrics(logger, positions_df)
+    except Exception as e:
+        print(e)
     email_subject = f'DELTA: {delta}% | M2M: {m2m} | SP: {current_strike} | Strategy: {strategy}'
 
     # Calculate max_profit and exit if condition met
@@ -92,8 +94,8 @@ def identify_session():
 
     if is_within_timeframe("03:00", "06:55"):
         return {"session": "session1", "start_time": "03:45", "end_time": "06:57"}
-    elif is_within_timeframe("07:00", "10:00"):
-        return {"session": "session2","start_time": "07:00", "end_time": "10:00"}
+    elif is_within_timeframe("07:00", "18:00"):
+        return {"session": "session2","start_time": "07:00", "end_time": "18:00"}
     return None
 
 def main():
@@ -186,11 +188,11 @@ def main():
                 minsp=48000
                 maxsp=58000
             email_sub = monitor_trade(logger, api, global_vars,positions_df, m2m, closed_m2m, current_strike, symbol, expiry, minsp,maxsp, IC_delta_threshold, IF_delta_threshold)
-            CM2M+=m2m
+            CM2M+=int(m2m)
             email_subject += email_head + email_sub +"|"
 
         sleep_time.sleep(global_vars.get("interval"))
-        if counter % 10 == 0:
+        if counter % 1 == 0:
             h.send_email(f"CM2M:{CM2M}"+ email_subject, global_vars)
 
         counter_test+=1

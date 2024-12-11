@@ -22,3 +22,5 @@ entry_trade.csv
 logs/app.log
 Positions/nifty_pos_2.csv
 logs/app.log
+creds.yml
+logs/app.log

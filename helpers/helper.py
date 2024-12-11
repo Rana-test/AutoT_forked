@@ -14,13 +14,48 @@ import pyotp
 from api_helper import ShoonyaApiPy
 format_line="__________________________________________________________"
 
+sender_email=None
+receiver_email=None
+email_password=None
+userid=None
+password=None
+vendor_code=None
+api_secret=None
+imei=None
+TOKEN=None
+
+def init_creds():
+    global sender_email, receiver_email, email_password, userid, password, vendor_code, api_secret, imei, TOKEN
+    if os.path.exists('helpers/creds.yml'):
+        try:
+            with open('helpers/creds.yml', 'r') as file:
+                data = yaml.safe_load(file)
+                sender_email = data.get("EMAIL_USER")
+                receiver_email = data.get("EMAIL_TO")
+                email_password = data.get("EMAIL_PASS")
+                TOKEN = data.get("TOKEN")
+                userid=data.get("userid")
+                password=data.get("password")
+                vendor_code=data.get("vendor_code")
+                api_secret=data.get("api_secret")
+                imei=data.get("imei")
+        except yaml.YAMLError as e:
+            print("Error loading YAML file:", e)
+    else:
+        # Email configuration
+        sender_email = os.getenv("EMAIL_USER")
+        receiver_email = os.getenv("EMAIL_TO")
+        email_password = os.getenv("EMAIL_PASS")
+        TOKEN = os.getenv("TOKEN")
+        userid=os.getenv("userid")
+        password=os.getenv("password")
+        vendor_code=os.getenv("vendor_code")
+        api_secret=os.getenv("api_secret")
+        imei=os.getenv("imei")
 
 def send_email(subject, global_vars):
-    # Email configuration
-    sender_email = os.getenv("EMAIL_USER")
-    receiver_email = os.getenv("EMAIL_TO")
-    password = os.getenv("EMAIL_PASS")
-
+    global sender_email, receiver_email, email_password
+    init_creds()
     # Create email
     msg = MIMEMultipart()
     # Add body to email
@@ -42,7 +77,7 @@ def send_email(subject, global_vars):
         # Connect to the Gmail SMTP server
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()  # Upgrade the connection to a secure encrypted SSL/TLS connection
-        server.login(sender_email, password)  # Login to your email account
+        server.login(sender_email, email_password)  # Login to your email account
         text = msg.as_string()
         server.sendmail(sender_email, receiver_email, text)  # Send the email
         print("Email sent successfully!")
@@ -53,14 +88,8 @@ def send_email(subject, global_vars):
         server.quit()
 
 def login(logger):
-    global userid
-    TOKEN = os.getenv("TOKEN")
-    userid=os.getenv("userid")
-    password=os.getenv("password")
-    vendor_code=os.getenv("vendor_code")
-    api_secret=os.getenv("api_secret")
-    imei=os.getenv("imei")
-
+    global userid, password, vendor_code, api_secret, imei, TOKEN
+    init_creds()
     twoFA = pyotp.TOTP(TOKEN).now()
     api = ShoonyaApiPy()
     login_response = api.login(userid=userid, password=password, twoFA=twoFA, vendor_code=vendor_code, api_secret=api_secret, imei=imei)   
@@ -198,7 +227,8 @@ def get_current_positions(api, logger, global_vars= None, open_positions=None):
             logger.info("\n%s",open_positions[['buy_sell', 'tsym', 'qty', 'netupldprc', 'lp']])
 
     if global_vars is not None:
-        total_m2m = closed_m2m+open_m2m+float(global_vars.get('Past_M2M'))
+        # total_m2m = closed_m2m+open_m2m+float(global_vars.get('Past_M2M'))
+        total_m2m = closed_m2m+open_m2m
     else:
         total_m2m = closed_m2m+open_m2m
         
