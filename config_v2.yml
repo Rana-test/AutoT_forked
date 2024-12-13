@@ -3,7 +3,7 @@ BankSymbol: BANKNIFTY
 EntryType: AUTO
 Entry_Date: '2024-11-23'
 Expiry: 26-DEC-2024
-ICT: 40
+ICT: 50
 IFT: 50
 Past_M2M: 15423
 Symbol: NIFTY
