@@ -3,4 +3,7 @@ pyotp
 https://github.com/Shoonya-Dev/ShoonyaApi-py/raw/refs/heads/master/dist/NorenRestApi-0.0.30-py2.py3-none-any.whl
 pandas
 zipfile2
-pyyaml
+PyYAML
+selenium
+upstox-python-sdk
+swagger-py-codegen

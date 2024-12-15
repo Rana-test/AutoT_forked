@@ -12,6 +12,16 @@ from datetime import datetime, timedelta, date
 import time
 import pyotp
 from api_helper import ShoonyaApiPy
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import time
+import upstox_client
+from upstox_client.rest import ApiException
+
+import pyotp
 format_line="__________________________________________________________"
 
 sender_email=None
@@ -23,9 +33,18 @@ vendor_code=None
 api_secret=None
 imei=None
 TOKEN=None
+UPSTOX_API_KEY=None
+UPSTOX_API_SECRET=None
+UPSTOX_CLIENT_ID=None
+UPSTOX_URL=None
+UPSTOX_MOB_NO=None
+UPSTOX_CLIENT_PASS=None
+UPSTOX_CLIENT_PIN=None
 
 def init_creds():
     global sender_email, receiver_email, email_password, userid, password, vendor_code, api_secret, imei, TOKEN
+    global UPSTOX_API_KEY, UPSTOX_API_SECRET, UPSTOX_CLIENT_ID, UPSTOX_URL,UPSTOX_MOB_NO,UPSTOX_CLIENT_PASS,UPSTOX_CLIENT_PIN
+
     if os.path.exists('helpers/creds.yml'):
         try:
             with open('helpers/creds.yml', 'r') as file:
@@ -39,6 +58,14 @@ def init_creds():
                 vendor_code=data.get("vendor_code")
                 api_secret=data.get("api_secret")
                 imei=data.get("imei")
+                UPSTOX_API_KEY=data.get("UPSTOX_API_KEY")
+                UPSTOX_API_SECRET=data.get("UPSTOX_API_SECRET")
+                UPSTOX_CLIENT_ID=data.get("UPSTOX_CLIENT_ID")
+                UPSTOX_URL=data.get("UPSTOX_URL")
+                UPSTOX_MOB_NO=data.get("UPSTOX_MOB_NO")
+                UPSTOX_CLIENT_PASS=data.get("UPSTOX_CLIENT_PASS")
+                UPSTOX_CLIENT_PIN=data.get("UPSTOX_CLIENT_PIN")
+
         except yaml.YAMLError as e:
             print("Error loading YAML file:", e)
     else:
@@ -52,6 +79,13 @@ def init_creds():
         vendor_code=os.getenv("vendor_code")
         api_secret=os.getenv("api_secret")
         imei=os.getenv("imei")
+        UPSTOX_API_KEY=os.getenv("UPSTOX_API_KEY")
+        UPSTOX_API_SECRET=os.getenv("UPSTOX_API_SECRET")
+        UPSTOX_CLIENT_ID=os.getenv("UPSTOX_CLIENT_ID")
+        UPSTOX_URL=os.getenv("UPSTOX_URL")
+        UPSTOX_MOB_NO=os.getenv("UPSTOX_MOB_NO")
+        UPSTOX_CLIENT_PASS=os.getenv("UPSTOX_CLIENT_PASS")
+        UPSTOX_CLIENT_PIN=os.getenv("UPSTOX_CLIENT_PIN")
 
 def send_email(subject, global_vars):
     global sender_email, receiver_email, email_password
@@ -101,12 +135,82 @@ def login(logger):
         print('Logged in failed')
         return None
 
+def wait_for_page_load(driver, timeout=30):
+    WebDriverWait(driver, timeout).until(
+        lambda d: d.execute_script('return document.readyState') == 'complete')
+
+def upstox_login(logger):
+    global UPSTOX_API_KEY, UPSTOX_API_SECRET, UPSTOX_CLIENT_ID, UPSTOX_URL,UPSTOX_MOB_NO,UPSTOX_CLIENT_PASS,UPSTOX_CLIENT_PIN
+    init_creds()
+    options = Options()
+    options.add_argument('--no-sandbox')
+    options.add_argument("--headless") 
+    driver = webdriver.Chrome(options=options)
+    driver.get(UPSTOX_URL)
+    wait_for_page_load(driver)
+    username_input_xpath = '//*[@id="mobileNum"]'
+    username_input_element = driver.find_element(By.XPATH, username_input_xpath)
+    username_input_element.clear()
+    username_input_element.send_keys(UPSTOX_MOB_NO)
+    get_otp_button_xpath = '//*[@id="getOtp"]'
+    get_otp_button_element = driver.find_element(By.XPATH, get_otp_button_xpath)
+    get_otp_button_element.click()
+    client_pass = pyotp.TOTP(UPSTOX_CLIENT_PASS).now()
+    text_box = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, "otpNum")))
+    text_box.clear()
+    text_box.send_keys(client_pass)
+    wait = WebDriverWait(driver, 10)
+    continue_button = wait.until(EC.element_to_be_clickable((By.ID, "continueBtn")))
+    continue_button.click()
+    # XPath for the pin input field
+    text_box = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, "pinCode")))
+    text_box.clear()
+    text_box.send_keys(UPSTOX_CLIENT_PIN)
+    continue_button = wait.until(EC.element_to_be_clickable((By.ID, "pinContinueBtn")))
+    continue_button.click()
+    redirect_url = WebDriverWait(driver, 10).until(
+        lambda d: "?code=" in d.current_url
+    )
+    # Retrieve the token from the URL
+    token = driver.current_url.split("?code=")[1]
+
+    url = 'https://api.upstox.com/v2/login/authorization/token'
+    headers = {
+        'accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
+    }
+    data = {
+        'code': token,
+        'client_id': UPSTOX_API_KEY,
+        'client_secret': UPSTOX_API_SECRET,
+        'redirect_uri': "https://www.google.com",
+        'grant_type': 'authorization_code',
+    }
+
+    response = requests.post(url, headers=headers, data=data)
+
+    print(response.status_code)
+    print(response.json())
+    access_token=response.json().get("access_token")
+
+    return access_token
 
 def logger_init():
     logger = logging.getLogger('Auto_Trader')
     logger.setLevel(logging.DEBUG)  # Set the logging level for the logger
     # Rotating file handler (file size limit of 1 MB, keeps 5 backup files)
     file_handler = RotatingFileHandler('logs/app.log', maxBytes=1_000_000, backupCount=5)
+    # Create a logging format
+    formatter = logging.Formatter('%(message)s')
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+    return logger
+
+def upstox_logger_init():
+    logger = logging.getLogger('Auto_Trader')
+    logger.setLevel(logging.DEBUG)  # Set the logging level for the logger
+    # Rotating file handler (file size limit of 1 MB, keeps 5 backup files)
+    file_handler = RotatingFileHandler('logs/upstox_app.log', maxBytes=1_000_000, backupCount=5)
     # Create a logging format
     formatter = logging.Formatter('%(message)s')
     file_handler.setFormatter(formatter)
@@ -140,6 +244,95 @@ def logout():
     """Logout from Upstox."""
     # Implement Upstox logout
     pass
+
+def upstox_get_current_positions(market_quote_api_instance, logger, instrument_df, global_vars, open_positions=None):
+    global total_m2m, config,email_subject
+    closed_m2m=0
+    open_m2m=0
+    if open_positions is not None:
+        for index, row in open_positions.iterrows():
+            instrument_key = instrument_df[(instrument_df.tradingsymbol==row['tsym'])].iloc[0].instrument_key
+            lp = market_quote_api_instance.ltp(instrument_key, "2.0").data['NSE_FO:'+row['tsym']].last_price
+            open_positions['lp'] = open_positions['lp'].astype(float)
+            open_positions.at[index, 'lp'] = float(lp)
+    # else:
+    #     # Fetch the latest data (positions, LTP, etc.)
+    #     all_positions_data=[]
+    #     ret = api.get_positions()
+    #     if ret is None:
+    #         logger.info("Issue fetching Positions")
+    #         email_subject = "Issue fetching Positions..."
+    #         return None, 0, 0
+    #     else:
+    #         mtm = 0
+    #         pnl = 0
+    #         for i in ret:
+    #             if i['tsym'][:5]=='NIFTY' or i['tsym'][:9] =='BANKNIFTY':
+    #                 if int(i['netqty'])<0:
+    #                     buy_sell = 'S'
+    #                 elif int(i['netqty'])>0:
+    #                     buy_sell = 'B'
+    #                 elif int(i['netqty'])==0:
+    #                     buy_sell = 'NA'
+                    
+    #                 # Error handling in case of wrong LTP value returned by API
+    #                 if float(i['lp'])<1:
+    #                     logger.info("Below 1 LP issue. Check manually")
+    #                     email_subject = "Below 1 LP issue. Check manually"
+    #                     return None, 0, 0
+
+    #                 all_positions_data.append({
+    #                     'buy_sell': buy_sell, 
+    #                     'tsym':i['tsym'], 
+    #                     'qty': i['netqty'], 
+    #                     'remarks':'Existing Order', 
+    #                     'upldprc': i['upldprc'], 
+    #                     'netupldprc': i['netupldprc'], 
+    #                     'lp':i['lp'], 
+    #                     'ord_type':i['tsym'][12],
+    #                     'rpnl':i['rpnl'],
+    #                     'cfbuyqty': i['cfbuyqty'],
+    #                     'cfsellqty': i['cfsellqty'],                
+    #                     'daybuyamt':i['daybuyamt'],
+    #                     'daysellamt':i['daysellamt']
+    #                     })
+    #         all_positions_df = pd.DataFrame(all_positions_data)
+            
+    #         if not all_positions_df.empty:
+    #             # Calculate Total M2M
+    #             closed_positions = all_positions_df[all_positions_df['buy_sell']=="NA"]
+    #             closed_positions = closed_positions.copy() 
+    #             if not closed_positions.empty:
+    #                 closed_positions.loc[:,'totcfbuyamt'] = closed_positions.upldprc.astype(float)*closed_positions.cfbuyqty.astype(int)
+    #                 closed_positions.loc[:,'totcfsellamt'] = closed_positions.upldprc.astype(float)*closed_positions.cfsellqty.astype(int)
+    #                 closed_positions.loc[:,'netbuy']=closed_positions['daybuyamt'].astype(float)+closed_positions['totcfbuyamt']
+    #                 closed_positions.loc[:,'netsell']=closed_positions['daysellamt'].astype(float)+closed_positions['totcfsellamt']
+    #                 closed_positions.loc[:,'net_prft']=closed_positions['netsell']-closed_positions['netbuy']
+    #                 closed_m2m = round(float(closed_positions['net_prft'].sum()),2)
+    #                 print(f"Closed M2M: {closed_m2m}")
+    #                 logger.info(format_line)
+    #                 logger.info(f"<<<TODAY'S CLOSED POSITION : {closed_m2m} | ADJUST TARGET PROFIT>>>")
+    #                 logger.info(format_line)
+    #                 del closed_positions
+
+    #             open_positions = all_positions_df[~(all_positions_df['buy_sell']=="NA")]
+    #             open_positions = open_positions.copy() 
+
+    # if not open_positions.empty:
+    #     open_positions['net_profit']=(open_positions['lp'].astype(float)-open_positions['netupldprc'].astype(float))*open_positions['qty'].astype(float)
+    #     open_m2m =round(float(open_positions['net_profit'].sum()),2)
+    #     logger.info(format_line)
+    #     logger.info("<<<CURRENT POSITION>>>")
+    #     with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+    #         logger.info("\n%s",open_positions[['buy_sell', 'tsym', 'qty', 'netupldprc', 'lp']])
+
+    # if global_vars is not None:
+    #     # total_m2m = closed_m2m+open_m2m+float(global_vars.get('Past_M2M'))
+    #     total_m2m = closed_m2m+open_m2m
+    # else:
+        total_m2m = closed_m2m+open_m2m
+        
+    return open_positions, total_m2m, closed_m2m
 
 def get_current_positions(api, logger, global_vars= None, open_positions=None):
     global total_m2m, config,email_subject
@@ -233,7 +426,6 @@ def get_current_positions(api, logger, global_vars= None, open_positions=None):
         total_m2m = closed_m2m+open_m2m
         
     return open_positions, total_m2m, closed_m2m
-
 
 def get_current_positions_new(api, logger, nfo_df, past_m2m, open_positions=None):
     global total_m2m, config,email_subject
@@ -708,6 +900,53 @@ def calculate_delta(logger, global_vars, api, df, current_strike):
 
     return delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff, current_strike, pstrike, cstrike
 
+def upstox_calculate_delta(df, current_strike):
+    print(df)
+    # Verify that there are only 2 records
+    put_order = df[(df.buy_sell=="S")&(df.ord_type=="P")]
+    call_order = df[(df.buy_sell=="S")&(df.ord_type=="C")] 
+
+    pltp= float(put_order.iloc[0]['lp'])
+    cltp= float(call_order.iloc[0]['lp'])
+    delta = round(100*abs(pltp-cltp)/(pltp+cltp),2)
+
+    pdiff = float(put_order.iloc[0]['upldprc'])-pltp
+    cdiff = float(call_order.iloc[0]['upldprc'])-cltp
+    profit_leg = "C" if  cdiff > pdiff else "P"
+    loss_leg = "P" if  cdiff > pdiff else "C"
+
+    pstrike = int(put_order.iloc[0]['tsym'][-7:-2])
+    cstrike = int(call_order.iloc[0]['tsym'][-7:-2])
+
+# if distance between put and call strike is less than min(dist between put and current_strike , dist between call and current_strike) consider strategy as IF
+    print("Calculating Delta .. Getting Current Price")
+    
+
+    strategy = 'IF' if abs(pstrike-cstrike) < min(abs(current_strike-pstrike), abs(current_strike-cstrike)) else 'IC'
+    # Special condition
+    if pstrike==cstrike and cstrike==current_strike:
+        strategy = 'IF'
+
+    put_hedge = df[(df.buy_sell=="B")&(df.ord_type=="P")]
+    call_hedge = df[(df.buy_sell=="B")&(df.ord_type=="C")] 
+
+    if len(put_hedge)>0:
+        p_hedge_strike = int(put_hedge.iloc[0]['tsym'][-7:-2])
+        pe_hedge_diff= pstrike-p_hedge_strike
+    else:
+        p_hedge_strike = None
+        pe_hedge_diff= None
+
+    if len(call_hedge)>0:
+        c_hedge_strike = int(call_hedge.iloc[0]['tsym'][-7:-2])
+        ce_hedge_diff= c_hedge_strike-cstrike
+    else:
+        c_hedge_strike = None
+        ce_hedge_diff= None
+
+    return delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff, current_strike, pstrike, cstrike
+
+
 def calculate_metrics(logger, df):
     #Hedges
     puth_order = df[(df.buy_sell=="B")&(df.ord_type=="P")] 
@@ -968,12 +1207,22 @@ def perform_adjustment(order_details):
     # Use Upstox API for order adjustment
     pass
 
+def upstox_calculate_breakevens(df, global_vars):
+    # Calculate breakevens
+    # qty = global_vars.get('lot_size')*global_vars.get('lots')
+    df['total_credit'] = df['netupldprc'].astype(float).astype(int)
+    adj = global_vars.get('Past_M2M')/df['qty'].abs().mean()
+    net_credit = round(float(df['total_credit'].sum()),2)
+    higher_be = float(df[(df['ord_type']=="P")&(df['buy_sell']=="S")]['tsym'].iloc[0][-7:-2])+net_credit -adj
+    lower_be = float(df[(df['ord_type']=="C")&(df['buy_sell']=="S")]['tsym'].iloc[0][-7:-2])-net_credit +adj
+    return round(lower_be,0), round(higher_be,0)
+
 def calculate_breakevens(df, global_vars):
     # Calculate breakevens
-    qty = global_vars.get('lot_size')*global_vars.get('lots')
-    df['total_credit'] = df['netupldprc'].astype(float)*df['qty'].astype(int)/(qty)
-    adj = global_vars.get('Past_M2M')/(qty)
+    # qty = global_vars.get('lot_size')*global_vars.get('lots')
+    df['total_credit'] = df['netupldprc'].astype(float).astype(int)
+    adj = global_vars.get('Past_M2M')/df['qty'].abs().mean()
     net_credit = round(float(df['total_credit'].sum()),2)
-    lower_be = float(df[(df['ord_type']=="P")&(df['buy_sell']=="S")]['tsym'].iloc[0][-5:])+net_credit-adj
-    higher_be = float(df[(df['ord_type']=="C")&(df['buy_sell']=="S")]['tsym'].iloc[0][-5:])-net_credit+adj
+    higher_be = float(df[(df['ord_type']=="P")&(df['buy_sell']=="S")]['tsym'].iloc[0][-5:])+net_credit #-adj
+    lower_be = float(df[(df['ord_type']=="C")&(df['buy_sell']=="S")]['tsym'].iloc[0][-5:])-net_credit #+adj
     return round(lower_be,0), round(higher_be,0)
