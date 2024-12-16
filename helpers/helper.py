@@ -616,12 +616,12 @@ def get_Option_Chain_new(api, symbol, expiry, symbolDf, optype, min_strike_price
     return Ostrikedf
 
 def get_nearest_price_strike(df, ltp):
-    df['price_diff']=abs(df['lp']-ltp)
+    df['price_diff']=abs(float(df['lp']-ltp))
     df.sort_values(by='price_diff', inplace=True)
     return df.iloc[0]['tsym'], df.iloc[0]['lp']
 
 def get_nearest_strike_strike(df, strike):
-    df['strike_diff']=abs(df['StrikePrice']-strike)
+    df['strike_diff']=abs(float(df['StrikePrice']-strike))
     df.sort_values(by='strike_diff', inplace=True)
     return df.iloc[0]['tsym'], df.iloc[0]['lp']
 
@@ -739,7 +739,7 @@ def enter_trade_ironfly(api, logger,global_vars):
     print("Positions based on Delta")
     logger.info("Positions based on Delta")
     delta_oc = CEOptdf.merge(PEOptdf, on = 'StrikePrice', how = 'left')
-    delta_oc['delta_diff'] = abs(delta_oc[(delta_oc['lp_x']>0) &(delta_oc['lp_y']>0)]['lp_x']-delta_oc[(delta_oc['lp_x']>0) &(delta_oc['lp_y']>0)]['lp_y'])
+    delta_oc['delta_diff'] = abs(float(delta_oc[(delta_oc['lp_x']>0) &(delta_oc['lp_y']>0)]['lp_x']-delta_oc[(delta_oc['lp_x']>0) &(delta_oc['lp_y']>0)]['lp_y']))
     delta_oc.sort_values(by='delta_diff', inplace=True)
     delta_atm = delta_oc['StrikePrice'].iloc[0]
     Delta_ord_df, d_net_premium, d_margin = calculate_initial_positions(global_vars, logger, api, delta_atm, CEOptdf, PEOptdf)
@@ -821,7 +821,7 @@ def place_order_new(logger, api, order_df, lot_size,live=0,remarks="regular orde
     for i, row in order_df.iterrows():
         if live:
             ret = api.place_order(buy_or_sell=row['buy_sell'], product_type=prd_type, exchange=exchange, 
-                                  tradingsymbol=row['tsym'], quantity=abs(row['qty']), 
+                                  tradingsymbol=row['tsym'], quantity=abs(int(row['qty'])), 
                                   discloseqty=disclosed_qty,price_type=price_type, price=price,
                                   trigger_price=trigger_price, retention=retention, remarks=remarks)
             # print(buy_sell,"|", prd_type,"|", exchange,"|", tsym,"|", qty,"|", disclosed_qty,"|", price_type,"|", price,"|", trigger_price,"|", retention,"|", remarks)
@@ -1073,7 +1073,7 @@ def require_adjustments(logger, api, global_vars, strategy, delta, positions_df,
             L_tsym, L_lp = get_nearest_price_strike(odf, search_ltp)
             if is_ce_hedge:
                 H_strike = int(L_tsym[-5:])+ce_hedge_diff 
-            new_delta = round(100*abs(L_lp-pltp)/(L_lp+pltp),2)
+            new_delta = round(100*abs(float(L_lp-pltp))/(L_lp+pltp),2)
             logger.info(f"New Delta of adjusted trade: {new_delta}")
             rev_cstrike = int(L_tsym[-5:])
         else:
@@ -1082,7 +1082,7 @@ def require_adjustments(logger, api, global_vars, strategy, delta, positions_df,
             L_tsym, L_lp = get_nearest_price_strike(odf, search_ltp)
             if is_pe_hedge:
                 H_strike = int(L_tsym[-5:])-pe_hedge_diff
-            new_delta = round(100*abs(L_lp-cltp)/(L_lp+cltp),2)
+            new_delta = round(100*absfloat((L_lp-cltp))/(L_lp+cltp),2)
             logger.info(f"New Delta of adjusted trade: {new_delta}")
             rev_pstrike = int(L_tsym[-5:])
 
@@ -1122,7 +1122,7 @@ def require_adjustments(logger, api, global_vars, strategy, delta, positions_df,
 
             rev_cstrike = int(L_tsym[-5:])
 
-            new_delta = round(100*abs(L_lp-pltp)/(L_lp+pltp),2)
+            new_delta = round(100*abs(float((L_lp-pltp))/(L_lp+pltp),2)
             logger.info(f"New Delta of adjusted trade: {new_delta}")
         else:
             search_ltp = cltp
@@ -1142,7 +1142,7 @@ def require_adjustments(logger, api, global_vars, strategy, delta, positions_df,
                 H_strike = new_strike_price-pe_hedge_diff
 
             rev_pstrike = int(L_tsym[-5:])
-            new_delta = round(100*abs(L_lp-cltp)/(L_lp+cltp),2)
+            new_delta = round(100*abs(float(L_lp-cltp))/(L_lp+cltp),2)
             logger.info(f"New Delta of adjusted trade: {new_delta}")
 
             
@@ -1211,7 +1211,8 @@ def upstox_calculate_breakevens(df, global_vars):
     # Calculate breakevens
     # qty = global_vars.get('lot_size')*global_vars.get('lots')
     df['total_credit'] = df['netupldprc'].astype(float).astype(int)
-    adj = global_vars.get('Past_M2M')/df['qty'].abs().mean()
+    # adj = global_vars.get('Past_M2M')/df['qty'].abs().mean()
+    adj = abs(float(global_vars.get('Past_M2M')) / df['qty'].mean())
     net_credit = round(float(df['total_credit'].sum()),2)
     higher_be = float(df[(df['ord_type']=="P")&(df['buy_sell']=="S")]['tsym'].iloc[0][-7:-2])+net_credit -adj
     lower_be = float(df[(df['ord_type']=="C")&(df['buy_sell']=="S")]['tsym'].iloc[0][-7:-2])-net_credit +adj
