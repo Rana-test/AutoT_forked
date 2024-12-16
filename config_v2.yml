@@ -21,3 +21,4 @@ percent_of_max_profit: 400
 positions_data: csv
 stop_loss: -5000000
 target_profit: 5000000
+
