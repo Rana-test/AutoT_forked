@@ -159,7 +159,7 @@ def main():
             if pos.split('.')[-1] =='csv':
                 open_positions= pd.read_csv('Positions/'+pos)
                 IC_delta_threshold = 40
-                IF_delta_threshold = 50
+                IF_delta_threshold = 40
             else:
                 open_positions=None
                 IC_delta_threshold = global_vars.get("ICT")
