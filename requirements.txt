@@ -6,4 +6,3 @@ zipfile2
 PyYAML==6.0.2
 selenium
 upstox-python-sdk
-swagger-py-codegen
