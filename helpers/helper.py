@@ -1212,6 +1212,7 @@ def upstox_calculate_breakevens(df, global_vars):
     # qty = global_vars.get('lot_size')*global_vars.get('lots')
     df['total_credit'] = df['netupldprc'].astype(float).astype(int)
     # adj = global_vars.get('Past_M2M')/df['qty'].abs().mean()
+    df['qty'] = pd.to_numeric(df['qty'], errors='coerce')
     adj = abs(float(global_vars.get('Past_M2M')) / df['qty'].mean())
     net_credit = round(float(df['total_credit'].sum()),2)
     higher_be = float(df[(df['ord_type']=="P")&(df['buy_sell']=="S")]['tsym'].iloc[0][-7:-2])+net_credit -adj
@@ -1222,7 +1223,9 @@ def calculate_breakevens(df, global_vars):
     # Calculate breakevens
     # qty = global_vars.get('lot_size')*global_vars.get('lots')
     df['total_credit'] = df['netupldprc'].astype(float).astype(int)
-    adj = global_vars.get('Past_M2M')/df['qty'].abs().mean()
+    df['qty'] = pd.to_numeric(df['qty'], errors='coerce')
+    # adj = global_vars.get('Past_M2M')/df['qty'].abs().mean()
+    adj = abs(float(global_vars.get('Past_M2M')) / df['qty'].mean())
     net_credit = round(float(df['total_credit'].sum()),2)
     higher_be = float(df[(df['ord_type']=="P")&(df['buy_sell']=="S")]['tsym'].iloc[0][-5:])+net_credit #-adj
     lower_be = float(df[(df['ord_type']=="C")&(df['buy_sell']=="S")]['tsym'].iloc[0][-5:])-net_credit #+adj
