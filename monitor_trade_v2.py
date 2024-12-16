@@ -139,6 +139,7 @@ def main():
     api = h.login(logger)
 
     while is_within_timeframe("03:00", "03:45"):
+        print("Initializing")
         sleep_time.sleep(60)
 
     counter=0
