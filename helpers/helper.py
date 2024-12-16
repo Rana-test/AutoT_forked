@@ -1122,7 +1122,7 @@ def require_adjustments(logger, api, global_vars, strategy, delta, positions_df,
 
             rev_cstrike = int(L_tsym[-5:])
 
-            new_delta = round(100*abs(float((L_lp-pltp))/(L_lp+pltp),2)
+            new_delta = round(100*abs(float((L_lp-pltp))/(L_lp+pltp)),2)
             logger.info(f"New Delta of adjusted trade: {new_delta}")
         else:
             search_ltp = cltp
