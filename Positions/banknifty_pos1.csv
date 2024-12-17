@@ -1,5 +1,0 @@
-buy_sell,tsym,qty,remarks,upldprc,netupldprc,lp,ord_type,rpnl,cfbuyqty,cfsellqty,daybuyamt,daysellamt
-B,BANKNIFTY24DEC24P50000,45,Manual Entry,0.0,100,0,P,0,0,0,0,0
-S,BANKNIFTY24DEC24P48400,-45,Manual Entry,0.0,100,0,P,0,0,0,0,0
-S,BANKNIFTY24DEC24C61500,-45,Manual Entry,0.0,100,0,C,0,0,0,0,0
-B,BANKNIFTY24DEC24C50000,45,Manual Entry,0.0,100,0,C,0,0,0,0,0
