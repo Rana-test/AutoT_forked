@@ -213,7 +213,6 @@ def main():
     
     # Logout
     api.logout()
-    global_vars['counter_test']=counter_test
     save_globals_to_yaml('config_v2.yml', global_vars)
     
 
