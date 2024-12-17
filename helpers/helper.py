@@ -616,12 +616,12 @@ def get_Option_Chain_new(api, symbol, expiry, symbolDf, optype, min_strike_price
     return Ostrikedf
 
 def get_nearest_price_strike(df, ltp):
-    df['price_diff']=abs(float(df['lp']-ltp))
+    df['price_diff']=abs(df['lp']-ltp)
     df.sort_values(by='price_diff', inplace=True)
     return df.iloc[0]['tsym'], df.iloc[0]['lp']
 
 def get_nearest_strike_strike(df, strike):
-    df['strike_diff']=abs(float(df['StrikePrice']-strike))
+    df['strike_diff']=abs(df['StrikePrice']-strike)
     df.sort_values(by='strike_diff', inplace=True)
     return df.iloc[0]['tsym'], df.iloc[0]['lp']
 
