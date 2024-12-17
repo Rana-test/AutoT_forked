@@ -1073,7 +1073,7 @@ def require_adjustments(logger, api, global_vars, strategy, delta, positions_df,
             L_tsym, L_lp = get_nearest_price_strike(odf, search_ltp)
             if is_ce_hedge:
                 H_strike = int(L_tsym[-5:])+ce_hedge_diff 
-            new_delta = round(100*abs(float(L_lp-pltp))/(L_lp+pltp),2)
+            new_delta = round(100*abs(float((L_lp-pltp)/(L_lp+pltp))),2)
             logger.info(f"New Delta of adjusted trade: {new_delta}")
             rev_cstrike = int(L_tsym[-5:])
         else:
@@ -1082,7 +1082,7 @@ def require_adjustments(logger, api, global_vars, strategy, delta, positions_df,
             L_tsym, L_lp = get_nearest_price_strike(odf, search_ltp)
             if is_pe_hedge:
                 H_strike = int(L_tsym[-5:])-pe_hedge_diff
-            new_delta = round(100*abs(float((L_lp-cltp))/(L_lp+cltp),2)
+            new_delta = round(100*abs(float((L_lp-cltp)/(L_lp+cltp))),2)
             logger.info(f"New Delta of adjusted trade: {new_delta}")
             rev_pstrike = int(L_tsym[-5:])
 
@@ -1122,7 +1122,7 @@ def require_adjustments(logger, api, global_vars, strategy, delta, positions_df,
 
             rev_cstrike = int(L_tsym[-5:])
 
-            new_delta = round(100*abs(float((L_lp-pltp))/(L_lp+pltp)),2)
+            new_delta = round(100*abs(float((L_lp-pltp)/(L_lp+pltp))),2)
             logger.info(f"New Delta of adjusted trade: {new_delta}")
         else:
             search_ltp = cltp
@@ -1142,7 +1142,7 @@ def require_adjustments(logger, api, global_vars, strategy, delta, positions_df,
                 H_strike = new_strike_price-pe_hedge_diff
 
             rev_pstrike = int(L_tsym[-5:])
-            new_delta = round(100*abs(float(L_lp-cltp))/(L_lp+cltp),2)
+            new_delta = round(100*abs(float((L_lp-cltp)/(L_lp+cltp))),2)
             logger.info(f"New Delta of adjusted trade: {new_delta}")
 
             
