@@ -1,85 +1,48 @@
-SESSION: {'session': 'session2', 'start_time': '07:00', 'end_time': '18:00'}
-### Day Count: 14 ###
-__________________________________________________________
-<<<CURRENT POSITION>>>
-
-  buy_sell                    tsym  qty  netupldprc      lp
-0        B  BANKNIFTY24DEC24P50000   45      242.20   33.05
-1        S  BANKNIFTY24DEC24P53300  -45      730.05  495.00
-2        S  BANKNIFTY24DEC24C53500  -45      139.45  615.00
-3        B  BANKNIFTY24DEC24C54500   45      168.67  230.35
-LOWER BE: 51858.0, HIGHER BE: 54942.0
-CURRENT STRIKE : 53391.35
-STRATEGY : IC
-DELTA : 10.81 | DELTA_THRESHOLD: 30
-_______________________METRICS______________________
-1. CE Premium Movement: -341.02 
-2. PE Premium Movement: 32.2
-3. Combined Premium Movement: 86.2
-4. Net Delta Drift: 16.13
-5. CE Long/Short Ratio: -12.97
-6. PE Long/Short Ratio: -88.98
-__________________________________________________________
-Max profit = 36061.35 | Auto target = 144245.4
-if -17458.65 > 144245.4 or -17458.65> 5000000:
-if -17458.65 < -1 * 144245.4 or -17458.65 < -5000000
-<<<<<NO ADJUSTMENTS NEEDED>>>>>
+SESSION: {'session': 'session2', 'start_time': '07:00', 'end_time': '10:00'}
+### Day Count: 18 ###
 __________________________________________________________
 <<<CURRENT POSITION>>>
 
   buy_sell                tsym  qty  netupldprc      lp
-0        B  NIFTY26DEC24P23200  100       76.00   12.35
-1        S  NIFTY26DEC24P24450 -100      286.30  142.05
-2        S  NIFTY26DEC24C24600 -100      199.20  329.90
-3        B  NIFTY26DEC24C25500  100       51.15   28.20
-LOWER BE: 22400.0, HIGHER BE: 26650.0
-CURRENT STRIKE : 24641.8
+0        B  NIFTY26DEC24P23200  100       76.00   10.35
+1        S  NIFTY26DEC24P24000 -100      106.20  105.00
+2        S  NIFTY26DEC24C24550 -100      229.27  104.60
+3        B  NIFTY26DEC24C25500  100       51.15   12.40
+LOWER BE: 24088.0, HIGHER BE: 24462.0
+CURRENT STRIKE : 24205.75
 STRATEGY : IC
-DELTA : 39.8 | DELTA_THRESHOLD: 30
+DELTA : 0.19 | DELTA_THRESHOLD: 40
 _______________________METRICS______________________
-1. CE Premium Movement: -65.61 
-2. PE Premium Movement: 50.38
-3. Combined Premium Movement: 61.31
-4. Net Delta Drift: 15.81
-5. CE Long/Short Ratio: 17.56
-6. PE Long/Short Ratio: -44.12
+1. CE Premium Movement: 54.38 
+2. PE Premium Movement: 1.13
+3. Combined Premium Movement: 100.12
+4. Net Delta Drift: 55.74
+5. CE Long/Short Ratio: -31.08
+6. PE Long/Short Ratio: -5470.83
 __________________________________________________________
-Max profit = 51258.0 | Auto target = 205032.0
-if -7305.0 > 205032.0 or -7305.0> 5000000:
-if -7305.0 < -1 * 205032.0 or -7305.0 < -5000000
-New Delta of adjusted trade: 26.16
-<<<<<PERFORM ADJUSTMENTS>>>>>
-  buy_sell                tsym  qty                 remarks netupldprc
-0        S  NIFTY26DEC24P23200  100            Manual Entry       76.0
-1        B  NIFTY26DEC24P24450  100            Manual Entry      286.3
-3        S  NIFTY26DEC24P24600  100        Adjustment Order          0
-4        B  NIFTY26DEC24P23350  100  Adjustment Hedge Order          0
-TEST ORDER PLACEMENT: S, NIFTY26DEC24P23200, 100, Manual Entry
-TEST ORDER PLACEMENT: B, NIFTY26DEC24P24450, 100, Manual Entry
-TEST ORDER PLACEMENT: S, NIFTY26DEC24P24600, 100, Adjustment Order
-TEST ORDER PLACEMENT: B, NIFTY26DEC24P23350, 100, Adjustment Hedge Order
-__________________________________________________________
-<<<TODAY'S CLOSED POSITION : 11355.75 | ADJUST TARGET PROFIT>>>
-__________________________________________________________
+Max profit = 36255.0 | Auto target = 145020.0
+if 2147.0 > 145020.0 or 2147.0> 5000000:
+if 2147.0 < -1 * 145020.0 or 2147.0 < -5000000
+<<<<<NO ADJUSTMENTS NEEDED>>>>>
 __________________________________________________________
 <<<CURRENT POSITION>>>
 
   buy_sell                tsym   qty netupldprc     lp
-1        S  NIFTY26DEC24C25600  -450      22.00  20.50
-2        S  NIFTY26DEC24P23500  -450      25.80  20.60
-LOWER BE: 22023.0, HIGHER BE: 27077.0
-CURRENT STRIKE : 24641.8
+0        S  NIFTY26DEC24P23500  -450      25.80  26.15
+1        S  NIFTY26DEC24C25600  -450      22.00  10.25
+LOWER BE: 25553.0, HIGHER BE: 23547.0
+CURRENT STRIKE : 24208.4
 STRATEGY : IC
-DELTA : 0.24 | DELTA_THRESHOLD: 40
+DELTA : 43.68 | DELTA_THRESHOLD: 80
 _______________________METRICS______________________
-1. CE Premium Movement: 6.82 
-2. PE Premium Movement: 20.16
-3. Combined Premium Movement: 100.21
-4. Net Delta Drift: 57.11
+1. CE Premium Movement: 53.41 
+2. PE Premium Movement: -1.36
+3. Combined Premium Movement: 133.26
+4. Net Delta Drift: 78.56
 5. CE Long/Short Ratio: 0.0
-6. PE Long/Short Ratio: 0.0
+6. PE Long/Short Ratio: -0.0
 __________________________________________________________
-Max profit = 48288.75 | Auto target = 193155.0
-if 14370.75 > 193155.0 or 14370.75> 5000000:
-if 14370.75 < -1 * 193155.0 or 14370.75 < -5000000
+Max profit = 36933.0 | Auto target = 147732.0
+if 5130.0 > 147732.0 or 5130.0> 5000000:
+if 5130.0 < -1 * 147732.0 or 5130.0 < -5000000
 <<<<<NO ADJUSTMENTS NEEDED>>>>>
