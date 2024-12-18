@@ -10,7 +10,7 @@ import time as sleep_time
 import yaml
 import helpers.helper as h
 import pytz
-
+#test
 def load_yaml_to_globals(yaml_file):
     with open(yaml_file, 'r') as file:
         data = yaml.safe_load(file)  # Load YAML content
