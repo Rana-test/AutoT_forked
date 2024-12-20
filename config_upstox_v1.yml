@@ -1,0 +1,27 @@
+BankExpiry: 24-DEC-2024
+BankSymbol: BANKNIFTY
+EntryType: AUTO
+Entry_Date: '2024-11-23'
+Expiry: 24-DEC-2024
+ICT: 40
+IFT: 50
+Past_M2M: 15423
+Symbol: NIFTY
+Update_EOD: 0
+access_token: eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIyTUNVTkYiLCJqdGkiOiI2NzVkM2NkNjc0Mzk4ZDE2MTdmYWRlZTQiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaWF0IjoxNzM0MTYzNjcwLCJpc3MiOiJ1ZGFwaS1nYXRld2F5LXNlcnZpY2UiLCJleHAiOjE3MzQyMTM2MDB9.DHamOTjhV_hI9lQAbi3bAmiUjZobhfK40_5YMrcdjW0
+enter_strategy: M
+enter_today: 0
+instrument_csv_path: https://assets.upstox.com/market-quote/instruments/exchange/NSE.csv.gz
+interval: 60
+live: 0
+log_file_path: logs/upstox_app.log
+lot_size: 25
+lots: 1
+nfo_sym_path: NFO_symbols.txt
+nse_sym_path: NSE_symbols.txt
+num_adjustments: 0
+percent_of_max_profit: 400
+positions_data: csv
+stop_loss: -5000000
+target_profit: 5000000
+

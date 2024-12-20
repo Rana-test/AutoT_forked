@@ -24,3 +24,5 @@ Positions/nifty_pos_2.csv
 logs/app.log
 creds.yml
 logs/app.log
+complete.csv
+upstox_creds.txt
