@@ -160,7 +160,10 @@ def main():
 
         CM2M = global_vars.get("Past_M2M") 
 
-        for pos in os.listdir("Positions")+["nifty"]:
+        pos_track = os.listdir("Positions")+["nifty"]
+        pos_track = [x for x in pos_track if x!=".gitkeep"]
+
+        for pos in pos_track:
             # Get Current Positions
             if pos.split('.')[-1] =='csv':
                 open_positions= pd.read_csv('Positions/'+pos)
