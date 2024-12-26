@@ -45,8 +45,8 @@ def monitor_trade(logger, api, global_vars, positions_df, m2m, closed_m2m , curr
             email_subject ="|No Positions found|"
     
     # Get breakevens
-    lower_be, higher_be = h.calculate_breakevens(positions_df, global_vars)
-    logger.info(f"LOWER BE: {lower_be}, HIGHER BE: {higher_be}")
+    # lower_be, higher_be = h.calculate_breakevens(positions_df, global_vars)
+    # logger.info(f"LOWER BE: {lower_be}, HIGHER BE: {higher_be}")
     
     # Step 2: Check adjustment signal
     delta, pltp, cltp, profit_leg, loss_leg, strategy, pe_hedge_diff, ce_hedge_diff, current_strike, pstrike, cstrike = h.calculate_delta(logger, global_vars, api, positions_df, current_strike)
