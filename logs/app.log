@@ -1,23 +1,23 @@
-SESSION: {'session': 'session1', 'start_time': '03:45', 'end_time': '06:57'}
+SESSION: {'session': 'session2', 'start_time': '07:00', 'end_time': '10:10'}
 ### Day Count: 38 ###
 __________________________________________________________
 <<<CURRENT POSITION>>>
 
   buy_sell                tsym   qty netupldprc     lp
-0        S  NIFTY30JAN25P22650  -450      51.00  75.05
-1        S  NIFTY30JAN25C25100  -450      30.60   6.95
-CURRENT STRIKE : 23202.65
+0        S  NIFTY30JAN25P22650  -450      51.00  75.50
+1        S  NIFTY30JAN25C25100  -450      30.60   6.30
+CURRENT STRIKE : 23213.2
 STRATEGY : IC
-DELTA : 83.05 | DELTA_THRESHOLD: 90
+DELTA : 84.6 | DELTA_THRESHOLD: 90
 _______________________METRICS______________________
-1. CE Premium Movement: 77.29 
-2. PE Premium Movement: -47.16
-3. Combined Premium Movement: 183.46
-4. Net Delta Drift: 91.48
+1. CE Premium Movement: 79.41 
+2. PE Premium Movement: -48.04
+3. Combined Premium Movement: 184.8
+4. Net Delta Drift: 92.28
 5. CE Long/Short Ratio: 0.0
 6. PE Long/Short Ratio: -0.0
 __________________________________________________________
 Max profit = 52143.0 | Auto target = 208572.0
-if -180.0 > 208572.0 or -180.0> 5000000:
-if -180.0 < -1 * 208572.0 or -180.0 < -5000000
+if -90.0 > 208572.0 or -90.0> 5000000:
+if -90.0 < -1 * 208572.0 or -90.0 < -5000000
 <<<<<NO ADJUSTMENTS NEEDED>>>>>
