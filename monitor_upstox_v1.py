@@ -69,8 +69,6 @@ def main():
     
     # Load all environment variables
     load_yaml_to_globals('config_upstox_v1.yml')
-    
-    email_subject ="|Initializing...|"
 
     # Get all global variables and their values, excluding built-in ones
     global_vars = {key: value for key, value in globals().items() if not key.startswith('__')}
@@ -95,12 +93,15 @@ def main():
     try:
         access_token= global_vars.get("access_token")
         configuration.access_token = access_token   
-        market_quote_api_instance = upstox_client.MarketQuoteApi(upstox_client.ApiClient(configuration))
-        current_strike = market_quote_api_instance.ltp("NSE_INDEX|Nifty 50","2.0")
+        market_quote_api = upstox_client.MarketQuoteApi(upstox_client.ApiClient(configuration))
+        portfolio_api = upstox_client.PortfolioApi(upstox_client.ApiClient(configuration))
+        options_api = upstox_client.OptionsApi(upstox_client.ApiClient(configuration))
     except:
         access_token = h.upstox_login(logger)
         configuration.access_token = access_token   
-        market_quote_api_instance = upstox_client.MarketQuoteApi(upstox_client.ApiClient(configuration))
+        market_quote_api = upstox_client.MarketQuoteApi(upstox_client.ApiClient(configuration))
+        portfolio_api = upstox_client.PortfolioApi(upstox_client.ApiClient(configuration))
+        options_api = upstox_client.OptionsApi(upstox_client.ApiClient(configuration))
         if os.path.exists('config_upstox_v1.yml'):
             save_globals_to_yaml("config_upstox_v1.yml", global_vars)
 
@@ -116,48 +117,53 @@ def main():
         logger.info(f"SESSION: {session}")
         logger.info(f"### Day Count: {h.count_working_days(global_vars)} ###")
 
-        email_subject=""
+        email_subject ="Upstox: "
+        curr_pos = get_current_pos(portfolio_api)
+        metrics = get_metrics(curr_pos)
 
-        CM2M = global_vars.get("Past_M2M") 
 
-        for pos in os.listdir("Upstox_Positions"): #+["nifty"]:
-            # Get Current Positions
-            if pos.split('.')[-1] =='csv':
-                open_positions= pd.read_csv('Upstox_Positions/'+pos)
-                IC_delta_threshold = 40
-                IF_delta_threshold = 50
-            else:
-                open_positions=None
-                IC_delta_threshold = global_vars.get("ICT")
-                IF_delta_threshold = global_vars.get("IFT")
-            positions_df, m2m, closed_m2m = h.upstox_get_current_positions(market_quote_api_instance, logger, instrument_df, global_vars, open_positions)
-            symbol=None
-            expiry=None
-            minsp=None
-            maxsp=None
-            if pos.split("_")[0]=="nifty":
-                current_strike = float(market_quote_api_instance.ltp("NSE_INDEX|Nifty 50","2.0").data["NSE_INDEX:Nifty 50"].last_price)
-                email_head = "<NIFTY>"
-                symbol="NIFTY"
-                expiry=global_vars.get('Expiry')
-                # minsp=22000
-                # maxsp=27000
-            elif pos.split("_")[0]=="banknifty":
-                current_strike = float(market_quote_api_instance.ltp("NSE_INDEX|Nifty Bank","2.0").data["NSE_INDEX:Nifty Bank"].last_price)
-                email_head = "<BANKNIFTY>"
-                symbol="BANKNIFTY"
-                expiry=global_vars.get('BankExpiry')
-                # minsp=48000
-                # maxsp=58000
-            email_sub = monitor_trade(logger, access_token, global_vars,positions_df, m2m, closed_m2m, current_strike, symbol, expiry, minsp,maxsp, IC_delta_threshold, IF_delta_threshold)
-            CM2M+=int(m2m)
-            email_subject += email_head + email_sub +"|"
-            print(email_subject)    
-        exit(0)
-        sleep_time.sleep(global_vars.get("interval"))
-        if counter % 10 == 0:
-            h.send_email(f"CM2M:{CM2M}"+ email_subject, global_vars)
-        counter+=1
+
+        # CM2M = global_vars.get("Past_M2M") 
+
+        # for pos in os.listdir("Upstox_Positions") + ["nifty"]:
+        #     # Get Current Positions
+        #     if pos.split('.')[-1] =='csv':
+        #         open_positions= pd.read_csv('Upstox_Positions/'+pos)
+        #         IC_delta_threshold = 40
+        #         IF_delta_threshold = 50
+        #     else:
+        #         open_positions=None
+        #         IC_delta_threshold = global_vars.get("ICT")
+        #         IF_delta_threshold = global_vars.get("IFT")
+        #     positions_df, m2m, closed_m2m = h.upstox_get_current_positions(market_quote_api_instance, logger, instrument_df, global_vars, open_positions)
+        #     symbol=None
+        #     expiry=None
+        #     minsp=None
+        #     maxsp=None
+        #     if pos.split("_")[0]=="nifty":
+        #         current_strike = float(market_quote_api_instance.ltp("NSE_INDEX|Nifty 50","2.0").data["NSE_INDEX:Nifty 50"].last_price)
+        #         email_head = "<NIFTY>"
+        #         symbol="NIFTY"
+        #         expiry=global_vars.get('Expiry')
+        #         # minsp=22000
+        #         # maxsp=27000
+        #     elif pos.split("_")[0]=="banknifty":
+        #         current_strike = float(market_quote_api_instance.ltp("NSE_INDEX|Nifty Bank","2.0").data["NSE_INDEX:Nifty Bank"].last_price)
+        #         email_head = "<BANKNIFTY>"
+        #         symbol="BANKNIFTY"
+        #         expiry=global_vars.get('BankExpiry')
+        #         # minsp=48000
+        #         # maxsp=58000
+        #     email_sub = monitor_trade(logger, access_token, global_vars,positions_df, m2m, closed_m2m, current_strike, symbol, expiry, minsp,maxsp, IC_delta_threshold, IF_delta_threshold)
+        #     CM2M+=int(m2m)
+        #     email_subject += email_head + email_sub +"|"
+        #     print(email_subject)    
+        # exit(0)
+
+        # sleep_time.sleep(global_vars.get("interval"))
+        # if counter % 10 == 0:
+        #     h.send_email(f"CM2M:{CM2M}"+ email_subject, global_vars)
+        # counter+=1
 
     # Update Past_M2M at EOD
         # if session ==2 and tod = eod: update config
@@ -171,9 +177,8 @@ def main():
         # save_config()
     
     # Logout
-    api.logout()
-    global_vars['counter_test']=counter_test
-    save_globals_to_yaml('config_v2.yml', global_vars)
+    # api.logout()
+    # save_globals_to_yaml('config_v2.yml', global_vars)
 
 def monitor_trade(logger, access_token, global_vars, positions_df, m2m, closed_m2m , current_strike, symbol, expiry, minsp,maxsp, IC_delta_threshold, IF_delta_threshold):
 
@@ -239,16 +244,37 @@ def fetch_ltp(instrument_key, ACCESS_TOKEN):
     response = requests.get(url, params={'instrument_key': instrument_key}, headers=headers)
     return response.json()
 
-def is_within_time_range():
-    # Get the current UTC time
-    now = datetime.now(pytz.utc).time()
+def get_current_pos(portfolio_api):
+    curr_pos = pd.DataFrame(columns = ['trading_symbol','quantity','average_price',
+                                   'last_price','pnl','realised','unrealised',
+                                   'value'])
+    portfolio_positions = portfolio_api.get_positions("2.0")
+    for pos in portfolio_positions.data:
+        pos_data = {
+        'trading_symbol': pos.trading_symbol,
+        'quantity': pos.quantity,
+        'average_price': pos.average_price,
+        'last_price': pos.last_price,
+        'pnl': pos.pnl,
+        'realised': pos.realised,
+        'unrealised': pos.unrealised,
+        'value': pos.value
+        }
+        curr_pos = pd.concat([curr_pos, pd.DataFrame([pos_data])], ignore_index=True)
 
-    # Define the start and end times
-    start_time = time(3, 45)  # 3:45 a.m. UTC
-    end_time = time(21, 00)   # 10:00 a.m. UTC
+    return curr_pos
 
-    # Check if the current time is within the range
-    return start_time <= now <= end_time
+
+def get_metrics(curr_pos):
+    # Check the current position
+    # Get metrics
+    # mtm val and %
+    # max_profit
+    # %age distance from nearest breakeven
+    # Delta
+    # strike price
+    # breakevens
+    # days to expiry
 
 if __name__ =="__main__":
     main()

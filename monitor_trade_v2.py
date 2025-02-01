@@ -219,16 +219,16 @@ def main():
     save_globals_to_yaml('config_v2.yml', global_vars)
     
 
-def is_within_time_range():
-    # Get the current UTC time
-    now = datetime.now(pytz.utc).time()
+# def is_within_time_range():
+#     # Get the current UTC time
+#     now = datetime.now(pytz.utc).time()
 
-    # Define the start and end times
-    start_time = time(3, 45)  # 3:45 a.m. UTC
-    end_time = time(21, 00)   # 10:00 a.m. UTC
+#     # Define the start and end times
+#     start_time = time(3, 45)  # 3:45 a.m. UTC
+#     end_time = time(21, 00)   # 10:00 a.m. UTC
 
-    # Check if the current time is within the range
-    return start_time <= now <= end_time
+#     # Check if the current time is within the range
+#     return start_time <= now <= end_time
 
 if __name__ =="__main__":
     main()

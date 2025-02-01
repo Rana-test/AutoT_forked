@@ -5,4 +5,5 @@ pandas
 zipfile2
 PyYAML==6.0.2
 selenium
-upstox-python-sdk
+# upstox-python-sdk
+yfinance

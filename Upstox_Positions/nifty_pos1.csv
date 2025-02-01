@@ -1,5 +1,0 @@
-buy_sell,tsym,qty,remarks,upldprc,netupldprc,lp,ord_type,rpnl,cfbuyqty,cfsellqty,daybuyamt,daysellamt
-B,NIFTY24DEC23200PE,100,Manual Entry,0.0,76.0,0,P,0,0,0,0,0
-S,NIFTY24DEC24450PE,-100,Manual Entry,0.0,286.30,0,P,0,0,0,0,0
-S,NIFTY24DEC25100CE,-100,Manual Entry,0.0,103.65,0,C,0,0,0,0,0
-B,NIFTY24DEC25500CE,100,Manual Entry,0.0,51.15,0,C,0,0,0,0,0

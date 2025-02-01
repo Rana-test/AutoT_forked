@@ -20,6 +20,7 @@ from selenium.webdriver.support import expected_conditions as EC
 import time
 import upstox_client
 from upstox_client.rest import ApiException
+import pytz
 
 import pyotp
 format_line="__________________________________________________________"
@@ -238,7 +239,6 @@ def get_symbol_data():
 
             os.remove(zip_file)
             print(f'remove: {zip_file}')
-
 
 def logout():
     """Logout from Upstox."""
@@ -512,7 +512,6 @@ def get_current_positions_new(api, logger, nfo_df, past_m2m, open_positions=None
     total_m2m = closed_m2m+open_m2m+past_m2m
         
     return open_positions, total_m2m, closed_m2m
-
 
 def get_revised_position(api, logger,Symbol, Past_M2M):
     # Publish new Positions after 5 second wait
@@ -880,6 +879,9 @@ def calculate_delta(logger, global_vars, api, df, current_strike):
     # Special condition
     if pstrike==cstrike and cstrike==current_strike:
         strategy = 'IF'
+    
+    if abs(pstrike-cstrike)>1000:
+        strategy="SAFE"
 
     put_hedge = df[(df.buy_sell=="B")&(df.ord_type=="P")]
     call_hedge = df[(df.buy_sell=="B")&(df.ord_type=="C")] 
@@ -1038,6 +1040,158 @@ def get_delta_thresholds(logger, global_vars):
     #     IFT=50
     # logger.info(f"ICT: {ICT} | IFT: {IFT}")
     return ICT, IFT
+
+def require_safe_adjustments(logger, api, global_vars, strategy, delta, positions_df, profit_leg, loss_leg, pltp, cltp, symbol, expiry, minsp,maxsp, IC_delta_threshold, IF_delta_threshold, current_strike ):
+
+    # IC_delta_threshold, IF_delta_threshold = get_delta_thresholds(logger, global_vars)
+    ce_leg = positions_df[(positions_df['buy_sell']=='S')&(positions_df['ord_type']=='C')]
+    pe_leg = positions_df[(positions_df['buy_sell']=='S')&(positions_df['ord_type']=='P')]
+    ce_hedge = positions_df[(positions_df['buy_sell']=='B')&(positions_df['ord_type']=='C')]
+    pe_hedge = positions_df[(positions_df['buy_sell']=='B')&(positions_df['ord_type']=='P')]
+
+    qty = abs(int(positions_df.iloc[0]['qty']))
+
+    is_ce_hedge = True if len(ce_hedge)==1 else False
+    is_pe_hedge = True if len(pe_hedge)==1 else False
+
+    if is_ce_hedge:
+        ce_hedge_diff = abs(int(ce_leg['tsym'].iloc[0][-5:])-int(ce_hedge['tsym'].iloc[0][-5:]))
+    if is_pe_hedge:
+        pe_hedge_diff = abs(int(pe_leg['tsym'].iloc[0][-5:])-int(pe_hedge['tsym'].iloc[0][-5:]))
+    
+    H_strike=None
+    exit_order_df=None
+    new_delta = None
+
+    if strategy=="SAFE":
+        p_diff = current_strike-int(pe_leg['tsym'].iloc[0][-5:])
+        c_diff = current_strike-int(ce_leg['tsym'].iloc[0][-5:])
+        if p_diff<50:
+            # Find lp diff between pleg and ce_sp_lp and ce_sp_plus_50_lp            
+            ce_sp_lp = api.searchscrip(exchange='NSE', searchtext=ce_leg['tsym'].iloc[0][:-5]+(current_strike))['values'][0]
+            ce_sp_plus_50_lp = api.searchscrip(exchange='NSE', searchtext=ce_leg['tsym'].iloc[0][:-5]+(current_strike+50)
+            abs(pltp-ce_sp_lp) < abs(pltp-ce_sp_plus_50_lp)
+
+            #If new Call SP and Loss leg SP is same then exit profit leg and make IF
+            new_strike_price = int(L_tsym[-5:])
+            if new_strike_price-int(pe_leg['tsym'].iloc[0][-5:])<=0:
+                adjust=True
+                exit_order_df = positions_df[positions_df.ord_type==profit_leg][['buy_sell','tsym','qty','remarks','netupldprc']]
+                exit_order_df['buy_sell']=exit_order_df['buy_sell'].apply(lambda x: "S" if x=="B" else "B")
+                new_order = {'buy_sell':"S",'tsym':L_tsym,'qty':qty,'remarks':"Adjustment Order", 'netupldprc':"0"}
+                exit_order_df.loc[len(exit_order_df)+1] = new_order
+        elif c_diff>-50:
+            #Find the Put with lp closest to the loss leg
+            search_ltp = cltp
+            odf = get_Option_Chain(api,logger, global_vars, symbol, expiry, minsp,maxsp, "PE")
+            L_tsym, L_lp = get_nearest_price_strike(odf, search_ltp)
+            #If new Put SP and Loss leg SP is same then exit profit leg and make IF
+            new_strike_price = int(L_tsym[-5:])
+            if new_strike_price-int(ce_leg['tsym'].iloc[0][-5:])>=0:
+                adjust=True
+                exit_order_df = positions_df[positions_df.ord_type==profit_leg][['buy_sell','tsym','qty','remarks','netupldprc']]
+                exit_order_df['buy_sell']=exit_order_df['buy_sell'].apply(lambda x: "S" if x=="B" else "B")
+                new_order = {'buy_sell':"S",'tsym':L_tsym,'qty':qty,'remarks':"Adjustment Order", 'netupldprc':"0"}
+                exit_order_df.loc[len(exit_order_df)+1] = new_order
+
+    elif strategy=="IF" and delta > IF_delta_threshold: 
+        # Exit the loss making leg
+        adjust=True
+        exit_order_df = positions_df[positions_df.ord_type==loss_leg][['buy_sell','tsym','qty','remarks', 'netupldprc']]
+        exit_order_df['buy_sell']=exit_order_df['buy_sell'].apply(lambda x: "S" if x=="B" else "B")
+        #Find new legs
+        if loss_leg=="C":
+            search_ltp = pltp
+            odf = get_Option_Chain(api,logger, global_vars, symbol, expiry, minsp,maxsp, "CE")
+            L_tsym, L_lp = get_nearest_price_strike(odf, search_ltp)
+            if is_ce_hedge:
+                H_strike = int(L_tsym[-5:])+ce_hedge_diff 
+            new_delta = round(100*abs(float((L_lp-pltp)/(L_lp+pltp))),2)
+            logger.info(f"New Delta of adjusted trade: {new_delta}")
+            rev_cstrike = int(L_tsym[-5:])
+        else:
+            search_ltp = cltp
+            odf = get_Option_Chain(api,logger, global_vars, symbol, expiry, minsp,maxsp, "PE")
+            L_tsym, L_lp = get_nearest_price_strike(odf, search_ltp)
+            if is_pe_hedge:
+                H_strike = int(L_tsym[-5:])-pe_hedge_diff
+            new_delta = round(100*abs(float((L_lp-cltp)/(L_lp+cltp))),2)
+            logger.info(f"New Delta of adjusted trade: {new_delta}")
+            rev_pstrike = int(L_tsym[-5:])
+
+        if new_delta < IC_delta_threshold:
+            new_order = {'buy_sell':"S",'tsym':L_tsym,'qty':qty,'remarks':"Adjustment Order", 'netupldprc':"0"}
+            exit_order_df.loc[len(exit_order_df)+1] = new_order
+            if H_strike is not None:
+                H_tsym, H_lp = get_nearest_strike_strike(odf, H_strike)
+                new_order = {'buy_sell':"B",'tsym':H_tsym,'qty':qty,'remarks':"Adjustment Hedge Order", 'netupldprc':"0"}
+                exit_order_df.loc[len(exit_order_df)+1] = new_order
+        else:
+            logger.info("EXIT TRADE: NEW DELTA > IC_DELTA_THRESHOLD")
+            print("EXIT TRADE")
+
+    elif strategy=="IC" and delta> IC_delta_threshold:
+        #Exit Profit making leg
+        adjust=True
+        exit_order_df = positions_df[positions_df.ord_type==profit_leg][['buy_sell','tsym','qty','remarks','netupldprc']]
+        exit_order_df['buy_sell']=exit_order_df['buy_sell'].apply(lambda x: "S" if x=="B" else "B")
+
+        #Find new legs
+        if profit_leg=="C":
+            search_ltp = pltp
+            odf = get_Option_Chain(api,logger, global_vars, symbol, expiry, minsp,maxsp, "CE")
+            L_tsym, L_lp = get_nearest_price_strike(odf, search_ltp) 
+            # Find loss_leg ATM
+            loss_atm = int(positions_df[(positions_df.ord_type==loss_leg) & (positions_df.buy_sell=="S")].iloc[0]['tsym'][-5:]) 
+            
+            if int(L_tsym[-5:]) < loss_atm:
+                new_strike_price =  loss_atm
+            else:
+                new_strike_price = int(L_tsym[-5:])
+            
+            L_tsym, L_lp = get_nearest_strike_strike(odf, new_strike_price)
+            if is_ce_hedge:
+                H_strike = new_strike_price+ce_hedge_diff
+
+            rev_cstrike = int(L_tsym[-5:])
+
+            new_delta = round(100*abs(float((L_lp-pltp)/(L_lp+pltp))),2)
+            logger.info(f"New Delta of adjusted trade: {new_delta}")
+        else:
+            search_ltp = cltp
+            odf = get_Option_Chain(api,logger, global_vars, symbol, expiry, minsp,maxsp, "PE")
+            L_tsym, L_lp = get_nearest_price_strike(odf, search_ltp)
+            # Find loss_leg ATM
+            loss_atm = int(positions_df[(positions_df.ord_type==loss_leg) & (positions_df.buy_sell=="S")].iloc[0]['tsym'][-5:]) 
+
+            if int(L_tsym[-5:]) > loss_atm:
+                new_strike_price = loss_atm
+            else:
+                new_strike_price = int(L_tsym[-5:])
+
+            L_tsym, L_lp = get_nearest_strike_strike(odf, new_strike_price)
+
+            if is_pe_hedge:            
+                H_strike = new_strike_price-pe_hedge_diff
+
+            rev_pstrike = int(L_tsym[-5:])
+            new_delta = round(100*abs(float((L_lp-cltp)/(L_lp+cltp))),2)
+            logger.info(f"New Delta of adjusted trade: {new_delta}")
+
+            
+        if new_delta < IF_delta_threshold:
+            new_order = {'buy_sell':"S",'tsym':L_tsym,'qty':qty,'remarks':"Adjustment Order", 'netupldprc':"0"}
+            exit_order_df.loc[len(exit_order_df)+1] = new_order
+            if H_strike is not None:
+                H_tsym, H_lp = get_nearest_strike_strike(odf, H_strike)
+                new_order = {'buy_sell':"B",'tsym':H_tsym,'qty':qty,'remarks':"Adjustment Hedge Order", 'netupldprc':"0"}
+                exit_order_df.loc[len(exit_order_df)+1] = new_order
+        else:
+            logger.info("EXIT TRADE: NEW DELTA > IF_DELTA_THRESHOLD")
+            print("EXIT TRADE")
+
+    return exit_order_df, new_delta
+
 
 def require_adjustments(logger, api, global_vars, strategy, delta, positions_df, profit_leg, loss_leg, pltp, cltp, symbol, expiry, minsp,maxsp, IC_delta_threshold, IF_delta_threshold ):
 
@@ -1228,3 +1382,25 @@ def calculate_breakevens(df, global_vars):
     higher_be = float(df[(df['ord_type']=="P")&(df['buy_sell']=="S")]['tsym'].iloc[0][-5:])+net_credit #-adj
     lower_be = float(df[(df['ord_type']=="C")&(df['buy_sell']=="S")]['tsym'].iloc[0][-5:])-net_credit #+adj
     return round(lower_be,0), round(higher_be,0)
+
+def is_within_timeframe(start, end):
+    now = datetime.now(timezone.utc) 
+    start_time = now.replace(hour=int(start.split(':')[0]), minute=int(start.split(':')[1]), second=0, microsecond=0)
+    end_time = now.replace(hour=int(end.split(':')[0]), minute=int(end.split(':')[1]), second=0, microsecond=0)
+    return start_time <= now <= end_time
+
+def identify_session():
+    # IST to UTC
+    # 8:30 == 3:00
+    # 9:00 ==  3:30
+    # 9:15 == 3:45
+    # 12:25 == 6:55
+    # 12:27 == 6:57
+    # 12:30 == 7:00
+    # 15:30 == 10:00
+
+    if is_within_timeframe("03:00", "06:55"):
+        return {"session": "session1", "start_time": "03:45", "end_time": "06:57"}
+    elif is_within_timeframe("07:00", "10:10"):
+        return {"session": "session2","start_time": "07:00", "end_time": "10:10"}
+    return None
