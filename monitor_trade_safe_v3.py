@@ -12,6 +12,8 @@ from email.mime.text import MIMEText
 import pytz
 
 live=True
+times=1.75
+stop_loss_per=0.5
 
 def stop_loss_order(pos_df, api, live=False):
     for i,pos in pos_df.iterrows():
@@ -174,7 +176,7 @@ def monitor_trade(api):
     metrics["Total_PNL"]= total_pnl
     pos_df['totsellamt']=pos_df['totsellamt'].astype(float)
     max_profit = pos_df['totsellamt'].sum()
-    max_loss = -0.5*max_profit
+    max_loss = -1*stop_loss_per*max_profit
     pos_df['netqty']=pos_df['netqty'].astype(int)
     metrics["Max_Profit"]=round(max_profit,2)
     metrics["Max_Loss"]=round(max_loss,2)
@@ -196,8 +198,8 @@ def monitor_trade(api):
         avg_premium_per_lot = total_premium_collected * (ce_lot + pe_lot) / (total_lots)
 
         # Calculate breakeven points
-        upper_breakeven = ce_strike + avg_premium_per_lot -current_index_price*1.75/100
-        lower_breakeven = pe_strike - avg_premium_per_lot +current_index_price*1.75/100
+        upper_breakeven = ce_strike + avg_premium_per_lot -current_index_price*times/100
+        lower_breakeven = pe_strike - avg_premium_per_lot +current_index_price*times/100
         breakeven_range = upper_breakeven - lower_breakeven
         near_breakeven = min(100*(current_index_price-lower_breakeven)/current_index_price, 100*(upper_breakeven-current_index_price)/current_index_price)
         
