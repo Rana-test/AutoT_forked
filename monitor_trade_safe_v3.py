@@ -219,6 +219,7 @@ def monitor_trade(api):
     if stop_loss_condition:
         # Exit positions
         stop_loss_order(pos_df, api, live)
+        return "STOP_LOSS"
 
     metrics["INDIA_VIX"]= round(get_india_vix(),2)
 
@@ -244,9 +245,12 @@ def main():
     # Start Monitoring
     while is_within_timeframe(session.get('start_time'), session.get('end_time')):
         metrics = monitor_trade(api)
-        subject = f"FINVASIA: MTM:{metrics['Total_PNL']} | NEAR_BE:{metrics['Near_Breakeven']} | RANGE:{metrics['Breakeven_Range_Per']}| MAX_PROFIT:{metrics['Max_Profit']} | MAX_LOSS: {metrics['Max_Loss']}"
-        if counter % 10 == 0:
-            send_email(sender_email, receiver_email, email_password, subject, dict_to_table_manual(metrics))
+        if metrics =="STOP_LOSS":
+            send_email(sender_email, receiver_email, email_password, "STOP LOSS HIT - QUIT", "STOP LOSS HIT")
+        else:
+            subject = f"FINVASIA: MTM:{metrics['Total_PNL']} | NEAR_BE:{metrics['Near_Breakeven']} | RANGE:{metrics['Breakeven_Range_Per']}| MAX_PROFIT:{metrics['Max_Profit']} | MAX_LOSS: {metrics['Max_Loss']}"
+            if counter % 10 == 0:
+                send_email(sender_email, receiver_email, email_password, subject, dict_to_table_manual(metrics))
         counter+=1
         sleep_time.sleep(60)
   
