@@ -167,11 +167,8 @@ def dict_to_table_manual(data):
 def monitor_trade(api):
     metrics = {}
     pos_df = pd.DataFrame(api.get_positions())
-    # Calculate sold price per lot
-    pos_df["sell_price_per_lot"] = pos_df["totsellamt"].astype(float) / abs(pos_df["netqty"].astype(float))
-    # Calculate P&L per option
-    pos_df["PnL"] = -1*(pos_df["sell_price_per_lot"].astype(float) - pos_df["lp"].astype(float)) * pos_df["netqty"].astype(float)
     # Total P&L of the position
+    pos_df["PnL"] = -1*(pos_df["netupldprc"].astype(float) - pos_df["lp"].astype(float)) * pos_df["netqty"].astype(float)
     total_pnl = pos_df["PnL"].sum()
     metrics["Total_PNL"]= total_pnl
     pos_df['totsellamt']=pos_df['totsellamt'].astype(float)
