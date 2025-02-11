@@ -11,7 +11,7 @@ import smtplib
 from email.mime.text import MIMEText
 import pytz
 
-live=True
+live=False
 times=1.75
 stop_loss_per=0.5
 
@@ -172,7 +172,8 @@ def monitor_trade(api):
     total_pnl = pos_df["PnL"].sum()
     metrics["Total_PNL"]= total_pnl
     pos_df['totsellamt']=pos_df['totsellamt'].astype(float)
-    max_profit = pos_df['totsellamt'].sum()
+    # max_profit = pos_df['totsellamt'].sum()
+    max_profit = (-1*pos_df["netupldprc"].astype(float) * pos_df["netqty"].astype(float)).sum()
     max_loss = -1*stop_loss_per*max_profit
     pos_df['netqty']=pos_df['netqty'].astype(int)
     metrics["Max_Profit"]=round(max_profit,2)
