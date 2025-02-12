@@ -11,7 +11,7 @@ import smtplib
 from email.mime.text import MIMEText
 import pytz
 
-live=False
+live=True
 times=1.75
 stop_loss_per=0.5
 
