@@ -302,7 +302,7 @@ def main():
         #     subject = f"FINVASIA: MTM:{metrics['Total_PNL']} | NEAR_BE:{metrics['Near_Breakeven']} | RANGE:{metrics['Breakeven_Range_Per']}| MAX_PROFIT:{metrics['Max_Profit']} | MAX_LOSS: {metrics['Max_Loss']}"
         if counter % 10 == 0:
             subject = "FINVASIA STATUS"
-            send_email(sender_email, receiver_email, email_password, subject, dict_to_table_manual(metrics))
+            send_email(sender_email, receiver_email, email_password, subject, email_body)
         counter+=1
         sleep_time.sleep(60)
   
