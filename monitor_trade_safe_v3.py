@@ -125,8 +125,8 @@ def identify_session():
 
     if is_within_timeframe("03:00", "06:55"):
         return {"session": "session1", "start_time": "03:45", "end_time": "06:57"}
-    elif is_within_timeframe("07:00", "10:00"):
-        return {"session": "session2","start_time": "07:00", "end_time": "10:00"}
+    elif is_within_timeframe("07:00", "20:00"):
+        return {"session": "session2","start_time": "07:00", "end_time": "20:00"}
     return None
 
 def send_email(sender_email, receiver_email, email_password, subject, body):
@@ -164,66 +164,116 @@ def dict_to_table_manual(data):
 
     return table
 
+import pandas as pd
+
 def monitor_trade(api):
-    metrics = {}
     pos_df = pd.DataFrame(api.get_positions())
-    # Total P&L of the position
-    pos_df["PnL"] = -1*(pos_df["netupldprc"].astype(float) - pos_df["lp"].astype(float)) * pos_df["netqty"].astype(float)
-    total_pnl = pos_df["PnL"].sum()
-    metrics["Total_PNL"]= total_pnl
-    pos_df['totsellamt']=pos_df['totsellamt'].astype(float)
-    # max_profit = pos_df['totsellamt'].sum()
-    max_profit = (-1*pos_df["netupldprc"].astype(float) * pos_df["netqty"].astype(float)).sum()
-    max_loss = -1*stop_loss_per*max_profit
-    pos_df['netqty']=pos_df['netqty'].astype(int)
-    metrics["Max_Profit"]=round(max_profit,2)
-    metrics["Max_Loss"]=round(max_loss,2)
-    pos_df['type']=pos_df['dname'].apply(lambda x: x.split()[3])
-    pos_df['sp']=pos_df['dname'].apply(lambda x: x.split()[2])
-    # Calculate total premium collected
-    total_premium_collected = (pos_df["totsellamt"] / abs(pos_df["netqty"])).sum()
-    # Extract strike prices and respective lot sizes
-    ce_row = pos_df.loc[pos_df["type"] == "CE"]
-    pe_row = pos_df.loc[pos_df["type"] == "PE"]
+    pos_df["PnL"] = -1 * (pos_df["netupldprc"].astype(float) - pos_df["lp"].astype(float)) * pos_df["netqty"].astype(float)
+    pos_df["totsellamt"] = pos_df["totsellamt"].astype(float)
+    pos_df["netqty"] = pos_df["netqty"].astype(int)
+    pos_df['type'] = pos_df['dname'].apply(lambda x: x.split()[3])
+    pos_df['sp'] = pos_df['dname'].apply(lambda x: x.split()[2])
+    pos_df['expiry'] = pos_df['dname'].apply(lambda x: x.split()[1])  # Extract expiry date
+    
+    total_pnl = round(float(pos_df["PnL"].sum()),2)
+    metrics = {"Total_PNL": total_pnl}
+    
+    expiry_metrics = {}
     current_index_price = float(api.get_quotes(exchange="NSE", token=str(26000))['lp'])
-
-    if not ce_row.empty and not pe_row.empty:
-        ce_strike, ce_lot = int(ce_row["sp"].values[0]), abs(ce_row["netqty"].values[0])
-        pe_strike, pe_lot = int(pe_row["sp"].values[0]), abs(pe_row["netqty"].values[0])
-
-        # Calculate weighted average premium per lot
-        total_lots = ce_lot + pe_lot
-        avg_premium_per_lot = total_premium_collected * (ce_lot + pe_lot) / (total_lots)
-
-        # Calculate breakeven points
-        upper_breakeven = ce_strike + avg_premium_per_lot -current_index_price*times/100
-        lower_breakeven = pe_strike - avg_premium_per_lot +current_index_price*times/100
-        breakeven_range = upper_breakeven - lower_breakeven
-        near_breakeven = min(100*(current_index_price-lower_breakeven)/current_index_price, 100*(upper_breakeven-current_index_price)/current_index_price)
+    
+    for expiry, group in pos_df.groupby("expiry"):
+        current_pnl = float((-1 * (group["netupldprc"].astype(float)-group["lp"].astype(float)) * group["netqty"].astype(float)).sum())
+        max_profit = float((-1 * group["netupldprc"].astype(float) * group["netqty"].astype(float)).sum())
+        max_loss = float(-1 * stop_loss_per * max_profit)
+        total_premium_collected = (group["totsellamt"] / abs(group["netqty"])).sum()
         
-        # Capture metrics
-        metrics["CE_Strike"]=ce_strike
-        metrics["PE_Strike"]=pe_strike
-        metrics["Current_Index_Price"]=current_index_price
-        metrics["Lower_Breakeven"]= round(lower_breakeven,2)
-        metrics["Upper_Breakeven"]= round(upper_breakeven,2)
-        metrics["Breakeven_Range"]= round(breakeven_range,2)
-        metrics["Breakeven_Range_Per"]=round(100*breakeven_range/current_index_price,2)
-        metrics["Near_Breakeven"]=round(near_breakeven,2)
-
-    else:
-        print("Error: CE or PE row missing in data.")
-
-    stop_loss_condition = (current_index_price < lower_breakeven or current_index_price > upper_breakeven) and total_pnl < max_loss
-
-    if stop_loss_condition:
-        # Exit positions
-        stop_loss_order(pos_df, api, live)
-        return "STOP_LOSS"
-
-    metrics["INDIA_VIX"]= round(get_india_vix(),2)
-
+        ce_rows = group[group["type"] == "CE"]
+        pe_rows = group[group["type"] == "PE"]
+        
+        if not ce_rows.empty and not pe_rows.empty:
+            ce_strike = float((ce_rows["sp"].astype(float) * ce_rows["netqty"].abs()).sum() / ce_rows["netqty"].abs().sum())
+            pe_strike = float((pe_rows["sp"].astype(float) * pe_rows["netqty"].abs()).sum() / pe_rows["netqty"].abs().sum())
+            
+            total_lots = ce_rows["netqty"].abs().sum() + pe_rows["netqty"].abs().sum()
+            avg_premium_per_lot = total_premium_collected / total_lots if total_lots else 0
+            
+            upper_breakeven = float(ce_strike + avg_premium_per_lot - current_index_price * times / 100)
+            lower_breakeven = float(pe_strike - avg_premium_per_lot + current_index_price * times / 100)
+            breakeven_range = upper_breakeven - lower_breakeven
+            near_breakeven = min(100 * (current_index_price - lower_breakeven) / current_index_price,  
+                                 100 * (upper_breakeven - current_index_price) / current_index_price)
+            
+            expiry_metrics[expiry] = {
+                "PNL": round(current_pnl, 2),
+                "CE_Strike": round(ce_strike, 2),
+                "PE_Strike": round(pe_strike, 2),
+                "Current_Index_Price": current_index_price,
+                "Lower_Breakeven": round(lower_breakeven, 2),
+                "Upper_Breakeven": round(upper_breakeven, 2),
+                "Breakeven_Range": round(breakeven_range, 2),
+                "Breakeven_Range_Per": round(100 * breakeven_range / current_index_price, 2),
+                "Near_Breakeven": round(near_breakeven, 2),
+                "Max_Profit": round(max_profit, 2),
+                "Max_Loss": round(max_loss, 2)
+            }
+            
+            stop_loss_condition = (current_index_price < lower_breakeven or current_index_price > upper_breakeven) and total_pnl < max_loss
+            if stop_loss_condition:
+                stop_loss_order(group, api, live)
+                return "STOP_LOSS"
+        
+        else:
+            expiry_metrics[expiry] = {"Error": "Incomplete CE or PE data for this expiry"}
+    
+    metrics["Expiry_Details"] = expiry_metrics
+    metrics["INDIA_VIX"] = round(get_india_vix(), 2)
+    
     return metrics
+
+def format_trade_metrics(metrics):
+    total_pnl = metrics.get("Total_PNL", "N/A")
+    india_vix = metrics.get("INDIA_VIX", "N/A")
+    expiry_details = metrics.get("Expiry_Details", {})
+    
+    data = []
+    for expiry, details in expiry_details.items():
+        if "Error" in details:
+            data.append([expiry, details["Error"], "", "", "", "", "", "", "", "", ""])
+        else:
+            data.append([
+                expiry, details.get("PNL", "N/A"), details.get("CE_Strike", "N/A"),
+                details.get("PE_Strike", "N/A"), details.get("Current_Index_Price", "N/A"),
+                details.get("Lower_Breakeven", "N/A"), details.get("Upper_Breakeven", "N/A"),
+                details.get("Breakeven_Range", "N/A"), details.get("Breakeven_Range_Per", "N/A"),
+                details.get("Near_Breakeven", "N/A"), details.get("Max_Profit", "N/A"), details.get("Max_Loss", "N/A")
+            ])
+    
+    df = pd.DataFrame(data, columns=[
+        "Expiry", "PNL", "CE Strike", "PE Strike", "Current Index Price", "Lower Breakeven", 
+        "Upper Breakeven", "Breakeven Range", "Breakeven %", "Near Breakeven", "Max Profit", "Max Loss"
+    ])
+    
+    table_html = df.to_html(index=False, border=1)
+    
+    email_body = f"""
+    <html>
+    <head>
+    <style>
+        table {{ border-collapse: collapse; width: 100%; }}
+        th, td {{ border: 1px solid black; padding: 8px; text-align: center; }}
+        th {{ background-color: #f2f2f2; }}
+    </style>
+    </head>
+    <body>
+        <h2>Options Trading Metrics</h2>
+        <p><strong>Total PNL:</strong> {total_pnl}</p>
+        <p><strong>INDIA VIX:</strong> {india_vix}</p>
+        {table_html}
+    </body>
+    </html>
+    """
+    
+    return email_body
 
 def main():
 
@@ -245,12 +295,14 @@ def main():
     # Start Monitoring
     while is_within_timeframe(session.get('start_time'), session.get('end_time')):
         metrics = monitor_trade(api)
-        if metrics =="STOP_LOSS":
-            send_email(sender_email, receiver_email, email_password, "STOP LOSS HIT - QUIT", "STOP LOSS HIT")
-        else:
-            subject = f"FINVASIA: MTM:{metrics['Total_PNL']} | NEAR_BE:{metrics['Near_Breakeven']} | RANGE:{metrics['Breakeven_Range_Per']}| MAX_PROFIT:{metrics['Max_Profit']} | MAX_LOSS: {metrics['Max_Loss']}"
-            if counter % 10 == 0:
-                send_email(sender_email, receiver_email, email_password, subject, dict_to_table_manual(metrics))
+        email_body = format_trade_metrics(metrics)
+        # if metrics =="STOP_LOSS":
+        #     send_email(sender_email, receiver_email, email_password, "STOP LOSS HIT - QUIT", "STOP LOSS HIT")
+        # else:
+        #     subject = f"FINVASIA: MTM:{metrics['Total_PNL']} | NEAR_BE:{metrics['Near_Breakeven']} | RANGE:{metrics['Breakeven_Range_Per']}| MAX_PROFIT:{metrics['Max_Profit']} | MAX_LOSS: {metrics['Max_Loss']}"
+        if counter % 10 == 0:
+            subject = "FINVASIA STATUS"
+            send_email(sender_email, receiver_email, email_password, subject, dict_to_table_manual(metrics))
         counter+=1
         sleep_time.sleep(60)
   
