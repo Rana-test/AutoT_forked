@@ -125,8 +125,8 @@ def identify_session():
 
     if is_within_timeframe("03:00", "06:55"):
         return {"session": "session1", "start_time": "03:45", "end_time": "06:57"}
-    elif is_within_timeframe("07:00", "20:00"):
-        return {"session": "session2","start_time": "07:00", "end_time": "20:00"}
+    elif is_within_timeframe("07:00", "10:00"):
+        return {"session": "session2","start_time": "07:00", "end_time": "10:00"}
     return None
 
 def send_email(sender_email, receiver_email, email_password, subject, body):
@@ -296,14 +296,14 @@ def main():
     while is_within_timeframe(session.get('start_time'), session.get('end_time')):
         metrics = monitor_trade(api)
         email_body = format_trade_metrics(metrics)
-        # if metrics =="STOP_LOSS":
-        #     send_email(sender_email, receiver_email, email_password, "STOP LOSS HIT - QUIT", "STOP LOSS HIT")
-        # else:
+        if metrics =="STOP_LOSS":
+            send_email(sender_email, receiver_email, email_password, "STOP LOSS HIT - QUIT", "STOP LOSS HIT")
+        else:
         #     subject = f"FINVASIA: MTM:{metrics['Total_PNL']} | NEAR_BE:{metrics['Near_Breakeven']} | RANGE:{metrics['Breakeven_Range_Per']}| MAX_PROFIT:{metrics['Max_Profit']} | MAX_LOSS: {metrics['Max_Loss']}"
-        if counter % 10 == 0:
-            subject = "FINVASIA STATUS"
-            send_email(sender_email, receiver_email, email_password, subject, email_body)
-        counter+=1
+            if counter % 10 == 0:
+                subject = "FINVASIA STATUS"
+                send_email(sender_email, receiver_email, email_password, subject, email_body)
+            counter+=1
         sleep_time.sleep(60)
   
     # Logout
