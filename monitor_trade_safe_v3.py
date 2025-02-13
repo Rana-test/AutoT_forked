@@ -220,7 +220,19 @@ def monitor_trade(api):
             stop_loss_condition = (current_index_price < lower_breakeven or current_index_price > upper_breakeven) and total_pnl < max_loss
             if stop_loss_condition:
                 stop_loss_order(group, api, live)
-                return "STOP_LOSS"
+                expiry_metrics[expiry] = {
+                "PNL": round(current_pnl, 2),
+                "CE_Strike": round(ce_strike, 2),
+                "PE_Strike": round(pe_strike, 2),
+                "Current_Index_Price": current_index_price,
+                "Lower_Breakeven": "STOP_LOSS",
+                "Upper_Breakeven": "STOP_LOSS",
+                "Breakeven_Range": "STOP_LOSS",
+                "Breakeven_Range_Per": "STOP_LOSS",
+                "Near_Breakeven": round(near_breakeven, 2),
+                "Max_Profit": round(max_profit, 2),
+                "Max_Loss": round(max_loss, 2)
+            }
         
         else:
             expiry_metrics[expiry] = {"Error": "Incomplete CE or PE data for this expiry"}
