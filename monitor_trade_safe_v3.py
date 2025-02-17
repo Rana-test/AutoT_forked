@@ -181,9 +181,11 @@ def get_positions(api):
 
 def monitor_trade(api):
     pos_df = get_positions(api)
+    timer = 60
     while pos_df is None:
-        sleep_time.sleep(60)
+        sleep_time.sleep(timer)
         pos_df = get_positions(api)
+        timer+=60
     
     total_pnl = round(float(pos_df["PnL"].sum()),2)
     metrics = {"Total_PNL": total_pnl}
