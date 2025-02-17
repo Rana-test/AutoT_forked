@@ -166,14 +166,24 @@ def dict_to_table_manual(data):
 
 import pandas as pd
 
+def get_positions(api):
+    try:
+        pos_df = pd.DataFrame(api.get_positions())
+        pos_df["PnL"] = -1 * (pos_df["netupldprc"].astype(float) - pos_df["lp"].astype(float)) * pos_df["netqty"].astype(float)
+        pos_df["totsellamt"] = pos_df["totsellamt"].astype(float)
+        pos_df["netqty"] = pos_df["netqty"].astype(int)
+        pos_df['type'] = pos_df['dname'].apply(lambda x: x.split()[3])
+        pos_df['sp'] = pos_df['dname'].apply(lambda x: x.split()[2])
+        pos_df['expiry'] = pos_df['dname'].apply(lambda x: x.split()[1])  # Extract expiry date
+        return pos_df
+    except Exception as e:
+        return None
+
 def monitor_trade(api):
-    pos_df = pd.DataFrame(api.get_positions())
-    pos_df["PnL"] = -1 * (pos_df["netupldprc"].astype(float) - pos_df["lp"].astype(float)) * pos_df["netqty"].astype(float)
-    pos_df["totsellamt"] = pos_df["totsellamt"].astype(float)
-    pos_df["netqty"] = pos_df["netqty"].astype(int)
-    pos_df['type'] = pos_df['dname'].apply(lambda x: x.split()[3])
-    pos_df['sp'] = pos_df['dname'].apply(lambda x: x.split()[2])
-    pos_df['expiry'] = pos_df['dname'].apply(lambda x: x.split()[1])  # Extract expiry date
+    pos_df = get_positions(api)
+    while pos_df is None:
+        sleep_time.sleep(60)
+        pos_df = get_positions(api)
     
     total_pnl = round(float(pos_df["PnL"].sum()),2)
     metrics = {"Total_PNL": total_pnl}
