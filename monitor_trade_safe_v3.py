@@ -12,8 +12,44 @@ from email.mime.text import MIMEText
 import pytz
 
 live=True
-times=1.75
-stop_loss_per=0.5
+# times=1.75
+# stop_loss_per=0.5
+exit_params = {
+    day: {"distance_from_breakeven": dist, "loss_multiple": profit}
+    for day, dist, profit in [
+        (30, 3.28, 0.00),
+        (29, 3.05, 0.00),
+        (28, 2.83, 0.00),
+        (27, 2.61, 0.00),
+        (26, 2.41, 0.00),
+        (25, 2.21, 0.02),
+        (24, 2.02, 0.15),
+        (23, 1.84, 0.27),
+        (22, 1.66, 0.39),
+        (21, 1.50, 0.50),
+        (20, 1.34, 0.61),
+        (19, 1.20, 0.72),
+        (18, 1.06, 0.82),
+        (17, 0.93, 0.92),
+        (16, 0.81, 1.01),
+        (15, 0.69, 1.10),
+        (14, 0.59, 1.19),
+        (13, 0.49, 1.27),
+        (12, 0.40, 1.35),
+        (11, 0.32, 1.43),
+        (10, 0.25, 1.50),
+        (9, 0.19, 1.57),
+        (8, 0.13, 1.63),
+        (7, 0.09, 1.69),
+        (6, 0.05, 1.75),
+        (5, 0.02, 1.80),
+        (4, 0.00, 1.85),
+        (3, 0.00, 1.89),
+        (2, 0.00, 1.93),
+        (1, 0.00, 1.97),
+        (0, 0.00, 2.00),
+    ]
+}
 
 def stop_loss_order(pos_df, api, live=False):
     for i,pos in pos_df.iterrows():
@@ -125,8 +161,8 @@ def identify_session():
 
     if is_within_timeframe("03:00", "06:55"):
         return {"session": "session1", "start_time": "03:45", "end_time": "06:57"}
-    elif is_within_timeframe("07:00", "10:00"):
-        return {"session": "session2","start_time": "07:00", "end_time": "10:00"}
+    elif is_within_timeframe("07:00", "22:00"):
+        return {"session": "session2","start_time": "07:00", "end_time": "22:00"}
     return None
 
 def send_email(sender_email, receiver_email, email_password, subject, body):
@@ -175,19 +211,19 @@ def get_positions(api):
         pos_df['type'] = pos_df['dname'].apply(lambda x: x.split()[3])
         pos_df['sp'] = pos_df['dname'].apply(lambda x: x.split()[2])
         pos_df['expiry'] = pos_df['dname'].apply(lambda x: x.split()[1])  # Extract expiry date
+        pos_df['expiry'] = pd.to_datetime(pos_df['expiry'])
+        current_date = pd.Timestamp.today().normalize()
+        pos_df['Days_to_Expiry'] = pos_df['expiry'].apply(lambda x: (x - current_date).days)
+        pos_df['exit_breakeven_per']= pos_df.apply(lambda x: exit_params[x['Days_to_Expiry']]['distance_from_breakeven'],axis=1)
+        pos_df['exit_loss_per']= pos_df.apply(lambda x: exit_params[x['Days_to_Expiry']]['loss_multiple'],axis=1)
         return pos_df
     except Exception as e:
         return None
 
 def monitor_trade(api):
     pos_df = get_positions(api)
-    timer = 60
-    counter=0
-    while pos_df is None and counter<5:
-        sleep_time.sleep(timer)
-        pos_df = get_positions(api)
-        timer+=60
-        counter+=1
+    if pos_df is None:
+        return {'get_pos Error':"Error getting position Info"} 
     
     total_pnl = round(float(pos_df["PnL"].sum()),2)
     metrics = {"Total_PNL": total_pnl}
@@ -198,21 +234,23 @@ def monitor_trade(api):
     for expiry, group in pos_df.groupby("expiry"):
         current_pnl = float((-1 * (group["netupldprc"].astype(float)-group["lp"].astype(float)) * group["netqty"].astype(float)).sum())
         max_profit = float((-1 * group["netupldprc"].astype(float) * group["netqty"].astype(float)).sum())
-        max_loss = float(-1 * stop_loss_per * max_profit)
-        total_premium_collected = (group["totsellamt"] / abs(group["netqty"])).sum()
+        # total_premium_collected = (group["totsellamt"] / abs(group["netqty"])).sum()
+        total_premium_collected = group["totsellamt"].sum() / group["netqty"].abs().sum() if group["netqty"].abs().sum() else 0
         
         ce_rows = group[group["type"] == "CE"]
         pe_rows = group[group["type"] == "PE"]
         
         if not ce_rows.empty and not pe_rows.empty:
+            stop_loss_per = group['exit_loss_per'].mean().astype(float)
+            max_loss = float(-1 * stop_loss_per * max_profit)
             ce_strike = float((ce_rows["sp"].astype(float) * ce_rows["netqty"].abs()).sum() / ce_rows["netqty"].abs().sum())
             pe_strike = float((pe_rows["sp"].astype(float) * pe_rows["netqty"].abs()).sum() / pe_rows["netqty"].abs().sum())
             
             total_lots = ce_rows["netqty"].abs().sum() + pe_rows["netqty"].abs().sum()
             avg_premium_per_lot = total_premium_collected / total_lots if total_lots else 0
             
-            upper_breakeven = float(ce_strike + avg_premium_per_lot - current_index_price * times / 100)
-            lower_breakeven = float(pe_strike - avg_premium_per_lot + current_index_price * times / 100)
+            upper_breakeven = float(ce_strike + avg_premium_per_lot - current_index_price * ce_rows['exit_breakeven_per'].mean().astype(float)/ 100)
+            lower_breakeven = float(pe_strike - avg_premium_per_lot + current_index_price * pe_rows['exit_breakeven_per'].mean().astype(float)/ 100)
             breakeven_range = upper_breakeven - lower_breakeven
             near_breakeven = min(100 * (current_index_price - lower_breakeven) / current_index_price,  
                                  100 * (upper_breakeven - current_index_price) / current_index_price)
