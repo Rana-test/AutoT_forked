@@ -71,23 +71,27 @@ def stop_loss_order(pos_df, api, live=False):
                 print(f'buy_or_sell="B", product_type={prd_type}, exchange={exchange}, tradingsymbol={tradingsymbol}, quantity={quantity}, discloseqty={quantity},price_type={price_type}, price={price},trigger_price={trigger_price}, retention={retention}, remarks="STOP LOSS ORDER"')
 
 def get_india_vix():
-    # Define the ticker symbol for India VIX
-    ticker_symbol = '^INDIAVIX'
+    try:
+        # Define the ticker symbol for India VIX
+        ticker_symbol = '^INDIAVIX'
 
-    # Fetch the data for India VIX
-    india_vix = yf.Ticker(ticker_symbol)
+        # Fetch the data for India VIX
+        india_vix = yf.Ticker(ticker_symbol)
 
-    # Get the latest market data
-    vix_data = india_vix.history(period='1d')
+        # Get the latest market data
+        vix_data = india_vix.history(period='1d')
 
-    # Extract and print the closing price, which represents the latest value
-    if not vix_data.empty:
-        current_vix_value = vix_data['Close'].iloc[-1]
-        # print(f"Current India VIX value: {current_vix_value}")
-    else:
-        # print("Failed to retrieve India VIX data.")
-        current_vix_value=0
-    return current_vix_value
+        # Extract and print the closing price, which represents the latest value
+        if not vix_data.empty:
+            current_vix_value = vix_data['Close'].iloc[-1]
+            # print(f"Current India VIX value: {current_vix_value}")
+        else:
+            # print("Failed to retrieve India VIX data.")
+            current_vix_value=0
+        return current_vix_value
+    except Exception as e:
+        print(f"Error fetching India VIX data: {e}")
+        return 0
 
 def is_within_time_range():
     # Get the current UTC time
@@ -290,7 +294,7 @@ def monitor_trade(api):
             expiry_metrics[expiry] = {"Error": "Incomplete CE or PE data for this expiry"}
     
     metrics["Expiry_Details"] = expiry_metrics
-    metrics["INDIA_VIX"] = round(get_india_vix(), 2)
+    
     
     return metrics
 
@@ -359,13 +363,15 @@ def main():
     # Start Monitoring
     while is_within_timeframe(session.get('start_time'), session.get('end_time')):
         metrics = monitor_trade(api)
-        email_body = format_trade_metrics(metrics)
+        
         if metrics =="STOP_LOSS":
             send_email(sender_email, receiver_email, email_password, "STOP LOSS HIT - QUIT", "STOP LOSS HIT")
         else:
         #     subject = f"FINVASIA: MTM:{metrics['Total_PNL']} | NEAR_BE:{metrics['Near_Breakeven']} | RANGE:{metrics['Breakeven_Range_Per']}| MAX_PROFIT:{metrics['Max_Profit']} | MAX_LOSS: {metrics['Max_Loss']}"
             if counter % 10 == 0:
                 subject = "FINVASIA STATUS"
+                metrics["INDIA_VIX"] = round(get_india_vix(), 2)
+                email_body = format_trade_metrics(metrics)
                 send_email(sender_email, receiver_email, email_password, subject, email_body)
             counter+=1
         sleep_time.sleep(60)
