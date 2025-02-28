@@ -74,28 +74,8 @@ def stop_loss_order(pos_df, api, live, sender_email, receiver_email, email_passw
             email_body = f"STOP LOSS TRIGGERED for {tradingsymbol} at {price}."
             send_email(sender_email, receiver_email, email_password, subject, email_body)
 
-def get_india_vix():
-    try:
-        # Define the ticker symbol for India VIX
-        ticker_symbol = '^INDIAVIX'
-
-        # Fetch the data for India VIX
-        india_vix = yf.Ticker(ticker_symbol)
-
-        # Get the latest market data
-        vix_data = india_vix.history(period='1d')
-
-        # Extract and print the closing price, which represents the latest value
-        if not vix_data.empty:
-            current_vix_value = vix_data['Close'].iloc[-1]
-            # print(f"Current India VIX value: {current_vix_value}")
-        else:
-            # print("Failed to retrieve India VIX data.")
-            current_vix_value=0
-        return current_vix_value
-    except Exception as e:
-        print(f"Error fetching India VIX data: {e}")
-        return 0
+def get_india_vix(api):
+    return round(float(api.get_quotes(exchange="NSE", token=str(26017))['lp']),2)
 
 def is_within_time_range():
     # Get the current UTC time
@@ -375,7 +355,7 @@ def main():
         #     subject = f"FINVASIA: MTM:{metrics['Total_PNL']} | NEAR_BE:{metrics['Near_Breakeven']} | RANGE:{metrics['Breakeven_Range_Per']}| MAX_PROFIT:{metrics['Max_Profit']} | MAX_LOSS: {metrics['Max_Loss']}"
             if counter % 10 == 0:
                 subject = "FINVASIA STATUS"
-                metrics["INDIA_VIX"] = round(get_india_vix(), 2)
+                metrics["INDIA_VIX"] = get_india_vix(api)
                 email_body = format_trade_metrics(metrics)
                 send_email(sender_email, receiver_email, email_password, subject, email_body)
             counter+=1
