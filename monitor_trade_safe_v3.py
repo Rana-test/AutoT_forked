@@ -51,7 +51,7 @@ exit_params = {
     ]
 }
 
-def stop_loss_order(pos_df, api, live=False):
+def stop_loss_order(pos_df, api, live, sender_email, receiver_email, email_password):
     for i,pos in pos_df.iterrows():
         tradingsymbol = pos["tsym"]  # Trading symbol of the position
         netqty = int(pos["netqty"])  # Net quantity of the position
@@ -69,6 +69,10 @@ def stop_loss_order(pos_df, api, live=False):
                 ret = api.place_order(buy_or_sell="B", product_type=prd_type, exchange=exchange, tradingsymbol=tradingsymbol, quantity=quantity, discloseqty=quantity,price_type=price_type, price=price,trigger_price=trigger_price, retention=retention, remarks="STOP LOSS ORDER")
             else:
                 print(f'buy_or_sell="B", product_type={prd_type}, exchange={exchange}, tradingsymbol={tradingsymbol}, quantity={quantity}, discloseqty={quantity},price_type={price_type}, price={price},trigger_price={trigger_price}, retention={retention}, remarks="STOP LOSS ORDER"')
+            
+            subject = f"STOP LOSS TRIGGERED for {tradingsymbol} at {price}."
+            email_body = f"STOP LOSS TRIGGERED for {tradingsymbol} at {price}."
+            send_email(sender_email, receiver_email, email_password, subject, email_body)
 
 def get_india_vix():
     try:
@@ -209,7 +213,7 @@ import pandas as pd
 def get_positions(api):
     try:
         pos_df = pd.DataFrame(api.get_positions())
-        pos_df = pos_df[~pos_df['dname'].isna()]
+        pos_df[(~pos_df['dname'].isna())&(pos_df['netqty']!="0")]
         pos_df["PnL"] = -1 * (pos_df["netupldprc"].astype(float) - pos_df["lp"].astype(float)) * pos_df["netqty"].astype(float)
         pos_df["totsellamt"] = pos_df["totsellamt"].astype(float)
         pos_df["netqty"] = pos_df["netqty"].astype(int)
@@ -225,7 +229,7 @@ def get_positions(api):
     except Exception as e:
         return None
 
-def monitor_trade(api):
+def monitor_trade(api, sender_email, receiver_email, email_password):
     pos_df = get_positions(api)
     if pos_df is None:
         return {'get_pos Error':"Error getting position Info"} 
@@ -276,7 +280,7 @@ def monitor_trade(api):
             
             stop_loss_condition = (current_index_price < lower_breakeven or current_index_price > upper_breakeven) and total_pnl < max_loss
             if stop_loss_condition:
-                stop_loss_order(group, api, live)
+                stop_loss_order(group, api, stop_loss_order(pos_df, api, sender_email, receiver_email, email_password,live)
                 expiry_metrics[expiry] = {
                 "PNL": round(current_pnl, 2),
                 "CE_Strike": round(ce_strike, 2),
@@ -363,7 +367,7 @@ def main():
 
     # Start Monitoring
     while is_within_timeframe(session.get('start_time'), session.get('end_time')):
-        metrics = monitor_trade(api)
+        metrics = monitor_trade(api, sender_email, receiver_email, email_password)
         
         if metrics =="STOP_LOSS":
             send_email(sender_email, receiver_email, email_password, "STOP LOSS HIT - QUIT", "STOP LOSS HIT")
