@@ -302,8 +302,8 @@ def format_trade_metrics(metrics):
             ])
     
     df = pd.DataFrame(data, columns=[
-        "Expiry", "PNL", "CE Strike", "PE Strike", "Current Index Price", "Lower Breakeven", 
-        "Upper Breakeven", "Breakeven Range", "Breakeven %", "Near Breakeven", "Max Profit", "Max Loss"
+        "Expiry", "CE Strike", "PE Strike", "PNL", "Max Loss", "Current Index Price","Near Breakeven", "Lower Breakeven", 
+        "Upper Breakeven", "Breakeven Range", "Breakeven %",  "Max Profit"
     ])
     
     table_html = df.to_html(index=False, border=1)
