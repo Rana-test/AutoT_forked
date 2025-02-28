@@ -209,6 +209,7 @@ import pandas as pd
 def get_positions(api):
     try:
         pos_df = pd.DataFrame(api.get_positions())
+        pos_df = pos_df[~pos_df['dname'].isna()]
         pos_df["PnL"] = -1 * (pos_df["netupldprc"].astype(float) - pos_df["lp"].astype(float)) * pos_df["netqty"].astype(float)
         pos_df["totsellamt"] = pos_df["totsellamt"].astype(float)
         pos_df["netqty"] = pos_df["netqty"].astype(int)
