@@ -280,7 +280,7 @@ def monitor_trade(api, sender_email, receiver_email, email_password):
             
             stop_loss_condition = (current_index_price < lower_breakeven or current_index_price > upper_breakeven) and total_pnl < max_loss
             if stop_loss_condition:
-                stop_loss_order(group, api, stop_loss_order(pos_df, api, sender_email, receiver_email, email_password,live)
+                stop_loss_order(group, api, sender_email, receiver_email, email_password,live)
                 expiry_metrics[expiry] = {
                 "PNL": round(current_pnl, 2),
                 "CE_Strike": round(ce_strike, 2),
