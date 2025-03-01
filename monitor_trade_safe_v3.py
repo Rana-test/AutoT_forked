@@ -343,39 +343,39 @@ def main():
         trade_hist_df = pd.DataFrame(columns=["timestamp", "trade_type", "symbol", "quantity", "price", "stop_loss", "target", "status"])
         trade_hist_df.to_csv(trade_hist, index=False)
     
-    session = identify_session()
-    if not session:
-        print("No active trading session.")
-        return
+    # session = identify_session()
+    # if not session:
+    #     print("No active trading session.")
+    #     return
     
-    # Login
-    userid, password, vendor_code, api_secret, imei, TOKEN, sender_email, receiver_email, email_password = init_creds()
-    api = login(userid, password, vendor_code, api_secret, imei, TOKEN)
+    # # Login
+    # userid, password, vendor_code, api_secret, imei, TOKEN, sender_email, receiver_email, email_password = init_creds()
+    # api = login(userid, password, vendor_code, api_secret, imei, TOKEN)
 
-    while is_within_timeframe("03:00", "03:45"):
-        print("Initializing")
-        sleep_time.sleep(60)
+    # while is_within_timeframe("03:00", "03:45"):
+    #     print("Initializing")
+    #     sleep_time.sleep(60)
 
-    counter=0
+    # counter=0
 
-    # Start Monitoring
-    while is_within_timeframe(session.get('start_time'), session.get('end_time')):
-        metrics = monitor_trade(api, sender_email, receiver_email, email_password)
+    # # Start Monitoring
+    # while is_within_timeframe(session.get('start_time'), session.get('end_time')):
+    #     metrics = monitor_trade(api, sender_email, receiver_email, email_password)
         
-        if metrics =="STOP_LOSS":
-            send_email(sender_email, receiver_email, email_password, "STOP LOSS HIT - QUIT", "STOP LOSS HIT")
-        else:
-        #     subject = f"FINVASIA: MTM:{metrics['Total_PNL']} | NEAR_BE:{metrics['Near_Breakeven']} | RANGE:{metrics['Breakeven_Range_Per']}| MAX_PROFIT:{metrics['Max_Profit']} | MAX_LOSS: {metrics['Max_Loss']}"
-            if counter % 10 == 0:
-                subject = "FINVASIA STATUS"
-                metrics["INDIA_VIX"] = get_india_vix(api)
-                email_body = format_trade_metrics(metrics)
-                send_email(sender_email, receiver_email, email_password, subject, email_body)
-            counter+=1
-        sleep_time.sleep(60)
+    #     if metrics =="STOP_LOSS":
+    #         send_email(sender_email, receiver_email, email_password, "STOP LOSS HIT - QUIT", "STOP LOSS HIT")
+    #     else:
+    #     #     subject = f"FINVASIA: MTM:{metrics['Total_PNL']} | NEAR_BE:{metrics['Near_Breakeven']} | RANGE:{metrics['Breakeven_Range_Per']}| MAX_PROFIT:{metrics['Max_Profit']} | MAX_LOSS: {metrics['Max_Loss']}"
+    #         if counter % 10 == 0:
+    #             subject = "FINVASIA STATUS"
+    #             metrics["INDIA_VIX"] = get_india_vix(api)
+    #             email_body = format_trade_metrics(metrics)
+    #             send_email(sender_email, receiver_email, email_password, subject, email_body)
+    #         counter+=1
+    #     sleep_time.sleep(60)
   
-    # Logout
-    api.logout()
+    # # Logout
+    # api.logout()
 
 if __name__ =="__main__":
     main()
