@@ -224,63 +224,69 @@ def monitor_trade(api, sender_email, receiver_email, email_password):
         current_pnl = float((-1 * (group["netupldprc"].astype(float)-group["lp"].astype(float)) * group["netqty"].astype(float)).sum())
         max_profit = float((-1 * group["netupldprc"].astype(float) * group["netqty"].astype(float)).sum())
         # total_premium_collected = (group["totsellamt"] / abs(group["netqty"])).sum()
-        total_premium_collected = group["totsellamt"].sum() / group["netqty"].abs().sum() if group["netqty"].abs().sum() else 0
+        total_premium_collected = len(group["netupldprc"])*(group["netupldprc"].astype(float) * group["netqty"].astype(float)).sum() / group["netqty"].astype(float).sum()
         
         ce_rows = group[group["type"] == "CE"]
         pe_rows = group[group["type"] == "PE"]
         
-        if not ce_rows.empty and not pe_rows.empty:
-            stop_loss_per = group['exit_loss_per'].mean().astype(float)
-            max_loss = float(-1 * stop_loss_per * max_profit)
+        # if not ce_rows.empty and not pe_rows.empty:
+        stop_loss_per = group['exit_loss_per'].mean().astype(float)
+        max_loss = float(-1 * stop_loss_per * max_profit)
+        if ce_rows.empty:
+            ce_strike = 0
+            upper_breakeven=999999
+        else:
             ce_strike = float((ce_rows["sp"].astype(float) * ce_rows["netqty"].abs()).sum() / ce_rows["netqty"].abs().sum())
+            upper_breakeven = float(ce_strike + total_premium_collected - current_index_price * ce_rows['exit_breakeven_per'].mean().astype(float)/ 100)
+
+        if pe_rows.empty:
+            pe_strike = 0
+            lower_breakeven = 0
+        else:
             pe_strike = float((pe_rows["sp"].astype(float) * pe_rows["netqty"].abs()).sum() / pe_rows["netqty"].abs().sum())
-            
-            total_lots = ce_rows["netqty"].abs().sum() + pe_rows["netqty"].abs().sum()
-            avg_premium_per_lot = total_premium_collected / total_lots if total_lots else 0
-            
-            upper_breakeven = float(ce_strike + avg_premium_per_lot - current_index_price * ce_rows['exit_breakeven_per'].mean().astype(float)/ 100)
-            lower_breakeven = float(pe_strike - avg_premium_per_lot + current_index_price * pe_rows['exit_breakeven_per'].mean().astype(float)/ 100)
+            lower_breakeven = float(pe_strike - total_premium_collected + current_index_price * pe_rows['exit_breakeven_per'].mean().astype(float)/ 100)
+        
+        if ce_strike!=0 and pe_strike!=0:
             breakeven_range = upper_breakeven - lower_breakeven
             near_breakeven = min(100 * (current_index_price - lower_breakeven) / current_index_price,  
-                                 100 * (upper_breakeven - current_index_price) / current_index_price)
-            
-            expiry_metrics[expiry] = {
-                "PNL": round(current_pnl, 2),
-                "CE_Strike": round(ce_strike, 2),
-                "PE_Strike": round(pe_strike, 2),
-                "Current_Index_Price": current_index_price,
-                "Lower_Breakeven": round(lower_breakeven, 2),
-                "Upper_Breakeven": round(upper_breakeven, 2),
-                "Breakeven_Range": round(breakeven_range, 2),
-                "Breakeven_Range_Per": round(100 * breakeven_range / current_index_price, 2),
-                "Near_Breakeven": round(near_breakeven, 2),
-                "Max_Profit": round(max_profit, 2),
-                "Max_Loss": round(max_loss, 2)
-            }
-            
-            stop_loss_condition = (current_index_price < lower_breakeven or current_index_price > upper_breakeven) and total_pnl < max_loss
-            if stop_loss_condition:
-                stop_loss_order(group, api, sender_email, receiver_email, email_password,live)
-                expiry_metrics[expiry] = {
-                "PNL": round(current_pnl, 2),
-                "CE_Strike": round(ce_strike, 2),
-                "PE_Strike": round(pe_strike, 2),
-                "Current_Index_Price": current_index_price,
-                "Lower_Breakeven": "STOP_LOSS",
-                "Upper_Breakeven": "STOP_LOSS",
-                "Breakeven_Range": "STOP_LOSS",
-                "Breakeven_Range_Per": "STOP_LOSS",
-                "Near_Breakeven": round(near_breakeven, 2),
-                "Max_Profit": round(max_profit, 2),
-                "Max_Loss": round(max_loss, 2)
-            }
-        
+                                100 * (upper_breakeven - current_index_price) / current_index_price)
         else:
-            expiry_metrics[expiry] = {"Error": "Incomplete CE or PE data for this expiry"}
-    
+            breakeven_range = 0
+            near_breakeven = 0
+
+        expiry_metrics[expiry] = {
+            "PNL": round(current_pnl, 2),
+            "CE_Strike": round(ce_strike, 2),
+            "PE_Strike": round(pe_strike, 2),
+            "Current_Index_Price": current_index_price,
+            "Lower_Breakeven": round(lower_breakeven, 2),
+            "Upper_Breakeven": round(upper_breakeven, 2),
+            "Breakeven_Range": round(breakeven_range, 2),
+            "Breakeven_Range_Per": round(100 * breakeven_range / current_index_price, 2),
+            "Near_Breakeven": round(near_breakeven, 2),
+            "Max_Profit": round(max_profit, 2),
+            "Max_Loss": round(max_loss, 2)
+        }
+        
+        stop_loss_condition = (current_index_price < lower_breakeven or current_index_price > upper_breakeven) and total_pnl < max_loss
+        if stop_loss_condition:
+            stop_loss_order(group, api, sender_email, receiver_email, email_password,live)
+            expiry_metrics[expiry] = {
+            "PNL": round(current_pnl, 2),
+            "CE_Strike": round(ce_strike, 2),
+            "PE_Strike": round(pe_strike, 2),
+            "Current_Index_Price": current_index_price,
+            "Lower_Breakeven": "STOP_LOSS",
+            "Upper_Breakeven": "STOP_LOSS",
+            "Breakeven_Range": "STOP_LOSS",
+            "Breakeven_Range_Per": "STOP_LOSS",
+            "Near_Breakeven": round(near_breakeven, 2),
+            "Max_Profit": round(max_profit, 2),
+            "Max_Loss": round(max_loss, 2)
+        }
+
     metrics["Expiry_Details"] = expiry_metrics
-    
-    
+      
     return metrics
 
 def format_trade_metrics(metrics):
@@ -329,7 +335,14 @@ def format_trade_metrics(metrics):
     return email_body
 
 def main():
-
+    trade_hist = "trade_history.csv"
+    if os.path.exists(trade_hist):
+        trade_hist_df = pd.read_csv(trade_hist)
+        print(trade_hist_df)
+    else:
+        trade_hist_df = pd.DataFrame(columns=["timestamp", "trade_type", "symbol", "quantity", "price", "stop_loss", "target", "status"])
+        trade_hist_df.to_csv(trade_hist, index=False)
+    
     session = identify_session()
     if not session:
         print("No active trading session.")
