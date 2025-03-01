@@ -342,6 +342,7 @@ def main():
     else:
         trade_hist_df = pd.DataFrame(columns=["timestamp", "trade_type", "symbol", "quantity", "price", "stop_loss", "target", "status"])
         trade_hist_df.to_csv(trade_hist, index=False)
+        print("file created")
     
     # session = identify_session()
     # if not session:
