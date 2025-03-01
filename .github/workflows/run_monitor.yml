@@ -34,16 +34,31 @@ jobs:
       run: |
         git config --local user.name "github-actions[bot]"
         git config --local user.email "action@github.com"
-    - name: Check for changes
-      id: git_status
+
+    - name: Commit and Push Changes
       run: |
-        if git diff --quiet; then
+        git add *.csv  # Add only CSV files
+        git status  # Show added files
+        if git diff --cached --quiet; then
           echo "No changes to commit."
         else
-          echo "Changes detected."
-          git add .
-          git commit -m "Update file"
+          git commit -m "Update CSV state"
+          git pull --rebase  # Ensure we don't overwrite recent commits
           git push
         fi
       env:
-        GITHUB_TOKEN: ${{ secrets.TEST_API_KEY}}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    # - name: Check for changes
+    #   id: git_status
+    #   run: |
+    #     if git diff --quiet; then
+    #       echo "No changes to commit."
+    #     else
+    #       echo "Changes detected."
+    #       git add .
+    #       git commit -m "Update file"
+    #       git push
+    #     fi
+    #   env:
+    #     GITHUB_TOKEN: ${{ secrets.TEST_API_KEY}}
