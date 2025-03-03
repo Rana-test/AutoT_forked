@@ -194,6 +194,11 @@ def get_positions(api):
     try:
         pos_df = pd.DataFrame(api.get_positions())
         pos_df = pos_df[(~pos_df['dname'].isna())&(pos_df['netqty']!="0")]
+        # Identify any record that needs to be added to tradehistory.csv
+        # Read tradehistory.csv and get tradehistory_df
+        # Add the record to trade_history_df
+        # Save trade_history_df to tradehistory.csv
+        # Update pos_df with relevant values from trade_history_df
         pos_df["PnL"] = -1 * (pos_df["netupldprc"].astype(float) - pos_df["lp"].astype(float)) * pos_df["netqty"].astype(float)
         pos_df["totsellamt"] = pos_df["totsellamt"].astype(float)
         pos_df["netqty"] = pos_df["netqty"].astype(int)
@@ -308,8 +313,8 @@ def format_trade_metrics(metrics):
             ])
     
     df = pd.DataFrame(data, columns=[
-        "Expiry", "CE Strike", "PE Strike", "PNL", "Max Loss", "Current Index Price","Near Breakeven", "Lower Breakeven", 
-        "Upper Breakeven", "Breakeven Range", "Breakeven %",  "Max Profit"
+        "Expiry", "PNL", "CE Strike", "PE Strike", "Current Index Price", "Lower Breakeven", 
+        "Upper Breakeven", "Breakeven Range", "Breakeven %", "Near Breakeven", "Max Profit", "Max Loss"
     ])
     
     table_html = df.to_html(index=False, border=1)
@@ -334,16 +339,20 @@ def format_trade_metrics(metrics):
     
     return email_body
 
+def write_to_tradehistory():
+    trade_hist = "trade_history.csv"
+    if os.path.exists(trade_hist):
+        trade_hist_df = pd.read_csv(trade_hist)
+        print(trade_hist_df)
+    else:
+        trade_hist_df = pd.DataFrame(columns=["timestamp", "trade_type", "symbol", "quantity", "price", "stop_loss", "target", "status"])
+
+    #write to trade_hist_df
+    # Save    
+    trade_hist_df.to_csv(trade_hist, index=False)
+    print("file created")
+
 def main():
-    # trade_hist = "trade_history.csv"
-    # if os.path.exists(trade_hist):
-    #     trade_hist_df = pd.read_csv(trade_hist)
-    #     print(trade_hist_df)
-    # else:
-    #     trade_hist_df = pd.DataFrame(columns=["timestamp", "trade_type", "symbol", "quantity", "price", "stop_loss", "target", "status"])
-    #     trade_hist_df.to_csv(trade_hist, index=False)
-    #     print("file created")
-    
     session = identify_session()
     if not session:
         print("No active trading session.")
