@@ -11,7 +11,7 @@ import smtplib
 from email.mime.text import MIMEText
 import pytz
 
-live=True
+live=False
 # times=1.75
 # stop_loss_per=0.5
 exit_params = {
@@ -229,8 +229,24 @@ def monitor_trade(api, sender_email, receiver_email, email_password):
         current_pnl = float((-1 * (group["netupldprc"].astype(float)-group["lp"].astype(float)) * group["netqty"].astype(float)).sum())
         max_profit = float((-1 * group["netupldprc"].astype(float) * group["netqty"].astype(float)).sum())
         # total_premium_collected = (group["totsellamt"] / abs(group["netqty"])).sum()
-        total_premium_collected = len(group["netupldprc"])*(group["netupldprc"].astype(float) * group["netqty"].astype(float)).sum() / group["netqty"].astype(float).sum()
-        
+        total_premium_collected = float(len(group["netupldprc"])*(group["netupldprc"].astype(float) * group["netqty"].astype(float)).sum() / group["netqty"].astype(float).sum())
+        # Record to insert is any with netqty = 0
+        rec_ins = group[group['netqty'].astype(int)==0]
+        if not rec_ins.empty:
+            #Insert record into tradebook_df if it already doesn't exists
+            trade_hist_df = write_to_trade_history(rec_ins)
+        else:
+            trade_hist_df = pd.read_csv("trade_history.csv", dtype=str)
+        #Read tradebook_df for the given expiry to retrive rec_ins
+        # Calculate premium collected
+        expiry_date_str = expiry.strftime('%Y-%m-%d')
+        trade_hist_df = trade_hist_df[trade_hist_df['expiry']==expiry_date_str]
+        realized_premium = float(((trade_hist_df['upldprc'].astype(float)-trade_hist_df['totbuyavgprc'].astype(float))*(trade_hist_df['daybuyqty'].astype(int)+trade_hist_df['cfsellqty'].astype(int))/2).sum())
+
+        total_premium_collected += realized_premium/group["netqty"].astype(float).sum()
+        current_pnl+=realized_premium
+        max_profit+=realized_premium
+
         ce_rows = group[group["type"] == "CE"]
         pe_rows = group[group["type"] == "PE"]
         
@@ -339,18 +355,52 @@ def format_trade_metrics(metrics):
     
     return email_body
 
-def write_to_tradehistory():
+def write_to_trade_history(trade_book_df):
     trade_hist = "trade_history.csv"
-    if os.path.exists(trade_hist):
-        trade_hist_df = pd.read_csv(trade_hist)
-        print(trade_hist_df)
-    else:
-        trade_hist_df = pd.DataFrame(columns=["timestamp", "trade_type", "symbol", "quantity", "price", "stop_loss", "target", "status"])
+    dtype_map={}
+    cols = ['stat', 'uid', 'actid', 'exch', 'tsym', 's_prdt_ali', 'prd', 'token',
+       'instname', 'dname', 'frzqty', 'pp', 'ls', 'ti', 'mult', 'prcftr',
+       'daybuyqty', 'daysellqty', 'daybuyamt', 'daybuyavgprc', 'daysellamt',
+       'daysellavgprc', 'cfbuyqty', 'cfsellqty', 'cfbuyamt', 'cfbuyavgprc',
+       'cfsellamt', 'cfsellavgprc', 'openbuyqty', 'opensellqty', 'openbuyamt',
+       'openbuyavgprc', 'opensellamt', 'opensellavgprc', 'dayavgprc', 'netqty',
+       'netavgprc', 'upldprc', 'netupldprc', 'lp', 'urmtom', 'bep',
+       'totbuyamt', 'totsellamt', 'totbuyavgprc', 'totsellavgprc', 'rpnl',
+       'PnL', 'type', 'sp', 'expiry', 'Days_to_Expiry', 'exit_breakeven_per',
+       'exit_loss_per']
+    
+    for col in cols:
+        dtype_map[col]=str
 
-    #write to trade_hist_df
-    # Save    
-    trade_hist_df.to_csv(trade_hist, index=False)
-    print("file created")
+    # Load existing trade history or create an empty DataFrame
+    if os.path.exists(trade_hist):
+        trade_hist_df = pd.read_csv(trade_hist, dtype=str)
+    else:
+        trade_hist_df = pd.DataFrame(columns=trade_book_df.columns)
+
+    # Ensure column order and types match by creating a copy before modification
+    trade_book_df = trade_book_df.copy()
+    trade_hist_df = trade_hist_df.copy()
+
+    # Convert all columns to string, ensuring NaN values don't cause warnings
+    trade_book_df = trade_book_df.fillna("").astype(str)
+    trade_hist_df = trade_hist_df.fillna("").astype(str)
+
+    for col, dtype in dtype_map.items():
+        if col in trade_book_df.columns:
+            trade_book_df.loc[:, col] = trade_book_df[col].astype(dtype)  # Use .loc to avoid SettingWithCopyWarning
+        if col in trade_hist_df.columns:
+            trade_hist_df.loc[:, col] = trade_hist_df[col].astype(dtype)  # Use .loc to avoid SettingWithCopyWarning
+
+    # Remove duplicates and keep only new records
+    trade_hist_df = pd.concat([trade_hist_df, trade_book_df], ignore_index=True).drop_duplicates()
+
+    # Save to CSV with fixed float format (2 decimal places)
+    trade_hist_df.to_csv(trade_hist, index=False, float_format="%.2f")
+
+    return trade_hist_df
+
+
 
 def main():
     session = identify_session()
