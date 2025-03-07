@@ -193,7 +193,8 @@ import pandas as pd
 def get_positions(api):
     try:
         pos_df = pd.DataFrame(api.get_positions())
-        pos_df = pos_df[(~pos_df['dname'].isna())&(pos_df['netqty']!="0")]
+        pos_df = pos_df[(~pos_df['dname'].isna())]
+        # pos_df = pos_df[(pos_df['netqty']!="0")] # Not needed
         # Identify any record that needs to be added to tradehistory.csv
         # Read tradehistory.csv and get tradehistory_df
         # Add the record to trade_history_df
@@ -229,7 +230,8 @@ def monitor_trade(api, sender_email, receiver_email, email_password):
         current_pnl = float((-1 * (group["netupldprc"].astype(float)-group["lp"].astype(float)) * group["netqty"].astype(float)).sum())
         max_profit = float((-1 * group["netupldprc"].astype(float) * group["netqty"].astype(float)).sum())
         # total_premium_collected = (group["totsellamt"] / abs(group["netqty"])).sum()
-        total_premium_collected = float(len(group["netupldprc"])*(group["netupldprc"].astype(float) * group["netqty"].astype(float)).sum() / group["netqty"].astype(float).sum())
+        current_premium = float((group["netupldprc"].astype(float) * group["netqty"].astype(float)).sum())*-1
+        current_qty =  group["netqty"].astype(float).sum()*-1
         # Record to insert is any with netqty = 0
         rec_ins = group[group['netqty'].astype(int)==0]
         if not rec_ins.empty:
@@ -241,9 +243,11 @@ def monitor_trade(api, sender_email, receiver_email, email_password):
         # Calculate premium collected
         expiry_date_str = expiry.strftime('%Y-%m-%d')
         trade_hist_df = trade_hist_df[trade_hist_df['expiry']==expiry_date_str]
-        realized_premium = float(((trade_hist_df['upldprc'].astype(float)-trade_hist_df['totbuyavgprc'].astype(float))*(trade_hist_df['daybuyqty'].astype(int)+trade_hist_df['cfsellqty'].astype(int))/2).sum())
+        realized_qty = float(((trade_hist_df['daybuyqty'].astype(int)+trade_hist_df['cfsellqty'].astype(int))/2).sum())
+        realized_premium = float((trade_hist_df['upldprc'].astype(float)-trade_hist_df['totbuyavgprc'].astype(float)).sum())*realized_qty
+        
 
-        total_premium_collected += realized_premium/group["netqty"].astype(float).sum()
+        total_premium_collected_per_option = (current_premium + realized_premium) /current_qty
         current_pnl+=realized_premium
         max_profit+=realized_premium
 
@@ -257,15 +261,17 @@ def monitor_trade(api, sender_email, receiver_email, email_password):
             ce_strike = 0
             upper_breakeven=999999
         else:
+            ce_breakeven_factor = current_qty/(-1*ce_rows["netqty"].sum())
             ce_strike = float((ce_rows["sp"].astype(float) * ce_rows["netqty"].abs()).sum() / ce_rows["netqty"].abs().sum())
-            upper_breakeven = float(ce_strike + total_premium_collected - current_index_price * ce_rows['exit_breakeven_per'].mean().astype(float)/ 100)
+            upper_breakeven = float(ce_strike + total_premium_collected_per_option*ce_breakeven_factor - current_index_price * ce_rows['exit_breakeven_per'].mean().astype(float)/ 100)
 
         if pe_rows.empty:
             pe_strike = 0
             lower_breakeven = 0
         else:
+            pe_breakeven_factor = current_qty/(-1*pe_rows["netqty"].sum())
             pe_strike = float((pe_rows["sp"].astype(float) * pe_rows["netqty"].abs()).sum() / pe_rows["netqty"].abs().sum())
-            lower_breakeven = float(pe_strike - total_premium_collected + current_index_price * pe_rows['exit_breakeven_per'].mean().astype(float)/ 100)
+            lower_breakeven = float(pe_strike - total_premium_collected_per_option*pe_breakeven_factor + current_index_price * pe_rows['exit_breakeven_per'].mean().astype(float)/ 100)
         
         if ce_strike!=0 and pe_strike!=0:
             breakeven_range = upper_breakeven - lower_breakeven
