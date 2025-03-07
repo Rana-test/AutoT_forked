@@ -149,8 +149,8 @@ def identify_session():
 
     if is_within_timeframe("03:00", "06:55"):
         return {"session": "session1", "start_time": "03:45", "end_time": "06:57"}
-    elif is_within_timeframe("07:00", "13:15"):
-        return {"session": "session2","start_time": "07:00", "end_time": "13:15"}
+    elif is_within_timeframe("07:00", "10:00"):
+        return {"session": "session2","start_time": "07:00", "end_time": "10:00"}
     return None
 
 def send_email(sender_email, receiver_email, email_password, subject, body):
@@ -219,10 +219,7 @@ def monitor_trade(api, sender_email, receiver_email, email_password):
     pos_df = get_positions(api)
     if pos_df is None:
         return {'get_pos Error':"Error getting position Info"} 
-    
-    total_pnl = round(float(pos_df["PnL"].sum()),2)
-    metrics = {"Total_PNL": total_pnl}
-    
+    total_pnl=0
     expiry_metrics = {}
     current_index_price = float(api.get_quotes(exchange="NSE", token=str(26000))['lp'])
     
@@ -294,7 +291,7 @@ def monitor_trade(api, sender_email, receiver_email, email_password):
             "Max_Profit": round(max_profit, 2),
             "Max_Loss": round(max_loss, 2)
         }
-        
+        total_pnl+=current_pnl
         stop_loss_condition = (current_index_price < lower_breakeven or current_index_price > upper_breakeven) and total_pnl < max_loss
         if stop_loss_condition:
             stop_loss_order(group, api, sender_email, receiver_email, email_password,live)
@@ -313,6 +310,7 @@ def monitor_trade(api, sender_email, receiver_email, email_password):
         }
 
     metrics["Expiry_Details"] = expiry_metrics
+    metrics = {"Total_PNL": total_pnl}
       
     return metrics
 
@@ -351,7 +349,6 @@ def format_trade_metrics(metrics):
     </style>
     </head>
     <body>
-        <h2>Options Trading Metrics</h2>
         <p><strong>Total PNL:</strong> {total_pnl}</p>
         <p><strong>INDIA VIX:</strong> {india_vix}</p>
         {table_html}
