@@ -311,7 +311,7 @@ def monitor_trade(api, sender_email, receiver_email, email_password):
         }
 
     metrics["Expiry_Details"] = expiry_metrics
-    metrics["Total_PNL"] = total_pnl
+    metrics["Total_PNL"] = round(total_pnl,2)
       
     return metrics
 
