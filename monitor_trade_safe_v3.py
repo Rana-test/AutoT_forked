@@ -359,6 +359,17 @@ def format_trade_metrics(metrics):
     
     return email_body
 
+def insert_if_not_exists(df, new_record):
+    match_columns = ['token', 'daybuyqty', 'daysellqty', 'cfbuyqty', 'cfsellqty']
+    # Check if there is any existing record with the same values in the match columns
+    exists = (df[match_columns] == new_record[match_columns].iloc[0]).all(axis=1).any()
+    
+    # Insert only if the record does not exist
+    if not exists:
+        df = pd.concat([df, new_record], ignore_index=True)
+    
+    return df
+
 def write_to_trade_history(trade_book_df):
     trade_hist = "trade_history.csv"
     dtype_map={}
@@ -397,8 +408,7 @@ def write_to_trade_history(trade_book_df):
             trade_hist_df.loc[:, col] = trade_hist_df[col].astype(dtype)  # Use .loc to avoid SettingWithCopyWarning
 
     # Remove duplicates and keep only new records
-    trade_hist_df = pd.concat([trade_hist_df, trade_book_df], ignore_index=True).drop_duplicates()
-
+    trade_hist_df = insert_if_not_exists(trade_hist_df, trade_book_df)
     # Save to CSV with fixed float format (2 decimal places)
     trade_hist_df.to_csv(trade_hist, index=False, float_format="%.2f")
 
