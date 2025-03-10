@@ -220,6 +220,7 @@ def monitor_trade(api, sender_email, receiver_email, email_password):
     if pos_df is None:
         return {'get_pos Error':"Error getting position Info"} 
     total_pnl=0
+    metrics = {"Total_PNL": total_pnl}
     expiry_metrics = {}
     current_index_price = float(api.get_quotes(exchange="NSE", token=str(26000))['lp'])
     
@@ -310,7 +311,7 @@ def monitor_trade(api, sender_email, receiver_email, email_password):
         }
 
     metrics["Expiry_Details"] = expiry_metrics
-    metrics = {"Total_PNL": total_pnl}
+    metrics["Total_PNL"] = total_pnl
       
     return metrics
 
