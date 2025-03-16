@@ -241,9 +241,9 @@ def monitor_trade(api, sender_email, receiver_email, email_password):
         # Calculate premium collected
         expiry_date_str = expiry.strftime('%Y-%m-%d')
         trade_hist_df = trade_hist_df[trade_hist_df['expiry']==expiry_date_str]
-        realized_qty = float(((trade_hist_df['daybuyqty'].astype(int)+trade_hist_df['cfsellqty'].astype(int))/2).sum())
-        realized_premium = float((trade_hist_df['upldprc'].astype(float)-trade_hist_df['totbuyavgprc'].astype(float)).sum())*realized_qty
-        
+        # realized_qty = float(((trade_hist_df['daybuyqty'].astype(int)+trade_hist_df['cfsellqty'].astype(int))/2).sum())
+        # realized_premium = float((trade_hist_df['upldprc'].astype(float)-trade_hist_df['totbuyavgprc'].astype(float)).sum())*realized_qty
+        realized_premium = (trade_hist_df['upldprc'].astype(float)*trade_hist_df['cfsellqty'].astype(int)-trade_hist_df['totbuyavgprc'].astype(float)*trade_hist_df['daybuyqty'].astype(int)).sum()
 
         total_premium_collected_per_option = (current_premium + realized_premium) /current_qty
         current_pnl+=realized_premium
