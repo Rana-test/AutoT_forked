@@ -261,16 +261,16 @@ def monitor_trade(api, sender_email, receiver_email, email_password):
         else:
             ce_breakeven_factor = current_qty/(-1*ce_rows["netqty"].sum())
             ce_strike = float((ce_rows["sp"].astype(float) * ce_rows["netqty"].abs()).sum() / ce_rows["netqty"].abs().sum())
-            upper_breakeven = float(ce_strike + total_premium_collected_per_option*ce_breakeven_factor - current_index_price * ce_rows['exit_breakeven_per'].mean().astype(float)/ 100)
-
+            # upper_breakeven = float(ce_strike + total_premium_collected_per_option*ce_breakeven_factor - current_index_price * ce_rows['exit_breakeven_per'].mean().astype(float)/ 100)
+            upper_breakeven = float(ce_strike - current_index_price * ce_rows['exit_breakeven_per'].mean().astype(float)/ 100)
         if pe_rows.empty:
             pe_strike = 0
             lower_breakeven = 0
         else:
             pe_breakeven_factor = current_qty/(-1*pe_rows["netqty"].sum())
             pe_strike = float((pe_rows["sp"].astype(float) * pe_rows["netqty"].abs()).sum() / pe_rows["netqty"].abs().sum())
-            lower_breakeven = float(pe_strike - total_premium_collected_per_option*pe_breakeven_factor + current_index_price * pe_rows['exit_breakeven_per'].mean().astype(float)/ 100)
-        
+            # lower_breakeven = float(pe_strike - total_premium_collected_per_option*pe_breakeven_factor + current_index_price * pe_rows['exit_breakeven_per'].mean().astype(float)/ 100)
+            lower_breakeven = float(pe_strike + current_index_price * pe_rows['exit_breakeven_per'].mean().astype(float)/ 100)
         if ce_strike!=0 and pe_strike!=0:
             breakeven_range = upper_breakeven - lower_breakeven
             near_breakeven = min(100 * (current_index_price - lower_breakeven) / current_index_price,  
