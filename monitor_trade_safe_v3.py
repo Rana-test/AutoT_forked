@@ -10,6 +10,7 @@ from email.mime.multipart import MIMEMultipart
 import smtplib
 from email.mime.text import MIMEText
 import pytz
+import numpy as np
 
 live=True
 # times=1.75
@@ -50,6 +51,11 @@ exit_params = {
         (0, 0.00, 0.00),
     ]
 }
+
+def expected_move(index_price: float, vix: float, days: int) -> float:
+    daily_volatility = (vix/100) / np.sqrt(252)  # Convert annualized VIX to daily volatility
+    expected_move = index_price * daily_volatility * np.sqrt(days)
+    return expected_move
 
 def stop_loss_order(pos_df, api, live, sender_email, receiver_email, email_password):
     for i,pos in pos_df.iterrows():
@@ -217,6 +223,7 @@ def get_positions(api):
 
 def monitor_trade(api, sender_email, receiver_email, email_password):
     pos_df = get_positions(api)
+    vix = get_india_vix(api)
     if pos_df is None:
         return {'get_pos Error':"Error getting position Info"} 
     total_pnl=0
@@ -225,6 +232,7 @@ def monitor_trade(api, sender_email, receiver_email, email_password):
     current_index_price = float(api.get_quotes(exchange="NSE", token=str(26000))['lp'])
     
     for expiry, group in pos_df.groupby("expiry"):
+        expected_move = expected_move(current_index_price, vix, group['Days_to_Expiry'].mean().astype(int))
         current_pnl = float((-1 * (group["netupldprc"].astype(float)-group["lp"].astype(float)) * group["netqty"].astype(float)).sum())
         max_profit = float((-1 * group["netupldprc"].astype(float) * group["netqty"].astype(float)).sum())
         # total_premium_collected = (group["totsellamt"] / abs(group["netqty"])).sum()
@@ -254,6 +262,7 @@ def monitor_trade(api, sender_email, receiver_email, email_password):
         
         # if not ce_rows.empty and not pe_rows.empty:
         stop_loss_per = group['exit_loss_per'].mean().astype(float)
+        stop_loss_per = 0.5
         max_loss = float(-1 * stop_loss_per * max_profit)
         if ce_rows.empty:
             ce_strike = 0
@@ -262,8 +271,9 @@ def monitor_trade(api, sender_email, receiver_email, email_password):
             ce_breakeven_factor = current_qty/(-1*ce_rows["netqty"].sum())
             ce_strike = float((ce_rows["sp"].astype(float) * ce_rows["netqty"].abs()).sum() / ce_rows["netqty"].abs().sum())
             # upper_breakeven = float(ce_strike + total_premium_collected_per_option*ce_breakeven_factor - current_index_price * ce_rows['exit_breakeven_per'].mean().astype(float)/ 100)
-            upper_breakeven = float(ce_strike - current_index_price * ce_rows['exit_breakeven_per'].mean().astype(float)/ 100)
-            
+            # upper_breakeven = float(ce_strike - current_index_price * ce_rows['exit_breakeven_per'].mean().astype(float)/ 100)
+            upper_breakeven=float(ce_strike - expected_move + total_premium_collected_per_option)
+
         if pe_rows.empty:
             pe_strike = 0
             lower_breakeven = 0
@@ -271,7 +281,9 @@ def monitor_trade(api, sender_email, receiver_email, email_password):
             pe_breakeven_factor = current_qty/(-1*pe_rows["netqty"].sum())
             pe_strike = float((pe_rows["sp"].astype(float) * pe_rows["netqty"].abs()).sum() / pe_rows["netqty"].abs().sum())
             # lower_breakeven = float(pe_strike - total_premium_collected_per_option*pe_breakeven_factor + current_index_price * pe_rows['exit_breakeven_per'].mean().astype(float)/ 100)
-            lower_breakeven = float(pe_strike + current_index_price * pe_rows['exit_breakeven_per'].mean().astype(float)/ 100)
+            # lower_breakeven = float(pe_strike + current_index_price * pe_rows['exit_breakeven_per'].mean().astype(float)/ 100)
+            lower_breakeven = float(pe_strike + expected_move-total_premium_collected_per_option)
+
         if ce_strike!=0 and pe_strike!=0:
             breakeven_range = upper_breakeven - lower_breakeven
             near_breakeven = min(100 * (current_index_price - lower_breakeven) / current_index_price,  
@@ -294,7 +306,9 @@ def monitor_trade(api, sender_email, receiver_email, email_password):
             "Max_Loss": round(max_loss, 2)
         }
         total_pnl+=current_pnl
-        stop_loss_condition = (current_index_price < lower_breakeven or current_index_price > upper_breakeven) and total_pnl < max_loss
+
+        stop_loss_condition = (current_index_price < lower_breakeven or current_index_price > upper_breakeven) and current_pnl < max_loss
+        
         if stop_loss_condition:
             stop_loss_order(group, api, sender_email, receiver_email, email_password,live)
             expiry_metrics[expiry] = {
