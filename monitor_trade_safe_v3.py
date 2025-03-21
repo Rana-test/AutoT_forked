@@ -263,6 +263,7 @@ def monitor_trade(api, sender_email, receiver_email, email_password):
             ce_strike = float((ce_rows["sp"].astype(float) * ce_rows["netqty"].abs()).sum() / ce_rows["netqty"].abs().sum())
             # upper_breakeven = float(ce_strike + total_premium_collected_per_option*ce_breakeven_factor - current_index_price * ce_rows['exit_breakeven_per'].mean().astype(float)/ 100)
             upper_breakeven = float(ce_strike - current_index_price * ce_rows['exit_breakeven_per'].mean().astype(float)/ 100)
+            
         if pe_rows.empty:
             pe_strike = 0
             lower_breakeven = 0
