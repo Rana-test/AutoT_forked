@@ -15,45 +15,45 @@ import numpy as np
 live=True
 # times=1.75
 # stop_loss_per=0.5
-exit_params = {
-    day: {"distance_from_breakeven": dist, "loss_multiple": profit}
-    for day, dist, profit in [
-        (30, 3.28, 0.00),
-        (29, 3.05, 0.00),
-        (28, 2.83, 0.00),
-        (27, 2.61, 0.00),
-        (26, 2.41, 0.00),
-        (25, 2.21, 0.02),
-        (24, 2.02, 0.15),
-        (23, 1.84, 0.27),
-        (22, 1.66, 0.39),
-        (21, 1.50, 0.50),
-        (20, 1.34, 0.61),
-        (19, 1.20, 0.72),
-        (18, 1.06, 0.82),
-        (17, 0.93, 0.92),
-        (16, 0.81, 1.01),
-        (15, 0.69, 1.10),
-        (14, 0.59, 1.01),
-        (13, 0.49, 0.92),
-        (12, 0.40, 0.82),
-        (11, 0.32, 0.72),
-        (10, 0.25, 0.61),
-        (9, 0.19, 0.50),
-        (8, 0.13, 0.39),
-        (7, 0.09, 0.27),
-        (6, 0.05, 0.15),
-        (5, 0.02, 0.02),
-        (4, 0.00, 0.00),
-        (3, 0.00, 0.00),
-        (2, 0.00, 0.00),
-        (1, 0.00, 0.00),
-        (0, 0.00, 0.00),
-    ]
-}
+# exit_params = {
+#     day: {"distance_from_breakeven": dist, "loss_multiple": profit}
+#     for day, dist, profit in [
+#         (30, 3.28, 0.00),
+#         (29, 3.05, 0.00),
+#         (28, 2.83, 0.00),
+#         (27, 2.61, 0.00),
+#         (26, 2.41, 0.00),
+#         (25, 2.21, 0.02),
+#         (24, 2.02, 0.15),
+#         (23, 1.84, 0.27),
+#         (22, 1.66, 0.39),
+#         (21, 1.50, 0.50),
+#         (20, 1.34, 0.61),
+#         (19, 1.20, 0.72),
+#         (18, 1.06, 0.82),
+#         (17, 0.93, 0.92),
+#         (16, 0.81, 1.01),
+#         (15, 0.69, 1.10),
+#         (14, 0.59, 1.01),
+#         (13, 0.49, 0.92),
+#         (12, 0.40, 0.82),
+#         (11, 0.32, 0.72),
+#         (10, 0.25, 0.61),
+#         (9, 0.19, 0.50),
+#         (8, 0.13, 0.39),
+#         (7, 0.09, 0.27),
+#         (6, 0.05, 0.15),
+#         (5, 0.02, 0.02),
+#         (4, 0.00, 0.00),
+#         (3, 0.00, 0.00),
+#         (2, 0.00, 0.00),
+#         (1, 0.00, 0.00),
+#         (0, 0.00, 0.00),
+#     ]
+# }
 
-def expected_move(index_price: float, vix: float, days: int) -> float:
-    daily_volatility = (vix/100) / np.sqrt(252)  # Convert annualized VIX to daily volatility
+def calc_expected_move(index_price: float, vix: float, days: int) -> float:
+    daily_volatility = (vix/100) / np.sqrt(365)  # Convert annualized VIX to daily volatility
     expected_move = index_price * daily_volatility * np.sqrt(days)
     return expected_move
 
@@ -215,8 +215,8 @@ def get_positions(api):
         pos_df['expiry'] = pd.to_datetime(pos_df['expiry'])
         current_date = pd.Timestamp.today().normalize()
         pos_df['Days_to_Expiry'] = pos_df['expiry'].apply(lambda x: (x - current_date).days)
-        pos_df['exit_breakeven_per']= pos_df.apply(lambda x: exit_params[x['Days_to_Expiry']]['distance_from_breakeven'],axis=1)
-        pos_df['exit_loss_per']= pos_df.apply(lambda x: exit_params[x['Days_to_Expiry']]['loss_multiple'],axis=1)
+        # pos_df['exit_breakeven_per']= pos_df.apply(lambda x: exit_params[x['Days_to_Expiry']]['distance_from_breakeven'],axis=1)
+        # pos_df['exit_loss_per']= pos_df.apply(lambda x: exit_params[x['Days_to_Expiry']]['loss_multiple'],axis=1)
         return pos_df
     except Exception as e:
         return None
@@ -232,7 +232,7 @@ def monitor_trade(api, sender_email, receiver_email, email_password):
     current_index_price = float(api.get_quotes(exchange="NSE", token=str(26000))['lp'])
     
     for expiry, group in pos_df.groupby("expiry"):
-        expected_move = expected_move(current_index_price, vix, group['Days_to_Expiry'].mean().astype(int))
+        expected_move = calc_expected_move(current_index_price, vix, group['Days_to_Expiry'].mean().astype(int))
         current_pnl = float((-1 * (group["netupldprc"].astype(float)-group["lp"].astype(float)) * group["netqty"].astype(float)).sum())
         max_profit = float((-1 * group["netupldprc"].astype(float) * group["netqty"].astype(float)).sum())
         # total_premium_collected = (group["totsellamt"] / abs(group["netqty"])).sum()
