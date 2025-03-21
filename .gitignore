@@ -25,3 +25,8 @@ creds.yml
 logs/app.log
 complete.csv
 upstox_creds.txt
+results_safe/*
+fyers_creds.py
+simulator_safe.py
+vix_req.txt
+Upstox_Positions/.gitkeep
