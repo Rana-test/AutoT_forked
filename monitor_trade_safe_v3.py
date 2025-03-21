@@ -263,7 +263,7 @@ def monitor_trade(api, sender_email, receiver_email, email_password):
         # if not ce_rows.empty and not pe_rows.empty:
         stop_loss_per = group['exit_loss_per'].mean().astype(float)
         stop_loss_per = 0.5
-        max_loss = float(-1 * stop_loss_per * max_profit)
+        max_loss = float(-1 * stop_loss_per * (max_profit-realized_premium))
         if ce_rows.empty:
             ce_strike = 0
             upper_breakeven=999999
