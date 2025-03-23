@@ -11,6 +11,22 @@ import smtplib
 from email.mime.text import MIMEText
 import pytz
 import numpy as np
+import math
+### Upstox login 
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import pyotp
+import sys
+# sys.path.append('/home/rana/trading/newAuto/AutoT/env/lib/python3.10/site-packages')
+import upstox_client
+from __future__ import print_function
+import time
+from upstox_client.rest import ApiException
+from pprint import pprint
+import requests
 
 live=True
 # times=1.75
@@ -51,6 +67,79 @@ live=True
 #         (0, 0.00, 0.00),
 #     ]
 # }
+def login_upstox(UPSTOX_API_KEY, UPSTOX_URL, UPSTOX_API_SECRET, UPSTOX_MOB_NO, UPSTOX_CLIENT_PASS, UPSTOX_CLIENT_PIN):
+
+    configuration = upstox_client.Configuration()
+    UPSTOX_API_KEY="9bff3d90-0499-4435-9052-758d5cad6d15"
+    UPSTOX_URL = f"https://api-v2.upstox.com/login/authorization/dialog?response_type=code&client_id={UPSTOX_API_KEY}&redirect_uri=https%3A%2F%2Fwww.google.com"
+    UPSTOX_API_SECRET="yt53tk18dx"
+    UPSTOX_MOB_NO="9731811400"
+    UPSTOX_CLIENT_PASS="ONRG76QYCMY4FYLUHBCU6PCRAYCMYFB7"
+    UPSTOX_CLIENT_PIN="182418"
+
+    def wait_for_page_load(driver, timeout=30):
+        WebDriverWait(driver, timeout).until(
+            lambda d: d.execute_script('return document.readyState') == 'complete')
+        
+    options = Options()
+    options.add_argument('--no-sandbox')
+    options.add_argument("--headless") 
+    driver = webdriver.Chrome(options=options)
+    driver.get(UPSTOX_URL)
+    wait_for_page_load(driver)
+    username_input_xpath = '//*[@id="mobileNum"]'
+    username_input_element = driver.find_element(By.XPATH, username_input_xpath)
+    username_input_element.clear()
+    username_input_element.send_keys(UPSTOX_MOB_NO)
+    get_otp_button_xpath = '//*[@id="getOtp"]'
+    get_otp_button_element = driver.find_element(By.XPATH, get_otp_button_xpath)
+    get_otp_button_element.click()
+    client_pass = pyotp.TOTP(UPSTOX_CLIENT_PASS).now()
+    text_box = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, "otpNum")))
+    text_box.clear()
+    text_box.send_keys(client_pass)
+    wait = WebDriverWait(driver, 10)
+    continue_button = wait.until(EC.element_to_be_clickable((By.ID, "continueBtn")))
+    continue_button.click()
+    # XPath for the pin input field
+    text_box = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, "pinCode")))
+    text_box.clear()
+    text_box.send_keys(UPSTOX_CLIENT_PIN)
+    continue_button = wait.until(EC.element_to_be_clickable((By.ID, "pinContinueBtn")))
+    continue_button.click()
+    redirect_url = WebDriverWait(driver, 10).until(
+        lambda d: "?code=" in d.current_url
+    )
+    # Retrieve the token from the URL
+    token = driver.current_url.split("?code=")[1]
+
+    url = 'https://api.upstox.com/v2/login/authorization/token'
+    headers = {
+        'accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
+    }
+
+    data = {
+        'code': token,
+        'client_id': UPSTOX_API_KEY,
+        'client_secret': UPSTOX_API_SECRET,
+        'redirect_uri': "https://www.google.com",
+        'grant_type': 'authorization_code',
+    }
+
+    response = requests.post(url, headers=headers, data=data)
+
+    print(response.status_code)
+    print(response.json())
+    access_token=response.json().get("access_token")
+
+    # Configure OAuth2 access token for authorization: OAUTH2
+    configuration = upstox_client.Configuration()
+    configuration.access_token = access_token
+
+    upstox_opt_api = upstox_client.OptionsApi(upstox_client.ApiClient(configuration))
+
+    return upstox_client, upstox_opt_api
 
 def calc_expected_move(index_price: float, vix: float, days: int) -> float:
     daily_volatility = (vix/100) / np.sqrt(365)  # Convert annualized VIX to daily volatility
@@ -82,6 +171,21 @@ def stop_loss_order(pos_df, api, live, sender_email, receiver_email, email_passw
 
 def get_india_vix(api):
     return round(float(api.get_quotes(exchange="NSE", token=str(26017))['lp']),2)
+
+def get_atm_iv(upstox_opt_api, expiry_date, current_index_price):
+    strike_interval = 50
+    remainder = math.fmod(current_index_price, strike_interval)
+    if remainder > strike_interval / 2:
+        atm_strike = math.ceil(current_index_price / strike_interval) * strike_interval
+    else:
+        atm_strike = math.floor(current_index_price / strike_interval) * strike_interval
+
+    api_response = upstox_opt_api.get_put_call_option_chain(instrument_key="NSE_INDEX|Nifty 50", expiry_date=expiry_date)
+    for sp in api_response.data:
+        if sp.strike_price == atm_strike:
+            return((float(sp.call_options.option_greeks.iv)+float(sp.put_options.option_greeks.iv))/2)
+    return None    
+    
 
 def is_within_time_range():
     # Get the current UTC time
@@ -120,6 +224,12 @@ def init_creds():
                 vendor_code=data.get("vendor_code")
                 api_secret=data.get("api_secret")
                 imei=data.get("imei")
+                UPSTOX_API_KEY=data.get("UPSTOX_API_KEY")
+                UPSTOX_URL=data.get("UPSTOX_URL")
+                UPSTOX_API_SECRET=data.get("UPSTOX_API_SECRET")
+                UPSTOX_MOB_NO=data.get("UPSTOX_MOB_NO")
+                UPSTOX_CLIENT_PASS=data.get("UPSTOX_CLIENT_PASS")
+                UPSTOX_CLIENT_PIN=data.get("UPSTOX_CLIENT_PIN")
 
         except yaml.YAMLError as e:
             print("Error loading YAML file:", e)
@@ -134,8 +244,14 @@ def init_creds():
         vendor_code=os.getenv("vendor_code")
         api_secret=os.getenv("api_secret")
         imei=os.getenv("imei")
+        UPSTOX_API_KEY=os.getenv("UPSTOX_API_KEY")
+        UPSTOX_URL=os.getenv("UPSTOX_URL")
+        UPSTOX_API_SECRET=os.getenv("UPSTOX_API_SECRET")
+        UPSTOX_MOB_NO=os.getenv("UPSTOX_MOB_NO")
+        UPSTOX_CLIENT_PASS=os.getenv("UPSTOX_CLIENT_PASS")
+        UPSTOX_CLIENT_PIN=os.getenv("UPSTOX_CLIENT_PIN")
     
-    return userid, password, vendor_code, api_secret, imei, TOKEN, sender_email, receiver_email, email_password
+    return userid, password, vendor_code, api_secret, imei, TOKEN, sender_email, receiver_email, email_password, UPSTOX_API_KEY, UPSTOX_URL, UPSTOX_API_SECRET, UPSTOX_MOB_NO, UPSTOX_CLIENT_PASS, UPSTOX_CLIENT_PIN
 
 def is_within_timeframe(start, end):
     now = datetime.now(timezone.utc) 
@@ -221,9 +337,9 @@ def get_positions(api):
     except Exception as e:
         return None
 
-def monitor_trade(api, sender_email, receiver_email, email_password):
+def monitor_trade(api, upstox_opt_api, sender_email, receiver_email, email_password):
     pos_df = get_positions(api)
-    vix = get_india_vix(api)
+    # vix = get_india_vix(api)
     if pos_df is None:
         return {'get_pos Error':"Error getting position Info"} 
     total_pnl=0
@@ -232,7 +348,10 @@ def monitor_trade(api, sender_email, receiver_email, email_password):
     current_index_price = float(api.get_quotes(exchange="NSE", token=str(26000))['lp'])
     
     for expiry, group in pos_df.groupby("expiry"):
-        expected_move = calc_expected_move(current_index_price, vix, group['Days_to_Expiry'].mean().astype(int))
+        expiry_date_str = expiry.strftime('%Y-%m-%d')
+        atm_iv = get_atm_iv(upstox_opt_api, expiry_date_str, current_index_price)
+        # expected_move = calc_expected_move(current_index_price, vix, group['Days_to_Expiry'].mean().astype(int))
+        expected_move = calc_expected_move(current_index_price, atm_iv, group['Days_to_Expiry'].mean().astype(int)) #atm_iv based expected move
         current_pnl = float((-1 * (group["netupldprc"].astype(float)-group["lp"].astype(float)) * group["netqty"].astype(float)).sum())
         max_profit = float((-1 * group["netupldprc"].astype(float) * group["netqty"].astype(float)).sum())
         # total_premium_collected = (group["totsellamt"] / abs(group["netqty"])).sum()
@@ -247,7 +366,7 @@ def monitor_trade(api, sender_email, receiver_email, email_password):
             trade_hist_df = pd.read_csv("trade_history.csv", dtype=str)
         #Read tradebook_df for the given expiry to retrive rec_ins
         # Calculate premium collected
-        expiry_date_str = expiry.strftime('%Y-%m-%d')
+        
         trade_hist_df = trade_hist_df[trade_hist_df['expiry']==expiry_date_str]
         # realized_qty = float(((trade_hist_df['daybuyqty'].astype(int)+trade_hist_df['cfsellqty'].astype(int))/2).sum())
         # realized_premium = float((trade_hist_df['upldprc'].astype(float)-trade_hist_df['totbuyavgprc'].astype(float)).sum())*realized_qty
@@ -297,6 +416,8 @@ def monitor_trade(api, sender_email, receiver_email, email_password):
             "CE_Strike": round(ce_strike, 2),
             "PE_Strike": round(pe_strike, 2),
             "Current_Index_Price": current_index_price,
+            "ATM_IV": round(atm_iv, 2),
+            "Expected_Movement": round(expected_move, 2),
             "Lower_Breakeven": round(lower_breakeven, 2),
             "Upper_Breakeven": round(upper_breakeven, 2),
             "Breakeven_Range": round(breakeven_range, 2),
@@ -316,6 +437,8 @@ def monitor_trade(api, sender_email, receiver_email, email_password):
             "CE_Strike": round(ce_strike, 2),
             "PE_Strike": round(pe_strike, 2),
             "Current_Index_Price": current_index_price,
+            "ATM_IV": round(atm_iv, 2),
+            "Expected_Movement": round(expected_move, 2),
             "Lower_Breakeven": "STOP_LOSS",
             "Upper_Breakeven": "STOP_LOSS",
             "Breakeven_Range": "STOP_LOSS",
@@ -343,13 +466,14 @@ def format_trade_metrics(metrics):
             data.append([
                 expiry, details.get("PNL", "N/A"), details.get("CE_Strike", "N/A"),
                 details.get("PE_Strike", "N/A"), details.get("Current_Index_Price", "N/A"),
+                details.get("ATM_IV", "N/A"), details.get("Expected_Movement", "N/A"),
                 details.get("Lower_Breakeven", "N/A"), details.get("Upper_Breakeven", "N/A"),
                 details.get("Breakeven_Range", "N/A"), details.get("Breakeven_Range_Per", "N/A"),
                 details.get("Near_Breakeven", "N/A"), details.get("Max_Profit", "N/A"), details.get("Max_Loss", "N/A")
             ])
     
     df = pd.DataFrame(data, columns=[
-        "Expiry", "PNL", "CE Strike", "PE Strike", "Current Index Price", "Lower Breakeven", 
+        "Expiry", "PNL", "CE Strike", "PE Strike", "Current Index Price", "ATM IV", "Expected Movement", "Lower Breakeven", 
         "Upper Breakeven", "Breakeven Range", "Breakeven %", "Near Breakeven", "Max Profit", "Max Loss"
     ])
     
@@ -438,8 +562,9 @@ def main():
         return
     
     # Login
-    userid, password, vendor_code, api_secret, imei, TOKEN, sender_email, receiver_email, email_password = init_creds()
+    userid, password, vendor_code, api_secret, imei, TOKEN, sender_email, receiver_email, email_password, UPSTOX_API_KEY, UPSTOX_URL, UPSTOX_API_SECRET, UPSTOX_MOB_NO, UPSTOX_CLIENT_PASS, UPSTOX_CLIENT_PIN = init_creds()
     api = login(userid, password, vendor_code, api_secret, imei, TOKEN)
+    upstox_client, upstox_opt_api = login_upstox(UPSTOX_API_KEY, UPSTOX_URL, UPSTOX_API_SECRET, UPSTOX_MOB_NO, UPSTOX_CLIENT_PASS, UPSTOX_CLIENT_PIN)
 
     while is_within_timeframe("03:00", "03:45"):
         print("Initializing")
@@ -449,7 +574,7 @@ def main():
 
     # Start Monitoring
     while is_within_timeframe(session.get('start_time'), session.get('end_time')):
-        metrics = monitor_trade(api, sender_email, receiver_email, email_password)
+        metrics = monitor_trade(api, upstox_opt_api, sender_email, receiver_email, email_password)
         
         if metrics =="STOP_LOSS":
             send_email(sender_email, receiver_email, email_password, "STOP LOSS HIT - QUIT", "STOP LOSS HIT")

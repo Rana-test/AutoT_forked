@@ -4,6 +4,7 @@ https://github.com/Shoonya-Dev/ShoonyaApi-py/raw/refs/heads/master/dist/NorenRes
 pandas
 zipfile2
 PyYAML==6.0.2
-selenium
+selenium==4.27.1
 # upstox-python-sdk
 yfinance
+upstox-python-sdk==2.9.0
