@@ -332,7 +332,9 @@ def get_positions(api):
         current_date = pd.Timestamp.today().normalize()
         pos_df['Days_to_Expiry'] = pos_df['expiry'].apply(lambda x: (x - current_date).days)
         # pos_df['exit_breakeven_per']= pos_df.apply(lambda x: exit_params[x['Days_to_Expiry']]['distance_from_breakeven'],axis=1)
+        pos_df['exit_breakeven_per']="0"
         # pos_df['exit_loss_per']= pos_df.apply(lambda x: exit_params[x['Days_to_Expiry']]['loss_multiple'],axis=1)
+        pos_df['exit_loss_per']=0.5
         return pos_df
     except Exception as e:
         return None
@@ -381,7 +383,6 @@ def monitor_trade(api, upstox_opt_api, sender_email, receiver_email, email_passw
         
         # if not ce_rows.empty and not pe_rows.empty:
         stop_loss_per = group['exit_loss_per'].mean().astype(float)
-        stop_loss_per = 0.5
         max_loss = float(-1 * stop_loss_per * (max_profit-realized_premium))
         if ce_rows.empty:
             ce_strike = 0
