@@ -1,3 +1,4 @@
+from __future__ import print_function
 from api_helper import ShoonyaApiPy
 import os
 import pyotp
@@ -22,7 +23,6 @@ import pyotp
 import sys
 # sys.path.append('/home/rana/trading/newAuto/AutoT/env/lib/python3.10/site-packages')
 import upstox_client
-from __future__ import print_function
 import time
 from upstox_client.rest import ApiException
 from pprint import pprint
