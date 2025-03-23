@@ -27,6 +27,7 @@ import time
 from upstox_client.rest import ApiException
 from pprint import pprint
 import requests
+import pandas as pd
 
 live=True
 # times=1.75
@@ -310,7 +311,61 @@ def dict_to_table_manual(data):
 
     return table
 
-import pandas as pd
+def insert_if_not_exists(df, new_record):
+    match_columns = ['token', 'daybuyqty', 'daysellqty', 'cfbuyqty', 'cfsellqty']
+    # Check if there is any existing record with the same values in the match columns
+    exists = (df[match_columns] == new_record[match_columns].iloc[0]).all(axis=1).any()
+    
+    # Insert only if the record does not exist
+    if not exists:
+        df = pd.concat([df, new_record], ignore_index=True)
+    
+    return df
+
+def write_to_trade_history(trade_book_df):
+    trade_hist = "trade_history.csv"
+    dtype_map={}
+    cols = ['stat', 'uid', 'actid', 'exch', 'tsym', 's_prdt_ali', 'prd', 'token',
+       'instname', 'dname', 'frzqty', 'pp', 'ls', 'ti', 'mult', 'prcftr',
+       'daybuyqty', 'daysellqty', 'daybuyamt', 'daybuyavgprc', 'daysellamt',
+       'daysellavgprc', 'cfbuyqty', 'cfsellqty', 'cfbuyamt', 'cfbuyavgprc',
+       'cfsellamt', 'cfsellavgprc', 'openbuyqty', 'opensellqty', 'openbuyamt',
+       'openbuyavgprc', 'opensellamt', 'opensellavgprc', 'dayavgprc', 'netqty',
+       'netavgprc', 'upldprc', 'netupldprc', 'lp', 'urmtom', 'bep',
+       'totbuyamt', 'totsellamt', 'totbuyavgprc', 'totsellavgprc', 'rpnl',
+       'PnL', 'type', 'sp', 'expiry', 'Days_to_Expiry', 'exit_breakeven_per',
+       'exit_loss_per']
+    
+    for col in cols:
+        dtype_map[col]=str
+
+    # Load existing trade history or create an empty DataFrame
+    if os.path.exists(trade_hist):
+        trade_hist_df = pd.read_csv(trade_hist, dtype=str)
+    else:
+        trade_hist_df = pd.DataFrame(columns=trade_book_df.columns)
+
+    # Ensure column order and types match by creating a copy before modification
+    trade_book_df = trade_book_df.copy()
+    trade_hist_df = trade_hist_df.copy()
+
+    # Convert all columns to string, ensuring NaN values don't cause warnings
+    trade_book_df = trade_book_df.fillna("").astype(str)
+    trade_hist_df = trade_hist_df.fillna("").astype(str)
+
+    for col, dtype in dtype_map.items():
+        if col in trade_book_df.columns:
+            trade_book_df.loc[:, col] = trade_book_df[col].astype(dtype)  # Use .loc to avoid SettingWithCopyWarning
+        if col in trade_hist_df.columns:
+            trade_hist_df.loc[:, col] = trade_hist_df[col].astype(dtype)  # Use .loc to avoid SettingWithCopyWarning
+
+    # Remove duplicates and keep only new records
+    trade_hist_df = insert_if_not_exists(trade_hist_df, trade_book_df)
+    # Save to CSV with fixed float format (2 decimal places)
+    trade_hist_df.to_csv(trade_hist, index=False, float_format="%.2f")
+
+    return trade_hist_df
+
 
 def get_positions(api):
     try:
@@ -328,7 +383,7 @@ def get_positions(api):
         pos_df['type'] = pos_df['dname'].apply(lambda x: x.split()[3])
         pos_df['sp'] = pos_df['dname'].apply(lambda x: x.split()[2])
         pos_df['expiry'] = pos_df['dname'].apply(lambda x: x.split()[1])  # Extract expiry date
-        pos_df['expiry'] = pd.to_datetime(pos_df['expiry'], format="%d-%m-%Y")
+        pos_df['expiry'] = pd.to_datetime(pos_df['expiry'], format="%d%b%y")
         current_date = pd.Timestamp.today().normalize()
         pos_df['Days_to_Expiry'] = pos_df['expiry'].apply(lambda x: (x - current_date).days)
         # pos_df['exit_breakeven_per']= pos_df.apply(lambda x: exit_params[x['Days_to_Expiry']]['distance_from_breakeven'],axis=1)
@@ -498,63 +553,6 @@ def format_trade_metrics(metrics):
     """
     
     return email_body
-
-def insert_if_not_exists(df, new_record):
-    match_columns = ['token', 'daybuyqty', 'daysellqty', 'cfbuyqty', 'cfsellqty']
-    # Check if there is any existing record with the same values in the match columns
-    exists = (df[match_columns] == new_record[match_columns].iloc[0]).all(axis=1).any()
-    
-    # Insert only if the record does not exist
-    if not exists:
-        df = pd.concat([df, new_record], ignore_index=True)
-    
-    return df
-
-def write_to_trade_history(trade_book_df):
-    trade_hist = "trade_history.csv"
-    dtype_map={}
-    cols = ['stat', 'uid', 'actid', 'exch', 'tsym', 's_prdt_ali', 'prd', 'token',
-       'instname', 'dname', 'frzqty', 'pp', 'ls', 'ti', 'mult', 'prcftr',
-       'daybuyqty', 'daysellqty', 'daybuyamt', 'daybuyavgprc', 'daysellamt',
-       'daysellavgprc', 'cfbuyqty', 'cfsellqty', 'cfbuyamt', 'cfbuyavgprc',
-       'cfsellamt', 'cfsellavgprc', 'openbuyqty', 'opensellqty', 'openbuyamt',
-       'openbuyavgprc', 'opensellamt', 'opensellavgprc', 'dayavgprc', 'netqty',
-       'netavgprc', 'upldprc', 'netupldprc', 'lp', 'urmtom', 'bep',
-       'totbuyamt', 'totsellamt', 'totbuyavgprc', 'totsellavgprc', 'rpnl',
-       'PnL', 'type', 'sp', 'expiry', 'Days_to_Expiry', 'exit_breakeven_per',
-       'exit_loss_per']
-    
-    for col in cols:
-        dtype_map[col]=str
-
-    # Load existing trade history or create an empty DataFrame
-    if os.path.exists(trade_hist):
-        trade_hist_df = pd.read_csv(trade_hist, dtype=str)
-    else:
-        trade_hist_df = pd.DataFrame(columns=trade_book_df.columns)
-
-    # Ensure column order and types match by creating a copy before modification
-    trade_book_df = trade_book_df.copy()
-    trade_hist_df = trade_hist_df.copy()
-
-    # Convert all columns to string, ensuring NaN values don't cause warnings
-    trade_book_df = trade_book_df.fillna("").astype(str)
-    trade_hist_df = trade_hist_df.fillna("").astype(str)
-
-    for col, dtype in dtype_map.items():
-        if col in trade_book_df.columns:
-            trade_book_df.loc[:, col] = trade_book_df[col].astype(dtype)  # Use .loc to avoid SettingWithCopyWarning
-        if col in trade_hist_df.columns:
-            trade_hist_df.loc[:, col] = trade_hist_df[col].astype(dtype)  # Use .loc to avoid SettingWithCopyWarning
-
-    # Remove duplicates and keep only new records
-    trade_hist_df = insert_if_not_exists(trade_hist_df, trade_book_df)
-    # Save to CSV with fixed float format (2 decimal places)
-    trade_hist_df.to_csv(trade_hist, index=False, float_format="%.2f")
-
-    return trade_hist_df
-
-
 
 def main():
     session = identify_session()
