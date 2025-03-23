@@ -328,7 +328,7 @@ def get_positions(api):
         pos_df['type'] = pos_df['dname'].apply(lambda x: x.split()[3])
         pos_df['sp'] = pos_df['dname'].apply(lambda x: x.split()[2])
         pos_df['expiry'] = pos_df['dname'].apply(lambda x: x.split()[1])  # Extract expiry date
-        pos_df['expiry'] = pd.to_datetime(pos_df['expiry'])
+        pos_df['expiry'] = pd.to_datetime(pos_df['expiry'], format="%Y-%m-%d")
         current_date = pd.Timestamp.today().normalize()
         pos_df['Days_to_Expiry'] = pos_df['expiry'].apply(lambda x: (x - current_date).days)
         # pos_df['exit_breakeven_per']= pos_df.apply(lambda x: exit_params[x['Days_to_Expiry']]['distance_from_breakeven'],axis=1)
