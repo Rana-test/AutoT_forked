@@ -429,7 +429,8 @@ def monitor_trade(api, upstox_opt_api, sender_email, receiver_email, email_passw
         trade_hist_df = trade_hist_df[trade_hist_df['expiry']==expiry_date_str]
         # realized_qty = float(((trade_hist_df['daybuyqty'].astype(int)+trade_hist_df['cfsellqty'].astype(int))/2).sum())
         # realized_premium = float((trade_hist_df['upldprc'].astype(float)-trade_hist_df['totbuyavgprc'].astype(float)).sum())*realized_qty
-        realized_premium = (trade_hist_df['upldprc'].astype(float)*trade_hist_df['cfsellqty'].astype(int)-trade_hist_df['totbuyavgprc'].astype(float)*trade_hist_df['daybuyqty'].astype(int)).sum()
+        act_realized_premium = (trade_hist_df['upldprc'].astype(float)*trade_hist_df['cfsellqty'].astype(int)-trade_hist_df['totbuyavgprc'].astype(float)*trade_hist_df['daybuyqty'].astype(int)).sum()
+        realized_premium=0
 
         total_premium_collected_per_option = (current_premium + realized_premium) /current_qty
         current_pnl+=realized_premium
@@ -488,7 +489,8 @@ def monitor_trade(api, upstox_opt_api, sender_email, receiver_email, email_passw
             "Breakeven_Range_Per": round(100 * breakeven_range / current_index_price, 2),
             "Near_Breakeven": round(near_breakeven, 2),
             "Max_Profit": round(max_profit, 2),
-            "Max_Loss": round(max_loss, 2)
+            "Max_Loss": round(max_loss, 2),
+            "Realized_Premium": round(act_realized_premium, 2),
         }
         total_pnl+=current_pnl
 
@@ -509,7 +511,8 @@ def monitor_trade(api, upstox_opt_api, sender_email, receiver_email, email_passw
             "Breakeven_Range_Per": "STOP_LOSS",
             "Near_Breakeven": round(near_breakeven, 2),
             "Max_Profit": round(max_profit, 2),
-            "Max_Loss": round(max_loss, 2)
+            "Max_Loss": round(max_loss, 2),
+            "Realized_Premium": round(act_realized_premium, 2),
         }
 
     metrics["Expiry_Details"] = expiry_metrics
@@ -533,12 +536,13 @@ def format_trade_metrics(metrics):
                 details.get("ATM_IV", "N/A"), details.get("Expected_Movement", "N/A"),
                 details.get("Lower_Breakeven", "N/A"), details.get("Upper_Breakeven", "N/A"),
                 details.get("Breakeven_Range", "N/A"), details.get("Breakeven_Range_Per", "N/A"),
-                details.get("Near_Breakeven", "N/A"), details.get("Max_Profit", "N/A"), details.get("Max_Loss", "N/A")
+                details.get("Near_Breakeven", "N/A"), details.get("Max_Profit", "N/A"), details.get("Max_Loss", "N/A"),
+                details.get("Realized_Premium", "N/A")
             ])
     
     df = pd.DataFrame(data, columns=[
         "Expiry", "PNL", "CE Strike", "PE Strike", "Current Index Price", "ATM IV", "Expected Movement", "Lower Breakeven", 
-        "Upper Breakeven", "Breakeven Range", "Breakeven %", "Near Breakeven", "Max Profit", "Max Loss"
+        "Upper Breakeven", "Breakeven Range", "Breakeven %", "Near Breakeven", "Max Profit", "Max Loss", "Realized_Premium"
     ])
     
     table_html = df.to_html(index=False, border=1)
