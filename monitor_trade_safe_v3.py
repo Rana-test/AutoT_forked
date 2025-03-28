@@ -149,26 +149,28 @@ def calc_expected_move(index_price: float, vix: float, days: int) -> float:
 
 def stop_loss_order(pos_df, api, live, sender_email, receiver_email, email_password):
     for i,pos in pos_df.iterrows():
-        tradingsymbol = pos["tsym"]  # Trading symbol of the position
-        netqty = int(pos["netqty"])  # Net quantity of the position
-        if netqty != 0:  # Ensure position exists
-            transaction_type = "BUY" if netqty < 0 else "SELL"
-            quantity = abs(netqty)  # Exit full position
-            prd_type = 'M'
-            exchange = 'NFO' 
-            # disclosed_qty= 0
-            price_type = 'MKT'
-            price=0
-            trigger_price = None
-            retention='DAY'
-            if live:
-                ret = api.place_order(buy_or_sell="B", product_type=prd_type, exchange=exchange, tradingsymbol=tradingsymbol, quantity=quantity, discloseqty=quantity,price_type=price_type, price=price,trigger_price=trigger_price, retention=retention, remarks="STOP LOSS ORDER")
-            else:
-                print(f'buy_or_sell="B", product_type={prd_type}, exchange={exchange}, tradingsymbol={tradingsymbol}, quantity={quantity}, discloseqty={quantity},price_type={price_type}, price={price},trigger_price={trigger_price}, retention={retention}, remarks="STOP LOSS ORDER"')
-            
-            subject = f"STOP LOSS TRIGGERED for {tradingsymbol} at {price}."
-            email_body = f"STOP LOSS TRIGGERED for {tradingsymbol} at {price}."
-            send_email(sender_email, receiver_email, email_password, subject, email_body)
+        # Exit only the loss making side
+        if pos["PnL"] < 1:
+            tradingsymbol = pos["tsym"]  # Trading symbol of the position
+            netqty = int(pos["netqty"])  # Net quantity of the position
+            if netqty != 0:  # Ensure position exists
+                transaction_type = "BUY" if netqty < 0 else "SELL"
+                quantity = abs(netqty)  # Exit full position
+                prd_type = 'M'
+                exchange = 'NFO' 
+                # disclosed_qty= 0
+                price_type = 'MKT'
+                price=0
+                trigger_price = None
+                retention='DAY'
+                if live:
+                    ret = api.place_order(buy_or_sell="B", product_type=prd_type, exchange=exchange, tradingsymbol=tradingsymbol, quantity=quantity, discloseqty=quantity,price_type=price_type, price=price,trigger_price=trigger_price, retention=retention, remarks="STOP LOSS ORDER")
+                else:
+                    print(f'buy_or_sell="B", product_type={prd_type}, exchange={exchange}, tradingsymbol={tradingsymbol}, quantity={quantity}, discloseqty={quantity},price_type={price_type}, price={price},trigger_price={trigger_price}, retention={retention}, remarks="STOP LOSS ORDER"')
+                
+                subject = f"STOP LOSS TRIGGERED for {tradingsymbol} at {price}."
+                email_body = f"STOP LOSS TRIGGERED for {tradingsymbol} at {price}."
+                send_email(sender_email, receiver_email, email_password, subject, email_body)
 
 def get_india_vix(api):
     return round(float(api.get_quotes(exchange="NSE", token=str(26017))['lp']),2)
@@ -463,6 +465,12 @@ def monitor_trade(api, upstox_opt_api, sender_email, receiver_email, email_passw
             breakeven_range = upper_breakeven - lower_breakeven
             near_breakeven = min(100 * (current_index_price - lower_breakeven) / current_index_price,  
                                 100 * (upper_breakeven - current_index_price) / current_index_price)
+        elif ce_strike!=0:
+            breakeven_range = upper_breakeven - current_index_price
+            near_breakeven = 100 * (breakeven_range) / current_index_price
+        elif pe_strike!=0:
+            breakeven_range = current_index_price - lower_breakeven
+            near_breakeven = 100 * (breakeven_range) / current_index_price
         else:
             breakeven_range = 0
             near_breakeven = 0
