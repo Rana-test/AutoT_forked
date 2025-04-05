@@ -300,6 +300,28 @@ def send_email(sender_email, receiver_email, email_password, subject, body):
     finally:
         server.quit()
 
+def send_email_plain(sender_email, receiver_email, email_password, subject, body):
+    # Create email
+    msg = MIMEMultipart()
+    # Add body to email
+    msg['From'] = sender_email
+    msg['To'] = receiver_email
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'plain'))
+    try:
+        # Connect to the Gmail SMTP server
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()  # Upgrade the connection to a secure encrypted SSL/TLS connection
+        server.login(sender_email, email_password)  # Login to your email account
+        text = msg.as_string()
+        server.sendmail(sender_email, receiver_email, text)  # Send the email
+        print("Email sent successfully!")
+        # time.sleep(180)
+    except Exception as e:
+        print(f"Error sending email: {e}")
+    finally:
+        server.quit()
+
 def dict_to_table_manual(data):
     """Converts a dictionary to a formatted table string without external libraries."""
     max_key_length = max(len(str(k)) for k in data.keys())
@@ -566,6 +588,429 @@ def format_trade_metrics(metrics):
     
     return email_body
 
+#####################################DIRECTIONAL#################
+import pandas as pd
+import numpy as np
+from api_helper import get_time
+from datetime import datetime, timedelta
+import math
+import calendar
+import ta
+import yfinance as yf
+
+month_mapping = {
+    '1': 'JAN', '2': 'FEB', '3': 'MAR', '4': 'APR', '5': 'MAY', '6': 'JUN',
+    '7': 'JUL', '8': 'AUG', '9': 'SEP', 'O': 'OCT', 'N': 'NOV', 'D': 'DEC'
+}
+
+def round_to_previous_15_45(dt):
+    hour = dt.hour
+    minute = dt.minute
+
+    # Only apply rounding if time is between 9:15 and 15:30
+    start = dt.replace(hour=9, minute=15, second=0, microsecond=0)
+    end = dt.replace(hour=15, minute=30, second=0, microsecond=0)
+
+    if dt < start:
+        return start
+    if dt > end:
+        return end
+
+    # Round down to previous 15 or 45 minute
+    if minute >= 45:
+        rounded_minute = 45
+    elif minute >= 15:
+        rounded_minute = 15
+    else:
+        # If before 15 past, round down to the previous hour at 45
+        dt -= timedelta(hours=1)
+        rounded_minute = 45
+
+    return dt.replace(minute=rounded_minute, second=0, microsecond=0)
+
+
+def get_data(api):
+    nifty_token = '26000'  # NSE|26000 is the Nifty 50 index
+    
+    # Get current time
+    now = datetime.now()
+
+    # Round current time
+    rounded_now = round_to_previous_15_45(now)
+
+    # Time 5 days ago
+    rounded_ten_days_ago = rounded_now - timedelta(days=30)
+
+    # Desired format
+    fmt = "%d-%m-%Y %H:%M:%S"
+
+    start_secs = get_time(rounded_ten_days_ago.strftime(fmt))  # dd-mm-YYYY HH:MM:SS
+    end_secs   = get_time(rounded_now.strftime(fmt))
+
+    bars = api.get_time_price_series(
+        exchange  = 'NSE',
+        token     = nifty_token,
+        starttime = int(start_secs),
+        endtime   = int(end_secs),
+        interval  = 60          # 60-minute candles
+    )
+
+    df = pd.DataFrame.from_dict(bars)
+    df.rename(columns={
+        'into': 'open',
+        'inth': 'high',
+        'intl': 'low',
+        'intc': 'close'
+    }, inplace=True)
+    df['datetime'] = pd.to_datetime(df['time'], dayfirst=True)
+    df.set_index('datetime', inplace=True)
+    df = df[['open', 'high', 'low', 'close']].astype(float)
+    df.sort_index(ascending=True, inplace=True)
+    return df
+
+def compute_EMA20(df):
+    ema_period = 20
+    df['EMA20'] = df['close'].ewm(span=ema_period, adjust=False).mean()
+    return df
+
+def compute_supertrend(df, atr_period=10, multiplier=3.5):
+    high = df['high']
+    low = df['low']
+    close = df['close']
+    df['tr'] = np.maximum(high - low, np.maximum((high - close.shift(1)).abs(), (low - close.shift(1)).abs()))
+    df['atr'] = df['tr'].rolling(window=atr_period).mean()
+    hl2 = (high + low) / 2
+    df['basic_upper'] = hl2 + multiplier * df['atr']
+    df['basic_lower'] = hl2 - multiplier * df['atr']
+    # Initialize with object dtype to support NaN and bool
+    df['final_upper'] = np.nan
+    df['final_lower'] = np.nan
+    df['supertrend'] = np.nan
+    df['st_up'] = pd.Series(dtype='object')  # Allows NaN and bool
+    first_valid_idx = df['atr'].first_valid_index()
+    if first_valid_idx is not None:
+        i = df.index.get_loc(first_valid_idx)
+        df.at[df.index[i], 'final_upper'] = df['basic_upper'].iloc[i]
+        df.at[df.index[i], 'final_lower'] = df['basic_lower'].iloc[i]
+        hl2_i = (high.iloc[i] + low.iloc[i]) / 2
+        # Initial direction: match expected downtrend (23781) if close < HL2
+        if close.iloc[i] < hl2_i:
+            df.at[df.index[i], 'st_up'] = False
+            df.at[df.index[i], 'supertrend'] = df['final_upper'].iloc[i]
+        else:
+            df.at[df.index[i], 'st_up'] = True
+            df.at[df.index[i], 'supertrend'] = df['final_lower'].iloc[i]
+        for j in range(i + 1, len(df)):
+            prev_j = j - 1
+            if df['basic_upper'].iloc[j] < df['final_upper'].iloc[prev_j] or close.iloc[prev_j] > df['final_upper'].iloc[prev_j]:
+                df.at[df.index[j], 'final_upper'] = df['basic_upper'].iloc[j]
+            else:
+                df.at[df.index[j], 'final_upper'] = df['final_upper'].iloc[prev_j]
+            if df['basic_lower'].iloc[j] > df['final_lower'].iloc[prev_j] or close.iloc[prev_j] < df['final_lower'].iloc[prev_j]:
+                df.at[df.index[j], 'final_lower'] = df['basic_lower'].iloc[j]
+            else:
+                df.at[df.index[j], 'final_lower'] = df['final_lower'].iloc[prev_j]
+            if df['st_up'].iloc[prev_j]:
+                if close.iloc[j] < df['supertrend'].iloc[prev_j]:
+                    df.at[df.index[j], 'st_up'] = False
+                    df.at[df.index[j], 'supertrend'] = df['final_upper'].iloc[j]
+                else:
+                    df.at[df.index[j], 'st_up'] = True
+                    df.at[df.index[j], 'supertrend'] = df['final_lower'].iloc[j]
+            else:
+                if close.iloc[j] > df['supertrend'].iloc[prev_j]:
+                    df.at[df.index[j], 'st_up'] = True
+                    df.at[df.index[j], 'supertrend'] = df['final_lower'].iloc[j]
+                else:
+                    df.at[df.index[j], 'st_up'] = False
+                    df.at[df.index[j], 'supertrend'] = df['final_upper'].iloc[j]
+    df.drop(columns=['tr', 'basic_upper', 'basic_lower'], inplace=True)
+    return df
+
+def get_signal(df):
+    df['position'] = 0
+    df['signal'] = pd.Series(dtype='object')
+    for i in range(1, len(df)):
+        prev_pos = df['position'].iat[i - 1]
+        if pd.isna(df['supertrend'].iat[i]):
+            df.at[df.index[i], 'position'] = prev_pos
+            continue
+        st_up = df['st_up'].iat[i]
+        close_i = df['close'].iat[i]
+        ema_i = df['EMA20'].iat[i]
+        low_i = df['low'].iat[i]
+        high_i = df['high'].iat[i]
+        if prev_pos == -1 and not st_up:  # Put exit
+            df.at[df.index[i], 'signal'] = 'PUT_EXIT'
+            df.at[df.index[i], 'position'] = 0
+        elif prev_pos == 1 and st_up:  # Call exit
+            df.at[df.index[i], 'signal'] = 'CALL_EXIT'
+            df.at[df.index[i], 'position'] = 0
+        elif prev_pos == 0:
+            if low_i > ema_i and st_up:  # Put entry
+                df.at[df.index[i], 'signal'] = 'PUT_ENTRY'
+                df.at[df.index[i], 'position'] = -1
+            elif high_i < ema_i and not st_up:  # Call entry
+                df.at[df.index[i], 'signal'] = 'CALL_ENTRY'
+                df.at[df.index[i], 'position'] = 1
+        else:
+            df.at[df.index[i], 'position'] = prev_pos
+    
+    # Get the latest signal and its timestamp
+    signal_series = df['signal'].dropna()
+    if not signal_series.empty:
+        latest_signal = signal_series.iloc[-1]  # Last non-null signal
+        latest_timestamp = signal_series.index[-1]  # Timestamp of latest signal
+        # Current time (April 5, 2025, per system date)
+        current_time = pd.Timestamp('2025-04-05 00:00:00')  # Adjust time as needed
+        time_diff = (current_time - latest_timestamp).total_seconds() / 60  # Minutes
+        return latest_signal, time_diff
+    else:
+        return None, None  # No signals found
+
+def get_nifty_rsi():
+    # Fetch NIFTY 50 data (^NSEI) for the last 20 days to ensure enough data for RSI calculation
+    nifty = yf.download("^NSEI", period="6wk", interval="1d")
+
+    # Ensure 'Close' is a Pandas Series (not a DataFrame)
+    close_prices = nifty["Close"].dropna().squeeze()
+
+    # Calculate RSI using the ta library (14-period RSI)
+    rsi_indicator = ta.momentum.RSIIndicator(close_prices, window=14)
+    nifty["RSI"] = rsi_indicator.rsi()
+
+    # Get the latest RSI value
+    latest_rsi = nifty["RSI"].iloc[-1]
+
+    return round(latest_rsi,2)
+
+def get_india_vix(api):
+    return round(float(api.get_quotes(exchange="NSE", token=str(26017))['lp']),2)
+
+
+def find_last_thursday(year, month):
+    """Finds the last Thursday of a given month and year."""
+    last_day = datetime(year, month, 1).replace(day=calendar.monthrange(year, month)[1])
+    while last_day.weekday() != 3:  # Thursday is weekday 3
+        last_day -= timedelta(days=1)
+    return last_day.day
+
+def get_next_thursday_between_4_and_12_days():
+    today = datetime.today().date()
+
+    for i in range(5, 12):  # Start from 5 (to be > 4) up to 11 (< 12)
+        target_date = today + timedelta(days=i)
+        if target_date.weekday() == 3:  # 0=Monday, ..., 3=Thursday
+            return target_date.strftime('%Y-%m-%d')
+    
+    return None  # If no Thursday found in range
+
+
+def convert_option_symbol(input_symbol):
+    # Ensure input is valid
+    if not isinstance(input_symbol, str) or len(input_symbol) < 12:
+        raise ValueError("Invalid symbol format. Expected format: NIFTY2530622300PE or NIFTY25FEB22450PE")
+
+    # Extract the underlying index (e.g., NIFTY)
+    index = input_symbol[:5]
+
+    # Extract the year
+    year_prefix = input_symbol[5:7]
+
+    # Determine if it's a weekly or monthly expiry
+    remaining_part = input_symbol[7:-2]  # Excludes index, year, and option type
+
+    # Check if the month part is in the three-letter format (e.g., FEB) for monthly options
+    if remaining_part[:3].isalpha():
+        # Monthly expiry format: NIFTY25FEB22450PE
+        month_abbr = remaining_part[:3].upper()
+        strike_price = remaining_part[3:]
+        expiry_day = None  # Monthly expiry day to be determined separately
+    else:
+        # Weekly expiry format: NIFTY2530622300PE (where "306" means 6th March)
+        month_code = remaining_part[0]  # Could be a single letter (O, N, D) or a digit (1-9)
+        day = remaining_part[1:3]  # Extract the day (e.g., '06')
+        strike_price = remaining_part[3:]
+
+        # Convert month code to full month abbreviation
+        if month_code in month_mapping:
+            month_abbr = month_mapping[month_code]
+        else:
+            raise ValueError(f"Invalid month code: {month_code}")
+
+        expiry_day = day  # Weekly expiry has an explicit day
+
+    # Determine the final expiry format
+    if expiry_day:
+        # Weekly expiry format: NIFTY06MAR25P22300
+        new_symbol = f"{index}{expiry_day}{month_abbr}{year_prefix}{'P' if input_symbol[-2:] == 'PE' else 'C'}{strike_price}"
+    else:
+        # Monthly expiry format: Find the last Thursday of the month
+        expiry_year = int(f"20{year_prefix}")
+        expiry_month = datetime.strptime(month_abbr, "%b").month
+        expiry_day = find_last_thursday(expiry_year, expiry_month)  # Function to get last Thursday
+
+        new_symbol = f"{index}{expiry_day}{month_abbr}{year_prefix}{'P' if input_symbol[-2:] == 'PE' else 'C'}{strike_price}"
+
+    return new_symbol
+
+def get_option_chain(upstox_opt_api, instrument, expiry):
+    # option_chain = upstox_opt_api.get_option_chain(symbol=instrument, expiry_date=expiry)
+    option_chain = upstox_opt_api.get_put_call_option_chain(instrument_key=instrument,expiry_date=expiry)
+    return option_chain.data
+
+def get_nearest_delta_options(option_chain_data, upstox_instruments, delta):
+    call_symbol = None
+    put_symbol = None
+    min_call_diff = float("inf")
+    min_put_diff = float("inf")
+
+    for option in option_chain_data:
+        # Access call and put options using dot notation
+        call_option = option.call_options
+        put_option = option.put_options
+
+        # Process call options
+        if call_option and call_option.option_greeks:
+            call_symb = upstox_instruments[upstox_instruments['instrument_key']==call_option.instrument_key].tradingsymbol.values[0]
+            call_delta = call_option.option_greeks.delta
+            call_oi = float(call_option.market_data.oi)
+            if call_delta is not None and abs(call_delta - delta) < min_call_diff and call_symb[-4:-2] == '00' and call_oi>10000:
+                min_call_diff = abs(call_delta - delta)
+                call_symbol = call_option.instrument_key
+                upstox_ce_ltp = call_option.market_data.ltp
+                co = call_option
+
+        # Process put options
+        if put_option and put_option.option_greeks:
+            put_symb = upstox_instruments[upstox_instruments['instrument_key']==put_option.instrument_key].tradingsymbol.values[0]
+            put_delta = put_option.option_greeks.delta
+            put_oi = float(put_option.market_data.oi) if put_option.market_data.oi is not None else 0
+            if put_delta is not None and abs(put_delta + delta) < min_put_diff and put_symb[-4:-2] == '00' and put_oi>10000:
+                min_put_diff = abs(put_delta + delta)
+                put_symbol = put_option.instrument_key
+                upstox_pe_ltp = put_option.market_data.ltp
+                po = put_option
+
+    call_bid = float(co.market_data.bid_price)
+    call_ask = float(co.market_data.ask_price)
+    call_bid_ask = call_ask-call_bid
+    put_bid = float(po.market_data.bid_price)
+    put_ask = float(po.market_data.ask_price)
+    put_bid_ask = put_ask-put_bid
+    return call_symbol, put_symbol, upstox_ce_ltp, upstox_pe_ltp, po, co , co.market_data.oi, po.market_data.oi, co.option_greeks.delta, po.option_greeks.delta, call_bid_ask, put_bid_ask
+
+def get_positions_directional(finvasia_api, instrument, expiry,trade_qty,upstox_instruments, delta):
+    SPAN_Expiry = datetime.strptime(expiry, "%Y-%m-%d").strftime("%d-%b-%Y").upper()
+    trade_details={}
+    option_chain = get_option_chain(instrument, expiry)
+    upstox_ce_instrument_key, upstox_pe_instrument_key, upstox_ce_ltp, upstox_pe_ltp,  po, co, call_oi, put_oi, call_delta, put_delta, call_bid_ask, put_bid_ask = get_nearest_delta_options(option_chain,upstox_instruments,delta)
+    trade_details['call_oi']=call_oi
+    trade_details['put_oi']=put_oi
+    trade_details['call_delta']=call_delta*100
+    trade_details['put_delta']=put_delta*100
+    trade_details['call_bid_ask']=call_bid_ask
+    trade_details['put_bid_ask']=put_bid_ask
+    upstox_ce_symbol = upstox_instruments[upstox_instruments['instrument_key']==upstox_ce_instrument_key]['tradingsymbol'].values[0]
+    # trade_details['upstox_ce'] = upstox_ce_symbol
+    upstox_pe_symbol = upstox_instruments[upstox_instruments['instrument_key']==upstox_pe_instrument_key]['tradingsymbol'].values[0]
+    # trade_details['upstox_pe'] = upstox_pe_symbol
+    instruments = []
+    instruments.append({"instrument_key": upstox_ce_instrument_key, "quantity": trade_qty, "transaction_type": "SELL", "product": "D", "price": upstox_ce_ltp})
+    instruments.append({"instrument_key": upstox_pe_instrument_key, "quantity": trade_qty, "transaction_type": "SELL", "product": "D", "price": upstox_pe_ltp})
+    current_index_price = round(float(finvasia_api.get_quotes(exchange="NSE", token=str(26000))['lp']),2)
+    atm_iv =0
+    strike_interval = 50
+    remainder = math.fmod(current_index_price, strike_interval)
+    if remainder > strike_interval / 2:
+        atm_strike = math.ceil(current_index_price / strike_interval) * strike_interval
+    else:
+        atm_strike = math.floor(current_index_price / strike_interval) * strike_interval
+    for sp in option_chain:
+        if sp.strike_price == atm_strike:
+            atm_iv = (float(sp.call_options.option_greeks.iv)+float(sp.put_options.option_greeks.iv))/2
+
+    trade_details['current_index_price']=current_index_price
+    lower_range = round((int(upstox_pe_symbol[-7:-2])-current_index_price)/current_index_price*100,2)
+    trade_details['lower_range']=lower_range
+    upper_range = round((int(upstox_ce_symbol[-7:-2])-current_index_price)/current_index_price*100,2)
+    trade_details['upper_range']=upper_range
+    trading_range = int(upstox_ce_symbol[-7:-2])-int(upstox_pe_symbol[-7:-2])
+    trade_details['trading_range']=trading_range//2
+    trade_details['range_per']=round(trading_range/current_index_price*100,2)
+
+    # Build instruments for finvasia
+    fin_pe_symbol = convert_option_symbol(upstox_pe_symbol)
+    fin_ce_symbol = convert_option_symbol(upstox_ce_symbol)
+    trade_details['fin_pe_symbol']=fin_pe_symbol
+    trade_details['fin_ce_symbol']=fin_ce_symbol
+
+    span_res = finvasia_api.span_calculator('FA417461',[
+            {"prd":"M","exch":"NFO","instname":"OPTSTK","symname":"NIFTY","exd":SPAN_Expiry,"optt":"PE","strprc":str(fin_pe_symbol[-5:])+".00","buyqty":"0","sellqty":str(trade_qty),"netqty":"0"},
+            {"prd":"M","exch":"NFO","instname":"OPTSTK","symname":"NIFTY","exd":SPAN_Expiry,"optt":"CE","strprc":str(fin_ce_symbol[-5:])+".00","buyqty":"0","sellqty":str(trade_qty),"netqty":"0"}
+        ])
+
+    trade_margin=float(span_res['span_trade']) + float(span_res['expo_trade'])
+    trade_details['trade_margin']=trade_margin
+    finvasia_pe_ltp=float(finvasia_api.get_quotes(exchange="NFO", token=str(fin_pe_symbol))['lp'])
+    trade_details['finvasia_pe_ltp']=finvasia_pe_ltp
+    finvasia_ce_ltp=float(finvasia_api.get_quotes(exchange="NFO", token=str(fin_ce_symbol))['lp'])
+    trade_details['finvasia_ce_ltp']=finvasia_ce_ltp
+    tot_fin_premium = round(trade_qty*(finvasia_pe_ltp+finvasia_ce_ltp),2)
+    trade_details['tot_fin_premium']=tot_fin_premium
+    fin_mtm_per= round(tot_fin_premium/trade_margin*100,2)
+    trade_details['fin_mtm_per']=str(fin_mtm_per)+"%"
+    trade_details['INDIA_VIX']=get_india_vix(finvasia_api)
+    try:
+        trade_details['INDIA_VIX_RSI']=get_nifty_rsi()
+        trade_details['ATM_IV']=atm_iv
+    except:
+        trade_details['INDIA_VIX_RSI']=-1
+        trade_details['ATM_IV']=-1
+    return trade_details
+
+def once_an_hour(finvasia_api, upstox_opt_api):
+    expiry = '2025-04-09'
+    subject = f"Directional: {expiry} |"
+    email_body = f"Directional: {expiry} /n"
+    upstox_instruments = pd.read_csv("https://assets.upstox.com/market-quote/instruments/exchange/complete.csv.gz")
+    instrument = "NSE_INDEX|Nifty 50" 
+    trade_qty=300
+    email_body+=f"Trade Qty: {trade_qty} /n"
+
+    # Execute the program
+    df = get_data(finvasia_api)
+    df = compute_EMA20(df)
+    df = compute_supertrend(df)
+    signal, timestamp = get_signal(df)
+    email_body+=f"Signal: {signal} /n"
+    email_body+=f"Timestamp: {timestamp} /n"
+
+    main_leg = get_positions_directional(finvasia_api, instrument, expiry,trade_qty,upstox_instruments, 0.4)
+    hedge_leg = get_positions_directional(finvasia_api, instrument, expiry,trade_qty,upstox_instruments, 0.25)
+    if signal == "CALL_ENTRY":
+        # print(f"SELL {main_leg['fin_ce_symbol']} {trade_qty} qty | DELTA: {round(main_leg['call_delta'],2)}")
+        # print(f"BUY {hedge_leg['fin_ce_symbol']} {trade_qty} qty | DELTA: {round(hedge_leg['call_delta'],2)}")
+        email_body += f"SELL {main_leg['fin_ce_symbol']} {trade_qty} qty | DELTA: {round(main_leg['call_delta'],2)} /n"
+        email_body += f"BUY {hedge_leg['fin_ce_symbol']} {trade_qty} qty | DELTA: {round(hedge_leg['call_delta'],2)} /n"
+    elif signal == "PUT_ENTRY":
+        email_body += f"SELL {main_leg['fin_pe_symbol']} {trade_qty} qty | DELTA: {round(main_leg['call_delta'],2)} /n"
+        email_body += f"BUY {hedge_leg['fin_pe_symbol']} {trade_qty} qty | DELTA: {round(hedge_leg['call_delta'],2)} /n"
+    elif signal == "CALL_EXIT":
+        email_body += "EXIT CE SELL and CE BUY POSITIONS /n"
+    elif signal == "PUT_EXIT":
+        email_body += "EXIT PE SELL and CE BUY POSITIONS /n"
+    if timestamp>90:
+        subject += "NO ACTION"
+        email_body += "NO ACTION /n"
+    else:
+        subject += "TAKE ACTION"
+        email_body += "TAKE ACTION /n"
+    
+    return subject, email_body
+
+##########################END DIRECTIONAL########################
+
 def main():
     session = identify_session()
     if not session:
@@ -596,6 +1041,9 @@ def main():
                 metrics["INDIA_VIX"] = get_india_vix(api)
                 email_body = format_trade_metrics(metrics)
                 send_email(sender_email, receiver_email, email_password, subject, email_body)
+            if counter % 60 ==0:
+                subject, email_body = once_an_hour(api, upstox_opt_api)
+                send_email_plain(sender_email, receiver_email, email_password, subject, email_body)
             counter+=1
         sleep_time.sleep(60)
   
