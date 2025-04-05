@@ -972,40 +972,40 @@ def get_positions_directional(finvasia_api, upstox_api, instrument, expiry,trade
 def once_an_hour(finvasia_api, upstox_opt_api):
     expiry = '2025-04-09'
     subject = f"Directional: {expiry} |"
-    email_body = f"Directional: {expiry} /n"
+    email_body = f"Directional: {expiry} \n"
     upstox_instruments = pd.read_csv("https://assets.upstox.com/market-quote/instruments/exchange/complete.csv.gz")
     instrument = "NSE_INDEX|Nifty 50" 
     trade_qty=300
-    email_body+=f"Trade Qty: {trade_qty} /n"
+    email_body+=f"Trade Qty: {trade_qty} \n"
 
     # Execute the program
     df = get_data(finvasia_api)
     df = compute_EMA20(df)
     df = compute_supertrend(df)
     signal, timestamp = get_signal(df)
-    email_body+=f"Signal: {signal} /n"
-    email_body+=f"Timestamp: {timestamp} /n"
+    email_body+=f"Signal: {signal} \n"
+    email_body+=f"Timestamp: {timestamp} \n"
 
     main_leg = get_positions_directional(finvasia_api, upstox_opt_api, instrument, expiry,trade_qty,upstox_instruments, 0.4)
     hedge_leg = get_positions_directional(finvasia_api, upstox_opt_api,instrument, expiry,trade_qty,upstox_instruments, 0.25)
     if signal == "CALL_ENTRY":
         # print(f"SELL {main_leg['fin_ce_symbol']} {trade_qty} qty | DELTA: {round(main_leg['call_delta'],2)}")
         # print(f"BUY {hedge_leg['fin_ce_symbol']} {trade_qty} qty | DELTA: {round(hedge_leg['call_delta'],2)}")
-        email_body += f"SELL {main_leg['fin_ce_symbol']} {trade_qty} qty | DELTA: {round(main_leg['call_delta'],2)} /n"
-        email_body += f"BUY {hedge_leg['fin_ce_symbol']} {trade_qty} qty | DELTA: {round(hedge_leg['call_delta'],2)} /n"
+        email_body += f"SELL {main_leg['fin_ce_symbol']} {trade_qty} qty | DELTA: {round(main_leg['call_delta'],2)} \n"
+        email_body += f"BUY {hedge_leg['fin_ce_symbol']} {trade_qty} qty | DELTA: {round(hedge_leg['call_delta'],2)} \n"
     elif signal == "PUT_ENTRY":
-        email_body += f"SELL {main_leg['fin_pe_symbol']} {trade_qty} qty | DELTA: {round(main_leg['call_delta'],2)} /n"
-        email_body += f"BUY {hedge_leg['fin_pe_symbol']} {trade_qty} qty | DELTA: {round(hedge_leg['call_delta'],2)} /n"
+        email_body += f"SELL {main_leg['fin_pe_symbol']} {trade_qty} qty | DELTA: {round(main_leg['call_delta'],2)} \n"
+        email_body += f"BUY {hedge_leg['fin_pe_symbol']} {trade_qty} qty | DELTA: {round(hedge_leg['call_delta'],2)} \n"
     elif signal == "CALL_EXIT":
-        email_body += "EXIT CE SELL and CE BUY POSITIONS /n"
+        email_body += "EXIT CE SELL and CE BUY POSITIONS \n"
     elif signal == "PUT_EXIT":
-        email_body += "EXIT PE SELL and CE BUY POSITIONS /n"
+        email_body += "EXIT PE SELL and CE BUY POSITIONS \n"
     if timestamp>90:
         subject += "NO ACTION"
-        email_body += "NO ACTION /n"
+        email_body += "NO ACTION \n"
     else:
         subject += "TAKE ACTION"
-        email_body += "TAKE ACTION /n"
+        email_body += "TAKE ACTION \n"
     
     return subject, email_body
 
