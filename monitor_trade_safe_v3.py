@@ -900,10 +900,10 @@ def get_nearest_delta_options(option_chain_data, upstox_instruments, delta):
     put_bid_ask = put_ask-put_bid
     return call_symbol, put_symbol, upstox_ce_ltp, upstox_pe_ltp, po, co , co.market_data.oi, po.market_data.oi, co.option_greeks.delta, po.option_greeks.delta, call_bid_ask, put_bid_ask
 
-def get_positions_directional(finvasia_api, instrument, expiry,trade_qty,upstox_instruments, delta):
+def get_positions_directional(finvasia_api, upstox_api, instrument, expiry,trade_qty,upstox_instruments, delta):
     SPAN_Expiry = datetime.strptime(expiry, "%Y-%m-%d").strftime("%d-%b-%Y").upper()
     trade_details={}
-    option_chain = get_option_chain(instrument, expiry)
+    option_chain = get_option_chain(upstox_api, instrument, expiry)
     upstox_ce_instrument_key, upstox_pe_instrument_key, upstox_ce_ltp, upstox_pe_ltp,  po, co, call_oi, put_oi, call_delta, put_delta, call_bid_ask, put_bid_ask = get_nearest_delta_options(option_chain,upstox_instruments,delta)
     trade_details['call_oi']=call_oi
     trade_details['put_oi']=put_oi
@@ -986,8 +986,8 @@ def once_an_hour(finvasia_api, upstox_opt_api):
     email_body+=f"Signal: {signal} /n"
     email_body+=f"Timestamp: {timestamp} /n"
 
-    main_leg = get_positions_directional(finvasia_api, instrument, expiry,trade_qty,upstox_instruments, 0.4)
-    hedge_leg = get_positions_directional(finvasia_api, instrument, expiry,trade_qty,upstox_instruments, 0.25)
+    main_leg = get_positions_directional(finvasia_api, upstox_opt_api, instrument, expiry,trade_qty,upstox_instruments, 0.4)
+    hedge_leg = get_positions_directional(finvasia_api, upstox_opt_api,instrument, expiry,trade_qty,upstox_instruments, 0.25)
     if signal == "CALL_ENTRY":
         # print(f"SELL {main_leg['fin_ce_symbol']} {trade_qty} qty | DELTA: {round(main_leg['call_delta'],2)}")
         # print(f"BUY {hedge_leg['fin_ce_symbol']} {trade_qty} qty | DELTA: {round(hedge_leg['call_delta'],2)}")
