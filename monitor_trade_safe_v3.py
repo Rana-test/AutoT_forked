@@ -29,7 +29,7 @@ from pprint import pprint
 import requests
 import pandas as pd
 
-live=False
+live=True
 # times=1.75
 # stop_loss_per=0.5
 # exit_params = {
