@@ -761,12 +761,12 @@ def get_signal(df):
     if not signal_series.empty:
         latest_signal = signal_series.iloc[-1]  # Last non-null signal
         latest_timestamp = signal_series.index[-1]  # Timestamp of latest signal
-        current_time = pd.Timestamp.now()
+        current_time = pd.Timestamp.today().normalize()
         # Adjust time as needed
         time_diff = (current_time - latest_timestamp).total_seconds() / 60  # Minutes
-        return latest_signal, time_diff
+        return latest_signal, latest_timestamp, time_diff
     else:
-        return None, None  # No signals found
+        return None, None, None  # No signals found
 
 def get_nifty_rsi():
     # Fetch NIFTY 50 data (^NSEI) for the last 20 days to ensure enough data for RSI calculation
@@ -962,7 +962,8 @@ def get_positions_directional(finvasia_api, upstox_api, instrument, expiry,trade
     trade_details['fin_mtm_per']=str(fin_mtm_per)+"%"
     trade_details['INDIA_VIX']=get_india_vix(finvasia_api)
     try:
-        trade_details['INDIA_VIX_RSI']=get_nifty_rsi()
+        # trade_details['INDIA_VIX_RSI']=get_nifty_rsi()
+        trade_details['INDIA_VIX_RSI']=-1
         trade_details['ATM_IV']=atm_iv
     except:
         trade_details['INDIA_VIX_RSI']=-1
@@ -982,9 +983,14 @@ def once_an_hour(finvasia_api, upstox_opt_api):
     df = get_data(finvasia_api)
     df = compute_EMA20(df)
     df = compute_supertrend(df)
-    signal, timestamp = get_signal(df)
-    email_body+=f"Signal: {signal} \n"
-    email_body+=f"Timestamp: {timestamp} \n"
+    signal, latest_timestamp, time_diff = get_signal(df)
+    signal, latest_timestamp, time_diff = get_signal(df)
+    day_diff = time_diff//1440
+    hour_diff = (time_diff%1440)//60
+    min_diff = time_diff%60
+
+    email_body+=f"Signal: {signal} at {latest_timestamp} \n"
+    email_body+=f"Time Stamp: {day_diff} days, {hour_diff} hours, {min_diff} minutes \n"
 
     main_leg = get_positions_directional(finvasia_api, upstox_opt_api, instrument, expiry,trade_qty,upstox_instruments, 0.4)
     hedge_leg = get_positions_directional(finvasia_api, upstox_opt_api,instrument, expiry,trade_qty,upstox_instruments, 0.25)
@@ -1000,7 +1006,7 @@ def once_an_hour(finvasia_api, upstox_opt_api):
         email_body += "EXIT CE SELL and CE BUY POSITIONS \n"
     elif signal == "PUT_EXIT":
         email_body += "EXIT PE SELL and CE BUY POSITIONS \n"
-    if timestamp>90:
+    if time_diff>90:
         subject += "NO ACTION"
         email_body += "NO ACTION \n"
     else:
