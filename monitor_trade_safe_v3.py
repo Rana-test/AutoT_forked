@@ -761,8 +761,8 @@ def get_signal(df):
     if not signal_series.empty:
         latest_signal = signal_series.iloc[-1]  # Last non-null signal
         latest_timestamp = signal_series.index[-1]  # Timestamp of latest signal
-        # Current time (April 5, 2025, per system date)
-        current_time = pd.Timestamp('2025-04-05 00:00:00')  # Adjust time as needed
+        current_time = pd.Timestamp.now()
+        # Adjust time as needed
         time_diff = (current_time - latest_timestamp).total_seconds() / 60  # Minutes
         return latest_signal, time_diff
     else:
