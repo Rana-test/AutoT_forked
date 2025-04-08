@@ -970,8 +970,7 @@ def get_positions_directional(finvasia_api, upstox_api, instrument, expiry,trade
         trade_details['ATM_IV']=-1
     return trade_details
 
-def once_an_hour(finvasia_api, upstox_opt_api):
-    expiry = '2025-04-09'
+def once_an_hour(finvasia_api, expiry, upstox_opt_api):
     subject = f"Directional: {expiry} |"
     email_body = f"Directional: {expiry} \n"
     upstox_instruments = pd.read_csv("https://assets.upstox.com/market-quote/instruments/exchange/complete.csv.gz")
@@ -1048,7 +1047,8 @@ def main():
                 email_body = format_trade_metrics(metrics)
                 send_email(sender_email, receiver_email, email_password, subject, email_body)
             if counter % 60 ==0:
-                subject, email_body = once_an_hour(api, upstox_opt_api)
+                expiry = '2025-04-17'
+                subject, email_body = once_an_hour(api, expiry, upstox_opt_api)
                 send_email_plain(sender_email, receiver_email, email_password, subject, email_body)
             counter+=1
         sleep_time.sleep(60)
