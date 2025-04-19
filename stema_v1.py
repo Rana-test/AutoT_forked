@@ -579,7 +579,10 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
                     'exit_timestamp': [pd.NaT]
                 })
                 if ret_hedge_status:
-                    trade_history = pd.concat([trade_history, new_order], ignore_index=True)
+                    # trade_history = pd.concat([trade_history, new_order], ignore_index=True)
+                    if not new_order.empty:
+                        new_order = new_order.astype(trade_history.dtypes.to_dict(), errors='ignore')
+                        trade_history = pd.concat([trade_history, new_order], ignore_index=True)
 
         #Pleace Main orders
         for order_leg, order_det in orders.items():
