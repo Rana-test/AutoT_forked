@@ -28,9 +28,10 @@ from upstox_client.rest import ApiException
 from pprint import pprint
 import requests
 import pandas as pd
+import logging
 from stema_v1 import get_data, run_hourly_trading_strategy
 
-live=False
+live=True
 trade_qty=75
 upstox_instruments = pd.read_csv("https://assets.upstox.com/market-quote/instruments/exchange/complete.csv.gz")
 sender_email =''
@@ -201,8 +202,8 @@ def identify_session():
 
     if is_within_timeframe("03:00", "06:55"):
         return {"session": "session1", "start_time": "03:45", "end_time": "06:57"}
-    elif is_within_timeframe("07:00", "12:15"):
-        return {"session": "session2","start_time": "07:00", "end_time": "12:15"}
+    elif is_within_timeframe("07:00", "15:00"):
+        return {"session": "session2","start_time": "07:00", "end_time": "15:00"}
     return None
 
 def send_email(subject, body):
@@ -565,7 +566,9 @@ def monitor_trade(api, upstox_opt_api, sender_email, receiver_email, email_passw
     return metrics
 
 def main():
+    logging.info("Inside Main")
     session = identify_session()
+    logging.info(f"Identified Session: {session}")
     if not session:
         print("No active trading session.")
         return
@@ -574,7 +577,7 @@ def main():
     userid, password, vendor_code, api_secret, imei, TOKEN, sender_email, receiver_email, email_password, UPSTOX_API_KEY, UPSTOX_URL, UPSTOX_API_SECRET, UPSTOX_MOB_NO, UPSTOX_CLIENT_PASS, UPSTOX_CLIENT_PIN = init_creds()
     api = login(userid, password, vendor_code, api_secret, imei, TOKEN)
     upstox_client, upstox_opt_api = login_upstox(UPSTOX_API_KEY, UPSTOX_URL, UPSTOX_API_SECRET, UPSTOX_MOB_NO, UPSTOX_CLIENT_PASS, UPSTOX_CLIENT_PIN)
-
+    logging.info(f"Logged into APIs")
     while is_within_timeframe("03:00", "03:45"):
         print("Initializing")
         sleep_time.sleep(60)
@@ -583,6 +586,7 @@ def main():
 
     # Start Monitoring
     while is_within_timeframe(session.get('start_time'), session.get('end_time')):
+        logging.info(f"Monitoring Trade")
         metrics = monitor_trade(api, upstox_opt_api, sender_email, receiver_email, email_password)
         
         if metrics =="STOP_LOSS":
@@ -590,6 +594,7 @@ def main():
         else:
         #     subject = f"FINVASIA: MTM:{metrics['Total_PNL']} | NEAR_BE:{metrics['Near_Breakeven']} | RANGE:{metrics['Breakeven_Range_Per']}| MAX_PROFIT:{metrics['Max_Profit']} | MAX_LOSS: {metrics['Max_Loss']}"
             if counter % 10 == 0:
+                logging.info(f"Senidng status mail")
                 subject = "FINVASIA STATUS"
                 metrics["INDIA_VIX"] = get_india_vix(api)
                 email_body = format_trade_metrics(metrics)
@@ -598,6 +603,7 @@ def main():
                 # subject, email_body = once_an_hour(api, expiry, upstox_opt_api)
                 # send_email_plain(subject, email_body)
                 stema_df = get_data(api,now=None)
+                logging.info(f"Got historical data")
                 return_msgs = run_hourly_trading_strategy(live, trade_qty, api, upstox_opt_api, upstox_instruments, stema_df, trade_history_file='trade_history_stema.csv', current_time=None)
                 print(f'Number of email messages: {len(return_msgs)}')
                 for msg in return_msgs:
