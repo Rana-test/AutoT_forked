@@ -13,6 +13,12 @@ month_mapping = {
     '7': 'JUL', '8': 'AUG', '9': 'SEP', 'O': 'OCT', 'N': 'NOV', 'D': 'DEC'
 }
 
+holiday_dict ={
+    '2025-05-01':'2025-04-30',
+    '2025-10-02':'2025-10-01',
+    '2025-12-25':'2025-12-24',
+}
+
 def round_to_previous_15_45(dt):
     hour = dt.hour
     minute = dt.minute
@@ -310,8 +316,6 @@ def place_order(api, live, trading_symbol, buy_sell, qty, order_type):
     # send_email_plain(subject, email_body)
     return {'subject': subject, 'body': email_body}
 
-
-
 def calculate_supertrend_and_ema(df, atr_period=10, multiplier=3.5, ema_period=130):
     """
     Calculate Supertrend indicator, 20-day EMA, and combined signals for a given OHLC dataframe.
@@ -416,15 +420,15 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     if current_time is None:
         current_time = datetime.now()
     
-    # Define trading hours (9:16 a.m. to 3:16 p.m.)
-    start_time = time(9, 16)
-    end_time = time(16, 20)
-    current_hour = current_time.time()
+    # # Define trading hours (9:16 a.m. to 3:16 p.m.)
+    # start_time = time(9, 16)
+    # end_time = time(17, 20)
+    # current_hour = current_time.time()
     
-    # Check if within trading hours
-    if not (start_time <= current_hour <= end_time):
-        print(f"Outside trading hours: {current_time}")
-        return
+    # # Check if within trading hours
+    # if not (start_time <= current_hour <= end_time):
+    #     print(f"Outside trading hours: {current_time}")
+    #     return
     
     # Ensure timestamp is in datetime format
     if not pd.api.types.is_datetime64_any_dtype(df['time']):
@@ -511,6 +515,9 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
         orders={}
         order_type = 'PUT' if latest_combined_signal == 1 else 'CALL'
         expiry = get_next_thursday_between_4_and_12_days(current_time)
+        # Check if expiry is a holiday
+        if expiry in holiday_dict:
+            expiry=holiday_dict.get(expiry)
         try:
             main_leg = get_positions(instrument, expiry,trade_qty,upstox_instruments, 0.4)
             hedge_leg = get_positions(instrument, expiry,trade_qty,upstox_instruments, 0.25)  
@@ -530,7 +537,8 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
             orders['Hedge']={'trading_symbol':hedge_leg['fin_ce_symbol'], 'order_action':'B', 'order_qty':str(trade_qty), 'order_type':'CALL'}
         
         for order_leg, order_det in orders.items():
-            place_order(finvasia_api, live, order_det['trading_symbol'], order_det['order_action'], order_det['order_qty'], 'STEMA')
+            ret_msg=place_order(finvasia_api, live, order_det['trading_symbol'], order_det['order_action'], order_det['order_qty'], 'STEMA')
+            return_msgs.append(ret_msg)
             # Append to trade history
             new_order = pd.DataFrame({
                 'time': latest_timestamp,
