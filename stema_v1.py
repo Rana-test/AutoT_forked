@@ -7,6 +7,7 @@ import calendar
 import os
 from datetime import datetime, timedelta
 import logging
+import time as sleep_time
 logging.basicConfig(level=logging.INFO)
 ################# Helper functions #################
 
@@ -320,7 +321,7 @@ def place_order(api, live, trading_symbol, buy_sell, qty, order_type):
         email_body += f'buy_or_sell={buy_sell}, product_type={prd_type}, exchange={exchange}, tradingsymbol={tradingsymbol}, quantity={quantity}, discloseqty={quantity},price_type={price_type}, price={price},trigger_price={trigger_price}, retention={retention}, remarks={order_type}'
         for _ in range(10):  
             logging.info(f"Waiting for order execution confirmation")# Try for ~10 seconds
-            time.sleep(1)
+            sleep_time.sleep(1)
             orders = api.get_order_book()
             if orders:
                 matching_orders = [o for o in orders if o['norenordno'] == order_id]
