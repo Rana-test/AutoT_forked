@@ -304,8 +304,7 @@ def place_order(api, live, trading_symbol, buy_sell, qty, order_type):
     price=0
     trigger_price = None
     retention='DAY'
-    subject = 'Order Placement'
-    body = ''
+    email_body = ''
     if live:
         response = api.place_order(buy_or_sell=buy_sell, product_type=prd_type, exchange=exchange, tradingsymbol=tradingsymbol, quantity=quantity, discloseqty=quantity,price_type=price_type, price=price,trigger_price=trigger_price, retention=retention, remarks=order_type)
         if response is None or 'norenordno' not in response:
@@ -323,16 +322,16 @@ def place_order(api, live, trading_symbol, buy_sell, qty, order_type):
                     status = order['status']
                     if status == 'COMPLETE':
                         # subject = f"Order executed successfully.: Order No: {order_id}"
-                        body+=f"Order executed successfully.: Order No: {order_id}"
-                        return True, {'subject': subject, 'body': email_body}
+                        email_body+=f"Order executed successfully.: Order No: {order_id}"
+                        return True, {'subject': "Order executed successfully", 'body': email_body}
                     elif status in ['REJECTED', 'CANCELLED']:
-                        print(f"Order {status}. Reason: {order.get('rejreason', 'Not available')}")
-                        return False, {'subject': subject, 'body': email_body}
+                        email_body+=f"Order {status}. Reason: {order.get('rejreason', 'Not available')}"
+                        return False, {'subject': "ORDER REJECTED", 'body': email_body}
             else:
                 email_body = email_body+ f"Could not fetch order book./n"
 
         email_body = email_body+ "Timed out waiting for order update."
-        return True, {'subject': subject, 'body': email_body}
+        return True, {'subject': "Order Timed out", 'body': email_body}
 
     else:
         print(f'buy_or_sell={buy_sell}, product_type={prd_type}, exchange={exchange}, tradingsymbol={tradingsymbol}, quantity={quantity}, discloseqty={quantity},price_type={price_type}, price={price},trigger_price={trigger_price}, retention={retention}, remarks={order_type}')
