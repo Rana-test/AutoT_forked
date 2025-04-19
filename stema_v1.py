@@ -7,6 +7,7 @@ import calendar
 import os
 from datetime import datetime, timedelta
 import logging
+logging.basicConfig(level=logging.INFO)
 ################# Helper functions #################
 
 month_mapping = {

@@ -31,6 +31,8 @@ import pandas as pd
 import logging
 from stema_v1 import get_data, run_hourly_trading_strategy
 
+logging.basicConfig(level=logging.INFO)
+
 live=True
 trade_qty=75
 upstox_instruments = pd.read_csv("https://assets.upstox.com/market-quote/instruments/exchange/complete.csv.gz")
