@@ -447,9 +447,6 @@ def calculate_supertrend_and_ema(df, atr_period=10, multiplier=3.5, ema_period=1
     return df
 
 def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, upstox_instruments, df, trade_history_file='trade_history_stema.csv', current_time=None):
-    # live=False
-    # trade_qty=75
-    # upstox_instruments = pd.read_csv("https://assets.upstox.com/market-quote/instruments/exchange/complete.csv.gz")
     logging.info(f"Started STEMA Strategy")
     return_msgs=[]
     instrument = "NSE_INDEX|Nifty 50"
@@ -488,8 +485,14 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     logging.info(f"Reading Trade History")
     if os.path.exists(trade_history_file):
         trade_history = pd.read_csv(trade_history_file, parse_dates=['time', 'exit_timestamp'])
+        # Close any trades whose expiry is past today's date
+        for i, row in trade_history.iterrows():
+            row_expiry = row['expiry']
+            days_to_expiry = (datetime.strptime(row_expiry, "%Y-%m-%d").date() - datetime.now().date()).days
+            if days_to_expiry < 1:
+                trade_history.at[i, 'status'] = 'CLOSED'
     else:
-        trade_history = pd.DataFrame(columns=['time', 'trading_symbol', 'order_type', 'order_action', 'order_leg', 'status','exit_timestamp'])
+        trade_history = pd.DataFrame(columns=['time', 'trading_symbol', 'expiry','order_type', 'order_action', 'order_leg', 'status','exit_timestamp'])
     
     # Check for open orders
     open_orders = trade_history[trade_history['status'] == 'ACTIVE']
@@ -603,6 +606,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
                 new_order = pd.DataFrame({
                     'time': latest_timestamp,
                     'trading_symbol': order_det['trading_symbol'],
+                    'expiry': expiry,
                     'order_action' : order_det['order_action'],
                     'order_qty': order_det['order_qty'],
                     'order_leg': order_leg,
@@ -627,6 +631,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
                 new_order = pd.DataFrame({
                     'time': latest_timestamp,
                     'trading_symbol': order_det['trading_symbol'],
+                    'expiry': expiry,
                     'order_action' : order_det['order_action'],
                     'order_qty': order_det['order_qty'],
                     'order_leg': order_leg,
