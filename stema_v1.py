@@ -304,17 +304,41 @@ def place_order(api, live, trading_symbol, buy_sell, qty, order_type):
     price=0
     trigger_price = None
     retention='DAY'
+    subject = 'Order Placement'
+    body = ''
     if live:
-        ret = api.place_order(buy_or_sell=buy_sell, product_type=prd_type, exchange=exchange, tradingsymbol=tradingsymbol, quantity=quantity, discloseqty=quantity,price_type=price_type, price=price,trigger_price=trigger_price, retention=retention, remarks=order_type)
+        response = api.place_order(buy_or_sell=buy_sell, product_type=prd_type, exchange=exchange, tradingsymbol=tradingsymbol, quantity=quantity, discloseqty=quantity,price_type=price_type, price=price,trigger_price=trigger_price, retention=retention, remarks=order_type)
+        if response is None or 'norenordno' not in response:
+            return False, {'subject': "Order Placement Failed", 'body': "Order Placement Failed"}
+        order_id = response['norenordno']
+        email_body = f"Order placed successfully : Order No: {order_id}/n"
+        for _ in range(10):  # Try for ~10 seconds
+            time.sleep(1)
+            orders = api.get_order_book()
+            if orders:
+                matching_orders = [o for o in orders if o['norenordno'] == order_id]
+                if matching_orders:
+                    order = matching_orders[0]
+                    status = order['status']
+                    if status == 'COMPLETE':
+                        # subject = f"Order executed successfully.: Order No: {order_id}"
+                        body+=f"Order executed successfully.: Order No: {order_id}"
+                        return True, {'subject': subject, 'body': email_body}
+                    elif status in ['REJECTED', 'CANCELLED']:
+                        print(f"Order {status}. Reason: {order.get('rejreason', 'Not available')}")
+                        return False, {'subject': subject, 'body': email_body}
+            else:
+                email_body = email_body+ f"Could not fetch order book./n"
+
+        email_body = email_body+ "Timed out waiting for order update."
+        return True, {'subject': subject, 'body': email_body}
+
     else:
         print(f'buy_or_sell={buy_sell}, product_type={prd_type}, exchange={exchange}, tradingsymbol={tradingsymbol}, quantity={quantity}, discloseqty={quantity},price_type={price_type}, price={price},trigger_price={trigger_price}, retention={retention}, remarks={order_type}')
-    
-    #log order details in trade_history with order_type
-    
-    subject = f"{order_type} order for {tradingsymbol}"
-    email_body = f"{order_type} order for {tradingsymbol}"
-    # send_email_plain(subject, email_body)
-    return {'subject': subject, 'body': email_body}
+        subject = f"{order_type} order for {tradingsymbol}"
+        email_body = f"{order_type} order for {tradingsymbol}"
+        # send_email_plain(subject, email_body)
+        return True, {'subject': subject, 'body': email_body}
 
 def calculate_supertrend_and_ema(df, atr_period=10, multiplier=3.5, ema_period=130):
     """
@@ -497,18 +521,19 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
                 # Pseudocode: Close Put order
                 # close_put_order(order_id, latest_close)
                 print(f"Closing Put order {order_tsm}")
-                ret_msg = place_order(finvasia_api, live, order['trading_symbol'], ord_act, str(order['order_qty']), 'EXIT STEMA')
+                ret_status, ret_msg = place_order(finvasia_api, live, order['trading_symbol'], ord_act, str(order['order_qty']), 'EXIT STEMA')
                 return_msgs.append(ret_msg)
             elif latest_trend ==1 and order_type == 'CALL':
                 # Pseudocode: Close Call order
                 # close_call_order(order_id, latest_close)
                 print(f"Closing Call order {order_tsm}")
-                ret_msg = place_order(finvasia_api, live, order['trading_symbol'], ord_act, str(order['order_qty']), 'EXIT STEMA')
+                ret_status, ret_msg = place_order(finvasia_api, live, order['trading_symbol'], ord_act, str(order['order_qty']), 'EXIT STEMA')
                 return_msgs.append(ret_msg)
             
             # Update trade history
-            trade_history.loc[trade_history['trading_symbol'] == order_tsm, 'status'] = 'CLOSED'
-            trade_history.loc[trade_history['trading_symbol'] == order_tsm, 'exit_timestamp'] = current_time
+            if ret_status:
+                trade_history.loc[trade_history['trading_symbol'] == order_tsm, 'status'] = 'CLOSED'
+                trade_history.loc[trade_history['trading_symbol'] == order_tsm, 'exit_timestamp'] = current_time
     
     # Place new order if no open orders and combined_signal is 1 or -1
     if not has_open_order and latest_combined_signal != 0:
@@ -519,9 +544,10 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
         if expiry in holiday_dict:
             expiry=holiday_dict.get(expiry)
         try:
-            main_leg = get_positions(instrument, expiry,trade_qty,upstox_instruments, 0.4)
-            hedge_leg = get_positions(instrument, expiry,trade_qty,upstox_instruments, 0.25)  
+            main_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,trade_qty,upstox_instruments, 0.4)
+            hedge_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,trade_qty,upstox_instruments, 0.25)
         except Exception as e:
+            return_msgs.append({'subject': 'Error in get_positions', 'body': str(e)})
             main_leg = {}
             hedge_leg = {}
             main_leg['fin_pe_symbol'] = f'{expiry}-PE-DELAT0.4'
@@ -536,21 +562,43 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
             orders['Main']={'trading_symbol':main_leg['fin_ce_symbol'], 'order_action':'S', 'order_qty':str(trade_qty), 'order_type':'CALL'}
             orders['Hedge']={'trading_symbol':hedge_leg['fin_ce_symbol'], 'order_action':'B', 'order_qty':str(trade_qty), 'order_type':'CALL'}
         
+        #Place Hedge orders first
         for order_leg, order_det in orders.items():
-            ret_msg=place_order(finvasia_api, live, order_det['trading_symbol'], order_det['order_action'], order_det['order_qty'], 'STEMA')
-            return_msgs.append(ret_msg)
-            # Append to trade history
-            new_order = pd.DataFrame({
-                'time': latest_timestamp,
-                'trading_symbol': order_det['trading_symbol'],
-                'order_action' : order_det['order_action'],
-                'order_qty': order_det['order_qty'],
-                'order_leg': order_leg,
-                'order_type': order_det['order_type'],
-                'status': 'ACTIVE',
-                'exit_timestamp': [pd.NaT]
-            })
-            trade_history = pd.concat([trade_history, new_order], ignore_index=True)
+            if order_leg == 'Hedge':
+                ret_hedge_status, ret_msg=place_order(finvasia_api, live, order_det['trading_symbol'], order_det['order_action'], order_det['order_qty'], 'STEMA')
+                return_msgs.append(ret_msg)
+                # Append to trade history
+                new_order = pd.DataFrame({
+                    'time': latest_timestamp,
+                    'trading_symbol': order_det['trading_symbol'],
+                    'order_action' : order_det['order_action'],
+                    'order_qty': order_det['order_qty'],
+                    'order_leg': order_leg,
+                    'order_type': order_det['order_type'],
+                    'status': 'ACTIVE',
+                    'exit_timestamp': [pd.NaT]
+                })
+                if ret_hedge_status:
+                    trade_history = pd.concat([trade_history, new_order], ignore_index=True)
+
+        #Pleace Main orders
+        for order_leg, order_det in orders.items():
+            if order_leg == 'Main':
+                ret_main_status, ret_msg=place_order(finvasia_api, live, order_det['trading_symbol'], order_det['order_action'], order_det['order_qty'], 'STEMA')
+                return_msgs.append(ret_msg)
+                # Append to trade history
+                new_order = pd.DataFrame({
+                    'time': latest_timestamp,
+                    'trading_symbol': order_det['trading_symbol'],
+                    'order_action' : order_det['order_action'],
+                    'order_qty': order_det['order_qty'],
+                    'order_leg': order_leg,
+                    'order_type': order_det['order_type'],
+                    'status': 'ACTIVE',
+                    'exit_timestamp': [pd.NaT]
+                })
+                if ret_main_status:
+                    trade_history = pd.concat([trade_history, new_order], ignore_index=True)
     
     # Save trade history
     trade_history.to_csv(trade_history_file, index=False)
