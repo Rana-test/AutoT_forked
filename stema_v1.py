@@ -506,6 +506,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     logging.info(f"Previous Trend: {previous_trend}")
     logging.info(f"Current Trend: {latest_trend}")
     logging.info(f"Trend Changed: {trend_changed}")
+    logging.info(f"Entry Signal: {latest_combined_signal}, Exit Signal:{trend_changed}")
 
     #Check if open order for Put exists and trend is -1 then trend changed
     logging.info(f"Checking trend change for open orders")
