@@ -598,7 +598,9 @@ def main():
                 # subject, email_body = once_an_hour(api, expiry, upstox_opt_api)
                 # send_email_plain(subject, email_body)
                 stema_df = get_data(api,now=None)
-                run_hourly_trading_strategy(live, trade_qty, api, upstox_opt_api, upstox_instruments, stema_df, trade_history_file='trade_history_stema.csv', current_time=None)
+                return_msgs = run_hourly_trading_strategy(live, trade_qty, api, upstox_opt_api, upstox_instruments, stema_df, trade_history_file='trade_history_stema.csv', current_time=None)
+                for msg in return_msgs:
+                    send_email_plain(msg['subject'], msg['body'])
             counter+=1
         sleep_time.sleep(60)
   

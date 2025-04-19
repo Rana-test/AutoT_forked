@@ -5,7 +5,6 @@ from datetime import datetime, timedelta, time
 import math
 import calendar
 import os
-from monitor_trade_stema_v1 import send_email_plain
 from datetime import datetime, timedelta
 ################# Helper functions #################
 
@@ -308,7 +307,10 @@ def place_order(api, live, trading_symbol, buy_sell, qty, order_type):
     
     subject = f"{order_type} order for {tradingsymbol}"
     email_body = f"{order_type} order for {tradingsymbol}"
-    send_email_plain(subject, email_body)
+    # send_email_plain(subject, email_body)
+    return {'subject': subject, 'body': email_body}
+
+
 
 def calculate_supertrend_and_ema(df, atr_period=10, multiplier=3.5, ema_period=130):
     """
@@ -408,6 +410,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     # live=False
     # trade_qty=75
     # upstox_instruments = pd.read_csv("https://assets.upstox.com/market-quote/instruments/exchange/complete.csv.gz")
+    return_msgs=[]
     instrument = "NSE_INDEX|Nifty 50"
     # Use current system time if not provided
     if current_time is None:
@@ -490,12 +493,14 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
                 # Pseudocode: Close Put order
                 # close_put_order(order_id, latest_close)
                 print(f"Closing Put order {order_tsm}")
-                place_order(finvasia_api, live, order['trading_symbol'], ord_act, str(order['order_qty']), 'EXIT STEMA')
+                ret_msg = place_order(finvasia_api, live, order['trading_symbol'], ord_act, str(order['order_qty']), 'EXIT STEMA')
+                return_msgs.append(ret_msg)
             elif latest_trend ==1 and order_type == 'CALL':
                 # Pseudocode: Close Call order
                 # close_call_order(order_id, latest_close)
                 print(f"Closing Call order {order_tsm}")
-                place_order(finvasia_api, live, order['trading_symbol'], ord_act, str(order['order_qty']), 'EXIT STEMA')
+                ret_msg = place_order(finvasia_api, live, order['trading_symbol'], ord_act, str(order['order_qty']), 'EXIT STEMA')
+                return_msgs.append(ret_msg)
             
             # Update trade history
             trade_history.loc[trade_history['trading_symbol'] == order_tsm, 'status'] = 'CLOSED'
@@ -553,7 +558,9 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     Combined Signal: {latest_combined_signal}
     Action: {'Placed ' + order_type if not has_open_order and latest_combined_signal != 0 else 'No action' if not trend_changed else 'Closed open orders'}
     """
-    send_email_plain(subject, email_body)
+    return_msgs.append({'subject': subject, 'body': email_body})
+    # send_email_plain(subject, email_body)
+    return return_msgs
     # print(f"Current Time: {latest_timestamp}")
     # print(f"Close: {latest_close}")
     # print(f"Supertrend: {latest_row['supertrend']}")
