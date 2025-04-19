@@ -312,6 +312,7 @@ def place_order(api, live, trading_symbol, buy_sell, qty, order_type):
             return False, {'subject': "Order Placement Failed", 'body': "Order Placement Failed"}
         order_id = response['norenordno']
         email_body = f"Order placed successfully : Order No: {order_id}/n"
+        email_body += f'buy_or_sell={buy_sell}, product_type={prd_type}, exchange={exchange}, tradingsymbol={tradingsymbol}, quantity={quantity}, discloseqty={quantity},price_type={price_type}, price={price},trigger_price={trigger_price}, retention={retention}, remarks={order_type}'
         for _ in range(10):  # Try for ~10 seconds
             time.sleep(1)
             orders = api.get_order_book()
@@ -336,7 +337,7 @@ def place_order(api, live, trading_symbol, buy_sell, qty, order_type):
     else:
         print(f'buy_or_sell={buy_sell}, product_type={prd_type}, exchange={exchange}, tradingsymbol={tradingsymbol}, quantity={quantity}, discloseqty={quantity},price_type={price_type}, price={price},trigger_price={trigger_price}, retention={retention}, remarks={order_type}')
         subject = f"{order_type} order for {tradingsymbol}"
-        email_body = f"{order_type} order for {tradingsymbol}"
+        email_body = f'buy_or_sell={buy_sell}, product_type={prd_type}, exchange={exchange}, tradingsymbol={tradingsymbol}, quantity={quantity}, discloseqty={quantity},price_type={price_type}, price={price},trigger_price={trigger_price}, retention={retention}, remarks={order_type}'
         # send_email_plain(subject, email_body)
         return True, {'subject': subject, 'body': email_body}
 
