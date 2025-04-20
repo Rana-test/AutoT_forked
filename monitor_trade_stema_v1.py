@@ -601,15 +601,15 @@ def main():
                 metrics["INDIA_VIX"] = get_india_vix(api)
                 email_body = format_trade_metrics(metrics)
                 send_email(subject, email_body)
-            if counter % 60 ==0:
+            # if counter % 60 ==0:
                 # subject, email_body = once_an_hour(api, expiry, upstox_opt_api)
                 # send_email_plain(subject, email_body)
-                stema_df = get_data(api,now=None)
-                logging.info(f"Got historical data")
-                return_msgs = run_hourly_trading_strategy(live, trade_qty, api, upstox_opt_api, upstox_instruments, stema_df, trade_history_file='trade_history_stema.csv', current_time=None)
-                print(f'Number of email messages: {len(return_msgs)}')
-                for msg in return_msgs:
-                    send_email_plain(msg['subject'], msg['body'])
+                # stema_df = get_data(api,now=None)
+                # logging.info(f"Got historical data")
+                # return_msgs = run_hourly_trading_strategy(live, trade_qty, api, upstox_opt_api, upstox_instruments, stema_df, trade_history_file='trade_history_stema.csv', current_time=None)
+                # print(f'Number of email messages: {len(return_msgs)}')
+                # for msg in return_msgs:
+                #     send_email_plain(msg['subject'], msg['body'])
             counter+=1
         sleep_time.sleep(60)
   
