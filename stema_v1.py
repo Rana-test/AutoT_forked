@@ -649,6 +649,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     # logging.info(f"Calculating Supertrend and EMA")
 
     result_df = calculate_supertrend(df)
+    result_df=result_df.reset_index()
     
     # Get the latest row (most recent candle)
     latest_row = result_df.iloc[-1]
