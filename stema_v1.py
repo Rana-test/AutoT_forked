@@ -352,99 +352,276 @@ def place_order(api, live, trading_symbol, buy_sell, qty, order_type):
         logging.info(f"Dummy order placed: {email_body}")
         return True, {'subject': subject, 'body': email_body}
 
-def calculate_supertrend_and_ema(df, atr_period=10, multiplier=3.5, ema_period=130):
-    """
-    Calculate Supertrend indicator, 20-day EMA, and combined signals for a given OHLC dataframe.
+from datetime import time
+def get_minute_data(api, now=None):
+    nifty_token = '26000'  # NSE|26000 is the Nifty 50 index
     
-    Parameters:
-    - df (pd.DataFrame): DataFrame with columns 'time', 'open', 'high', 'low', 'close'
-    - atr_period (int): Period for ATR calculation, default is 10
-    - multiplier (float): Multiplication factor for bands, default is 3.5
-    - ema_period (int): Period for EMA calculation, default is 130 (approx. 20 trading days)
+    # Define trading hours
+    market_open = time(9, 15)
+    market_close = time(15, 30)
+    
+    # Set current time if not provided
+    if now is None:
+        now = datetime.now()
+    
+    # Adjust latest_time to the most recent trading minute
+    def adjust_to_trading_hours(dt):
+        dt_time = dt.time()
+        dt_date = dt.date()
+        
+        if dt_time > market_close:
+            # After market close, use 15:30:00 of the same day
+            return datetime.combine(dt_date, market_close)
+        elif dt_time < market_open:
+            # Before market open, use 15:30:00 of the previous trading day
+            prev_day = dt_date - timedelta(days=1)
+            # Check if previous day is a weekday (Monday to Friday)
+            while prev_day.weekday() >= 5:  # Skip Saturday (5) and Sunday (6)
+                prev_day -= timedelta(days=1)
+            return datetime.combine(prev_day, market_close)
+        else:
+            # Within trading hours, round down to the nearest minute
+            return dt.replace(second=0, microsecond=0)
+    
+    latest_time = adjust_to_trading_hours(now)
+    
+    # Time 90 days ago
+    start_time = latest_time - timedelta(days=300)
+    
+    # Desired time format
+    fmt = "%d-%m-%Y %H:%M:%S"
+    
+    # Convert times to seconds (assuming get_time is defined elsewhere)
+    start_secs = get_time(start_time.strftime(fmt))  # dd-mm-YYYY HH:MM:SS
+    end_secs = get_time(latest_time.strftime(fmt))
+    
+    # Fetch 1-minute candle data from Finvasia API
+    bars = api.get_time_price_series(
+        exchange='NSE',
+        token=nifty_token,
+        starttime=int(start_secs),
+        endtime=int(end_secs),
+        interval=1  # 1-minute candles
+    )
+    
+    # Create DataFrame
+    df = pd.DataFrame.from_dict(bars)
+    df.rename(columns={
+        'into': 'open',
+        'inth': 'high',
+        'intl': 'low',
+        'intc': 'close'
+    }, inplace=True)
+    
+    # Convert time to datetime
+    df['time'] = pd.to_datetime(df['time'], dayfirst=True)
+    
+    # Select and convert columns to float
+    df = df[['time', 'open', 'high', 'low', 'close']]
+    df[['open', 'high', 'low', 'close']] = df[['open', 'high', 'low', 'close']].astype(float)
+    
+    # Filter data to ensure it's within trading hours (9:15:00 to 15:30:00)
+    df = df[(df['time'].dt.time >= market_open) & (df['time'].dt.time <= market_close)]
+    # df = df.reset_index()
+
+    return df
+
+def calculate_supertrend(df_minute):
+    """
+    Calculates Supertrend (10 ATR, 3.5 factor) on hourly Nifty 50 candles without talib.
     
     Returns:
-    - pd.DataFrame: DataFrame with added 'supertrend', 'trend', 'signal', 'ema', and 'combined_signal' columns
+        pd.DataFrame: Hourly candles with Supertrend values and signals
     """
-    # Ensure dataframe is sorted by timestamp
-    df = df.sort_values('time').reset_index(drop=True)
+    # # Define time range: last 10 days for sufficient ATR history
+    # end_date = pd.Timestamp.now(tz='Asia/Kolkata')
+    # start_date = end_date - timedelta(days=10)
+    
+    # # Fetch minute-level data (placeholder)
+    # df_minute = get_minute_data('NIFTY 50', start_date, end_date)
+    
+    # Convert timestamp to datetime and set as index
+    df = df_minute.copy()
+    df['time'] = pd.to_datetime(df_minute['time'])
+    df.set_index('time', inplace=True)
+
+
+    ############################## START HOURLY #################
+    # Aggregate to hourly candles
+    df_hourly = df.resample('1h', label='right', closed='right').agg({
+        'open': 'first',
+        'high': 'max',
+        'low': 'min',
+        'close': 'last',
+        # 'volume': 'sum'
+    }).dropna()
+
+    ########################## END HOURLY #####################
     
     # Calculate True Range (TR)
-    df['tr'] = np.maximum(df['high'] - df['low'],
-                          np.maximum(abs(df['high'] - df['close'].shift(1)),
-                                     abs(df['low'] - df['close'].shift(1))))
-    df.loc[0, 'tr'] = df.loc[0, 'high'] - df.loc[0, 'low']  # First row TR
+    df_hourly['tr'] = pd.concat([
+        df_hourly['high'] - df_hourly['low'],
+        (df_hourly['high'] - df_hourly['close'].shift(1)).abs(),
+        (df_hourly['low'] - df_hourly['close'].shift(1)).abs()
+    ], axis=1).max(axis=1)
     
-    # Calculate ATR using EMA (matches TradingView's RMA)
-    alpha = 1 / atr_period
-    df['atr'] = df['tr'].ewm(alpha=alpha, adjust=False).mean()
+    # Calculate ATR using EMA with alpha = 1/10 (RMA equivalent)
+    Periods = 10
+    df_hourly['atr'] = df_hourly['tr'].ewm(alpha=1/Periods, adjust=False).mean()
     
-    # Calculate (High + Low)/2
-    df['hl2'] = (df['high'] + df['low']) / 2
+    # Initialize Supertrend lists
+    up_list = [np.nan] * len(df_hourly)
+    dn_list = [np.nan] * len(df_hourly)
+    trend_list = [np.nan] * len(df_hourly)
     
-    # Calculate basic upper and lower bands
-    df['basic_upper_band'] = df['hl2'] + multiplier * df['atr']
-    df['basic_lower_band'] = df['hl2'] - multiplier * df['atr']
+    Multiplier = 3.5
     
-    # Calculate 20-day EMA (130 periods for hourly data)
-    df['ema'] = df['close'].ewm(span=ema_period, adjust=False).mean()
-    
-    # Initialize arrays
-    supertrend = np.zeros(len(df))
-    trend = np.zeros(len(df))
-    final_upper_band = np.zeros(len(df))
-    final_lower_band = np.zeros(len(df))
-    
-    # Set initial values
-    final_upper_band[0] = df['basic_upper_band'].iloc[0]
-    final_lower_band[0] = df['basic_lower_band'].iloc[0]
-    trend[0] = 1 if df['close'].iloc[0] <= df['basic_upper_band'].iloc[0] else -1
-    supertrend[0] = final_lower_band[0] if trend[0] == 1 else final_upper_band[0]
-    
-    # Iterate through remaining rows
-    for i in range(1, len(df)):
-        # Adjust final bands based on previous trend and close
-        if trend[i-1] == 1:
-            final_lower_band[i] = max(df['basic_lower_band'].iloc[i], final_lower_band[i-1]) if df['close'].iloc[i-1] > final_lower_band[i-1] else df['basic_lower_band'].iloc[i]
-            final_upper_band[i] = df['basic_upper_band'].iloc[i]
+    # Calculate Supertrend
+    for i in range(len(df_hourly)):
+        src = (df_hourly['high'].iloc[i] + df_hourly['low'].iloc[i]) / 2
+        if i == 0:
+            # First bar initialization
+            up = src - Multiplier * df_hourly['atr'].iloc[i]
+            dn = src + Multiplier * df_hourly['atr'].iloc[i]
+            trend = 1  # Start with uptrend
         else:
-            final_upper_band[i] = min(df['basic_upper_band'].iloc[i], final_upper_band[i-1]) if df['close'].iloc[i-1] < final_upper_band[i-1] else df['basic_upper_band'].iloc[i]
-            final_lower_band[i] = df['basic_lower_band'].iloc[i]
+            up_temp = src - Multiplier * df_hourly['atr'].iloc[i]
+            dn_temp = src + Multiplier * df_hourly['atr'].iloc[i]
+            up1 = up_list[i-1]
+            dn1 = dn_list[i-1]
+            previous_close = df_hourly['close'].iloc[i-1]
+            
+            # Adjust bands
+            up = max(up_temp, up1) if previous_close > up1 else up_temp
+            dn = min(dn_temp, dn1) if previous_close < dn1 else dn_temp
+            
+            # Determine trend
+            if trend_list[i-1] == -1 and df_hourly['close'].iloc[i] > dn1:
+                trend = 1
+            elif trend_list[i-1] == 1 and df_hourly['close'].iloc[i] < up1:
+                trend = -1
+            else:
+                trend = trend_list[i-1]
         
-        # Determine trend direction based on close vs. previous Supertrend
-        if trend[i-1] == 1 and df['close'].iloc[i] < supertrend[i-1]:
-            trend[i] = -1
-        elif trend[i-1] == -1 and df['close'].iloc[i] > supertrend[i-1]:
-            trend[i] = 1
-        else:
-            trend[i] = trend[i-1]
+        up_list[i] = up
+        dn_list[i] = dn
+        trend_list[i] = trend
+    
+    # Add Supertrend to DataFrame
+    df_hourly['up'] = up_list
+    df_hourly['dn'] = dn_list
+    df_hourly['trend'] = trend_list
+    
+    # Generate signals
+    # df_hourly['buySignal'] = (df_hourly['trend'] == 1) & (df_hourly['trend'].shift(1) == -1)
+    # df_hourly['sellSignal'] = (df_hourly['trend'] == -1) & (df_hourly['trend'].shift(1) == 1)
+
+    # Calculate 20 EMA
+    df_hourly['ema20'] = df_hourly['close'].ewm(span=20, adjust=False).mean()
+    df_hourly['entry_signal'] = 0
+    df_hourly.loc[(df_hourly['close'] < df_hourly['ema20']) & (df_hourly['trend'] == -1), 'entry_signal'] = 1
+    df_hourly.loc[(df_hourly['close'] > df_hourly['ema20']) & (df_hourly['trend'] == 1), 'entry_signal'] = -1
+    # Initialize the exit_signal column to 0
+    df_hourly['exit_signal'] = 0
+    # Set exit_signal to 1 when the trend changes (current trend != previous trend)
+    df_hourly.loc[df_hourly['trend'] != df_hourly['trend'].shift(1), 'exit_signal'] = 1
+    
+    return df_hourly
+
+
+# def calculate_supertrend_and_ema(df, atr_period=10, multiplier=3.5, ema_period=130):
+#     """
+#     Calculate Supertrend indicator, 20-day EMA, and combined signals for a given OHLC dataframe.
+    
+#     Parameters:
+#     - df (pd.DataFrame): DataFrame with columns 'time', 'open', 'high', 'low', 'close'
+#     - atr_period (int): Period for ATR calculation, default is 10
+#     - multiplier (float): Multiplication factor for bands, default is 3.5
+#     - ema_period (int): Period for EMA calculation, default is 130 (approx. 20 trading days)
+    
+#     Returns:
+#     - pd.DataFrame: DataFrame with added 'supertrend', 'trend', 'signal', 'ema', and 'combined_signal' columns
+#     """
+#     # Ensure dataframe is sorted by timestamp
+#     df = df.sort_values('time').reset_index(drop=True)
+    
+#     # Calculate True Range (TR)
+#     df['tr'] = np.maximum(df['high'] - df['low'],
+#                           np.maximum(abs(df['high'] - df['close'].shift(1)),
+#                                      abs(df['low'] - df['close'].shift(1))))
+#     df.loc[0, 'tr'] = df.loc[0, 'high'] - df.loc[0, 'low']  # First row TR
+    
+#     # Calculate ATR using EMA (matches TradingView's RMA)
+#     alpha = 1 / atr_period
+#     df['atr'] = df['tr'].ewm(alpha=alpha, adjust=False).mean()
+    
+#     # Calculate (High + Low)/2
+#     df['hl2'] = (df['high'] + df['low']) / 2
+    
+#     # Calculate basic upper and lower bands
+#     df['basic_upper_band'] = df['hl2'] + multiplier * df['atr']
+#     df['basic_lower_band'] = df['hl2'] - multiplier * df['atr']
+    
+#     # Calculate 20-day EMA (130 periods for hourly data)
+#     df['ema'] = df['close'].ewm(span=ema_period, adjust=False).mean()
+    
+#     # Initialize arrays
+#     supertrend = np.zeros(len(df))
+#     trend = np.zeros(len(df))
+#     final_upper_band = np.zeros(len(df))
+#     final_lower_band = np.zeros(len(df))
+    
+#     # Set initial values
+#     final_upper_band[0] = df['basic_upper_band'].iloc[0]
+#     final_lower_band[0] = df['basic_lower_band'].iloc[0]
+#     trend[0] = 1 if df['close'].iloc[0] <= df['basic_upper_band'].iloc[0] else -1
+#     supertrend[0] = final_lower_band[0] if trend[0] == 1 else final_upper_band[0]
+    
+#     # Iterate through remaining rows
+#     for i in range(1, len(df)):
+#         # Adjust final bands based on previous trend and close
+#         if trend[i-1] == 1:
+#             final_lower_band[i] = max(df['basic_lower_band'].iloc[i], final_lower_band[i-1]) if df['close'].iloc[i-1] > final_lower_band[i-1] else df['basic_lower_band'].iloc[i]
+#             final_upper_band[i] = df['basic_upper_band'].iloc[i]
+#         else:
+#             final_upper_band[i] = min(df['basic_upper_band'].iloc[i], final_upper_band[i-1]) if df['close'].iloc[i-1] < final_upper_band[i-1] else df['basic_upper_band'].iloc[i]
+#             final_lower_band[i] = df['basic_lower_band'].iloc[i]
         
-        # Set Supertrend value
-        supertrend[i] = final_lower_band[i] if trend[i] == 1 else final_upper_band[i]
+#         # Determine trend direction based on close vs. previous Supertrend
+#         if trend[i-1] == 1 and df['close'].iloc[i] < supertrend[i-1]:
+#             trend[i] = -1
+#         elif trend[i-1] == -1 and df['close'].iloc[i] > supertrend[i-1]:
+#             trend[i] = 1
+#         else:
+#             trend[i] = trend[i-1]
+        
+#         # Set Supertrend value
+#         supertrend[i] = final_lower_band[i] if trend[i] == 1 else final_upper_band[i]
     
-    # Add Supertrend and trend to DataFrame
-    df['supertrend'] = supertrend.round(0).astype(int)
-    df['trend'] = trend.astype(int)
+#     # Add Supertrend and trend to DataFrame
+#     df['supertrend'] = supertrend.round(0).astype(int)
+#     df['trend'] = trend.astype(int)
     
-    # Generate trend flip signals
-    trend_array = df['trend'].to_numpy()
-    signals = np.zeros(len(df), dtype=int)
-    signals[1:] = np.where(trend_array[1:] > trend_array[:-1], 1,
-                           np.where(trend_array[1:] < trend_array[:-1], -1, 0))
-    df['signal'] = signals
+#     # Generate trend flip signals
+#     trend_array = df['trend'].to_numpy()
+#     signals = np.zeros(len(df), dtype=int)
+#     signals[1:] = np.where(trend_array[1:] > trend_array[:-1], 1,
+#                            np.where(trend_array[1:] < trend_array[:-1], -1, 0))
+#     df['signal'] = signals
     
-    # Generate combined signals based on Close, EMA, and Supertrend
-    combined_signals = np.zeros(len(df), dtype=int)
-    close = df['close'].to_numpy()
-    ema = df['ema'].to_numpy()
-    supertrend = df['supertrend'].to_numpy()
-    combined_signals = np.where((close > ema) & (close > supertrend), 1,
-                               np.where((close < ema) & (close < supertrend), -1, 0))
-    df['combined_signal'] = combined_signals
-    df.to_csv('temp_data.csv', index=False)
-    # Clean up intermediate columns
-    df = df.drop(columns=['tr', 'atr', 'hl2', 'basic_upper_band', 'basic_lower_band'])
+#     # Generate combined signals based on Close, EMA, and Supertrend
+#     combined_signals = np.zeros(len(df), dtype=int)
+#     close = df['close'].to_numpy()
+#     ema = df['ema'].to_numpy()
+#     supertrend = df['supertrend'].to_numpy()
+#     combined_signals = np.where((close > ema) & (close > supertrend), 1,
+#                                np.where((close < ema) & (close < supertrend), -1, 0))
+#     df['combined_signal'] = combined_signals
+#     df.to_csv('temp_data.csv', index=False)
+#     # Clean up intermediate columns
+#     df = df.drop(columns=['tr', 'atr', 'hl2', 'basic_upper_band', 'basic_lower_band'])
     
-    return df
+#     return df
 
 def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, upstox_instruments, df, trade_history_file='trade_history_stema.csv', current_time=None):
     logging.info(f"Started STEMA Strategy")
@@ -456,28 +633,31 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     
     logging.info(f"Current time: {current_time}")
         
-    # Ensure timestamp is in datetime format
-    if not pd.api.types.is_datetime64_any_dtype(df['time']):
-        # df['time'] = pd.to_datetime(df['time'])
-        df['time'] = pd.to_datetime(df['time'], format='%d-%m-%Y %H:%M:%S', errors='coerce')
-        # '%d-%m-%Y %H:%M:%S'
+    # # Ensure timestamp is in datetime format
+    # if not pd.api.types.is_datetime64_any_dtype(df['time']):
+    #     # df['time'] = pd.to_datetime(df['time'])
+    #     df['time'] = pd.to_datetime(df['time'], format='%d-%m-%Y %H:%M:%S', errors='coerce')
+    #     # '%d-%m-%Y %H:%M:%S'
     
-    # Filter OHLC data up to current time
-    df = df[df['time'] <= current_time].copy()
-    if df.empty:
-        print("No data available up to current time")
-        return
+    # # Filter OHLC data up to current time
+    # df = df[df['time'] <= current_time].copy()
+    # if df.empty:
+    #     print("No data available up to current time")
+    #     return
     
-    # Calculate Supertrend, EMA, and signals
-    logging.info(f"Calculating Supertrend and EMA")
-    result_df = calculate_supertrend_and_ema(df)
+    # # Calculate Supertrend, EMA, and signals
+    # logging.info(f"Calculating Supertrend and EMA")
+
+    result_df = calculate_supertrend(df)
     
     # Get the latest row (most recent candle)
     latest_row = result_df.iloc[-1]
     latest_timestamp = latest_row['time']
     latest_close = latest_row['close']
     latest_trend = latest_row['trend']
-    latest_combined_signal = latest_row['combined_signal']
+    # latest_combined_signal = latest_row['combined_signal']
+    entry_signal = latest_row['entry_signal']
+    exit_signal = latest_row['exit_signal']
 
     logging.info(f"Latest Row: {latest_row}")
     
@@ -499,43 +679,38 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     has_open_order = not open_orders.empty
     logging.info(f"has_open_order: {has_open_order}")
     
-    # Check for trend change (compare with previous row if available)
-    if len(result_df) > 1:
-        previous_trend = result_df.iloc[-2]['trend']
-        trend_changed = latest_trend != previous_trend
-    else:
-        trend_changed = False
+    # # Check for trend change (compare with previous row if available)
+    # if len(result_df) > 1:
+    #     previous_trend = result_df.iloc[-2]['trend']
+    #     exit_signal = latest_trend != previous_trend
+    # else:
+    #     # trend_changed = False
+    #     exit_signal=False
 
-    logging.info(f"Previous Trend: {previous_trend}")
+    # logging.info(f"Previous Trend: {previous_trend}")
     logging.info(f"Current Trend: {latest_trend}")
-    logging.info(f"Trend Changed: {trend_changed}")
-    logging.info(f"Entry Signal: {latest_combined_signal}, Exit Signal:{trend_changed}")
+    # logging.info(f"Trend Changed: {trend_changed}")
+    logging.info(f"Entry Signal: {entry_signal}, Exit Signal:{exit_signal}")
 
     #Check if open order for Put exists and trend is -1 then trend changed
     logging.info(f"Checking trend change for open orders")
     if has_open_order:
         for _, order in open_orders.iterrows():
             if order['order_type'] == 'PUT' and latest_trend == -1:
-                trend_changed = True
+                # trend_changed = True
+                exit_signal=1
                 logging.info(f"Trend changed for PUT order")
                 break
             if order['order_type'] == 'CALL' and latest_trend == 1:
-                trend_changed = True
-                logging.info(f"Trend changed for CALL order")
-                break
-            if order['order_type'] == 'PUT' and previous_trend == -1:
-                trend_changed = True
-                logging.info(f"Trend changed for PUT order")
-                break
-            if order['order_type'] == 'CALL' and previous_trend == 1:
-                trend_changed = True
+                # trend_changed = True
+                exit_signal=1
                 logging.info(f"Trend changed for CALL order")
                 break
         
     #Check if open order for Call exists and trend is 1 then trend changed
     
     # Exit open orders if trend changes
-    if trend_changed and has_open_order:
+    if exit_signal and has_open_order:
         logging.info(f"Checking open order when trend changed")
         for _, order in open_orders.iterrows():
             order_tsm = order['trading_symbol']
@@ -562,9 +737,9 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
                 trade_history.loc[trade_history['trading_symbol'] == order_tsm, 'exit_timestamp'] = current_time
     
     # Place new order if no open orders and combined_signal is 1 or -1
-    if not has_open_order and latest_combined_signal != 0:
+    if not has_open_order and entry_signal != 0:
         orders={}
-        order_type = 'PUT' if latest_combined_signal == 1 else 'CALL'
+        order_type = 'PUT' if entry_signal == 1 else 'CALL'
         expiry = get_next_thursday_between_4_and_12_days(current_time)
         # Check if expiry is a holiday
         if expiry in holiday_dict:
@@ -654,11 +829,10 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     email_body = f"""
     Current Time: {latest_timestamp}
     Current Close: {latest_close}
-    Supertrend: {latest_row['supertrend']}
-    EMA: {latest_row['ema']}
+    EMA: {latest_row['ema20']}
     Trend: {latest_trend}
-    Combined Signal: {latest_combined_signal}
-    Action: {'Placed ' + order_type if not has_open_order and latest_combined_signal != 0 else 'No action' if not trend_changed else 'Closed open orders'}
+    Entry Signal: {entry_signal}
+    Action: {'Placed ' + order_type if not has_open_order and entry_signal != 0 else 'No action' if not exit_signal else 'Closed open orders'}
     """
     return_msgs.append({'subject': subject, 'body': email_body})
     # send_email_plain(subject, email_body)
