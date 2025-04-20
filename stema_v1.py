@@ -336,7 +336,7 @@ def place_order(api, live, trading_symbol, buy_sell, qty, order_type):
                         return True, {'subject': "Order executed successfully", 'body': email_body}
                     elif status in ['REJECTED', 'CANCELLED']:
                         email_body+=f"Order {status}. Reason: {order.get('rejreason', 'Not available')}"
-                        return False, {'subject': f"ORDER REJECTED : Reason: {order.get('rejreason', 'Not available')}, 'body': email_body}
+                        return False, {'subject': f"ORDER REJECTED : Reason: {order.get('rejreason', 'Not available')}", 'body': email_body}
             else:
                 email_body = email_body+ f"Could not fetch order book./n"
 
