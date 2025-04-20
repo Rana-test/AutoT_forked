@@ -737,6 +737,10 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
                 trade_history.loc[trade_history['trading_symbol'] == order_tsm, 'status'] = 'CLOSED'
                 trade_history.loc[trade_history['trading_symbol'] == order_tsm, 'exit_timestamp'] = current_time
     
+    # Check for open orders again after Exit maybe
+    open_orders = trade_history[trade_history['status'] == 'ACTIVE']
+    has_open_order = not open_orders.empty
+    logging.info(f"Check again has_open_order: {has_open_order}")
     # Place new order if no open orders and combined_signal is 1 or -1
     if not has_open_order and entry_signal != 0:
         orders={}
