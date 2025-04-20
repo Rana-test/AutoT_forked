@@ -744,7 +744,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     # Place new order if no open orders and combined_signal is 1 or -1
     if not has_open_order and entry_signal != 0:
         orders={}
-        order_type = 'PUT' if entry_signal == 1 else 'CALL'
+        order_type = 'CALL' if entry_signal == 1 else 'PUT'
         expiry = get_next_thursday_between_4_and_12_days(current_time)
         # Check if expiry is a holiday
         if expiry in holiday_dict:
