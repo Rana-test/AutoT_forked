@@ -386,7 +386,7 @@ def get_minute_data(api, now=None):
     latest_time = adjust_to_trading_hours(now)
     
     # Time 90 days ago
-    start_time = latest_time - timedelta(days=300)
+    start_time = latest_time - timedelta(days=30)
     
     # Desired time format
     fmt = "%d-%m-%Y %H:%M:%S"
