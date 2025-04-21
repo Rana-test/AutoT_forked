@@ -790,12 +790,22 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
             main_leg['fin_ce_symbol'] = f'{expiry}-CE-DELAT0.4'
             hedge_leg['fin_ce_symbol'] = f'{expiry}-CE-DELAT0.25'
         # Pseudocode: Place order
-        if order_type == 'PUT':
+        # Check to not place the same trend order if exited on the same day
+        last_order_type = trade_history.iloc[-1]['order_type']
+        last_order_status = trade_history.iloc[-1]['status']
+        last_order_exit = trade_history.iloc[-1]['exit_timestamp']
+        today = datetime.today().date()
+        execute = True
+        if last_order_status =='CLOSED':
+            if last_order_exit.date()==today and last_order_type == order_type:
+                execute = False
+
+        if order_type == 'PUT' and last_order_type!='PUT' and execute:
             orders['Main']={'trading_symbol':main_leg['fin_pe_symbol'], 'order_action':'S', 'order_qty':str(trade_qty), 'order_type':'PUT'}
             logging.info(f"Main Leg: {main_leg['fin_pe_symbol']}")
             orders['Hedge']={'trading_symbol':hedge_leg['fin_pe_symbol'], 'order_action':'B', 'order_qty':str(trade_qty), 'order_type':'PUT'}
             logging.info(f"Hedge Leg: {hedge_leg['fin_pe_symbol']}")
-        else:
+        elif order_type == 'CALL' and last_order_type!='CALL' and execute:
             orders['Main']={'trading_symbol':main_leg['fin_ce_symbol'], 'order_action':'S', 'order_qty':str(trade_qty), 'order_type':'CALL'}
             logging.info(f"Main Leg: {main_leg['fin_ce_symbol']}")
             orders['Hedge']={'trading_symbol':hedge_leg['fin_ce_symbol'], 'order_action':'B', 'order_qty':str(trade_qty), 'order_type':'CALL'}
