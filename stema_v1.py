@@ -766,6 +766,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     # open_orders = trade_history[trade_history['status'] == 'ACTIVE']
     # has_open_order = not open_orders.empty
     # logging.info(f"Check again has_open_order: {has_open_order}")
+
     # Place new order if no open orders and combined_signal is 1 or -1
     if not has_open_order and entry_signal != 0:
         orders={}
@@ -798,6 +799,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
         execute = True
         if last_order_exit.date()==today and last_order_type == order_type:
             execute = False
+            logging.info(f"Exit {last_order_type} today and trying to place another {order_type}. IGNORED.")
 
         if order_type == 'PUT' and last_order_type!='PUT' and execute:
             orders['Main']={'trading_symbol':main_leg['fin_pe_symbol'], 'order_action':'S', 'order_qty':str(trade_qty), 'order_type':'PUT'}
