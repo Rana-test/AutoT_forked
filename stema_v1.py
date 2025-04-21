@@ -738,26 +738,23 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
         
     #Check if open order for Call exists and trend is 1 then trend changed
     
+    curr_pos = pd.DataFrame(finvasia_api.get_positions())
     # Exit open orders if trend changes
     if exit_signal and has_open_order:
         logging.info(f"Checking open order when trend changed")
         for _, order in open_orders.iterrows():
             order_tsm = order['trading_symbol']
             order_type = order['order_type']
+            # ord_qty = min(abs(int(curr_pos[curr_pos['tsym']==order_tsm]['netqty'].iloc[0])),order['order_qty'])
+            ord_qty = int(curr_pos[curr_pos['tsym']==order_tsm]['netqty'].iloc[0])
             ord_act = 'S' if order['order_action'] == 'B' else 'B'
-            if latest_trend ==-1 and order_type == 'PUT':
+            if (latest_trend ==-1 and order_type == 'PUT') or (latest_trend ==1 and order_type == 'CALL'):
                 # Pseudocode: Close Put order
                 # close_put_order(order_id, latest_close)
                 # print(f"Closing Put order {order_tsm}")
                 logging.info(f"Closing put order: {order}")
-                ret_status, ret_msg = place_order(finvasia_api, live, order['trading_symbol'], ord_act, str(order['order_qty']), 'EXIT STEMA')
-                return_msgs.append(ret_msg)
-            elif latest_trend ==1 and order_type == 'CALL':
-                # Pseudocode: Close Call order
-                # close_call_order(order_id, latest_close)
-                # print(f"Closing Call order {order_tsm}")
-                logging.info(f"Closing call order: {order}")
-                ret_status, ret_msg = place_order(finvasia_api, live, order['trading_symbol'], ord_act, str(order['order_qty']), 'EXIT STEMA')
+                # Get the current qty as per exisitng position and limit qty to that 
+                ret_status, ret_msg = place_order(finvasia_api, live, order_tsm, ord_act, str(ord_qty), 'EXIT STEMA')
                 return_msgs.append(ret_msg)
             
             # Update trade history
@@ -765,10 +762,10 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
                 trade_history.loc[trade_history['trading_symbol'] == order_tsm, 'status'] = 'CLOSED'
                 trade_history.loc[trade_history['trading_symbol'] == order_tsm, 'exit_timestamp'] = current_time
     
-    # Check for open orders again after Exit maybe
-    open_orders = trade_history[trade_history['status'] == 'ACTIVE']
-    has_open_order = not open_orders.empty
-    logging.info(f"Check again has_open_order: {has_open_order}")
+    # Check for open orders again after Exit maybe - Giving gap of 1 iteration between exit and entry
+    # open_orders = trade_history[trade_history['status'] == 'ACTIVE']
+    # has_open_order = not open_orders.empty
+    # logging.info(f"Check again has_open_order: {has_open_order}")
     # Place new order if no open orders and combined_signal is 1 or -1
     if not has_open_order and entry_signal != 0:
         orders={}

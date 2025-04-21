@@ -601,7 +601,7 @@ def main():
                 metrics["INDIA_VIX"] = get_india_vix(api)
                 email_body = format_trade_metrics(metrics)
                 send_email(subject, email_body)
-            if counter % 30 ==0:
+            if counter % 15 ==0:
                 # subject, email_body = once_an_hour(api, expiry, upstox_opt_api)
                 # send_email_plain(subject, email_body)
                 stema_min_df = get_minute_data(api,now=None)
