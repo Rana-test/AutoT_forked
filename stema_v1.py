@@ -447,16 +447,44 @@ def calculate_supertrend(df_minute):
 
 
     ############################## START HOURLY #################
-    # Aggregate to hourly candles
-    df_hourly = df.resample('1h', label='right', closed='right').agg({
-        'open': 'first',
-        'high': 'max',
-        'low': 'min',
-        'close': 'last',
-        # 'volume': 'sum'
-    }).dropna()
+    # # Aggregate to hourly candles
+    # df_hourly = df.resample('1h', label='right', closed='right').agg({
+    #     'open': 'first',
+    #     'high': 'max',
+    #     'low': 'min',
+    #     'close': 'last',
+    #     # 'volume': 'sum'
+    # }).dropna()
 
     ########################## END HOURLY #####################
+    ########################## START MIN #####################
+    # Sort descending (latest to earliest)
+    df = df.sort_index(ascending=False)
+
+    # Assign reverse-time bins: each 60-minute chunk gets a unique group number
+    df['minutes_from_latest'] = ((df.index[0] - df.index).total_seconds() // 60).astype(int)
+    df['reverse_hour_bin'] = (df['minutes_from_latest'] // 60).astype(int)
+
+    # Aggregate into OHLC
+    agg_funcs = {
+        'open': 'last',   # Because we're going from latest to earliest
+        'high': 'max',
+        'low': 'min',
+        'close': 'first'
+    }
+
+    df_hourly = df.groupby('reverse_hour_bin').agg(agg_funcs)
+
+    # Optional: Add timestamp for the latest time in each bin
+    df_hourly['time'] = df.groupby('reverse_hour_bin').apply(lambda x: x.index[0])
+
+    # Reorder columns if needed
+    df_hourly = df_hourly[['time', 'open', 'high', 'low', 'close']]
+    df_hourly.set_index('time', inplace=True)
+    df_hourly = df_hourly.sort_index(ascending=True)
+
+
+    ###########################END MIN#########################
     
     # Calculate True Range (TR)
     df_hourly['tr'] = pd.concat([
