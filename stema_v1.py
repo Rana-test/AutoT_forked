@@ -796,9 +796,8 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
         last_order_exit = trade_history.iloc[-1]['exit_timestamp']
         today = datetime.today().date()
         execute = True
-        if last_order_status =='CLOSED':
-            if last_order_exit.date()==today and last_order_type == order_type:
-                execute = False
+        if last_order_exit.date()==today and last_order_type == order_type:
+            execute = False
 
         if order_type == 'PUT' and last_order_type!='PUT' and execute:
             orders['Main']={'trading_symbol':main_leg['fin_pe_symbol'], 'order_action':'S', 'order_qty':str(trade_qty), 'order_type':'PUT'}
