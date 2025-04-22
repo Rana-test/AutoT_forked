@@ -908,8 +908,8 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     20 EMA: {latest_row['ema20']}
     50 EMA: {latest_row['ema50']}
     Trend: {latest_trend}
-    Entry Signal: {entry_signal}
     RSI: {rsi}
+    Entry Signal: {entry_signal}
     Action: {'Placed ' + order_type if not has_open_order and entry_signal != 0 else 'No action' if not exit_signal else 'Closed open orders'}
     """
     return_msgs.append({'subject': subject, 'body': email_body})
