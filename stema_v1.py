@@ -792,21 +792,18 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
             hedge_leg['fin_ce_symbol'] = f'{expiry}-CE-DELAT0.25'
         # Pseudocode: Place order
         # Check to not place the same trend order if exited on the same day
-        last_order_type = trade_history.iloc[-1]['order_type']
-        last_order_status = trade_history.iloc[-1]['status']
-        last_order_exit = trade_history.iloc[-1]['exit_timestamp']
-        today = datetime.today().date()
-        execute = True
-        if last_order_exit.date()==today and last_order_type == order_type:
-            execute = False
-            logging.info(f"Exit {last_order_type} today and trying to place another {order_type}. IGNORED.")
+        # Get today's date (without time)
+        today = pd.Timestamp(datetime.now().date())
+        # Filter rows where the date part of 'exit_timestamp' matches today
+        df_today = trade_history[trade_history['exit_timestamp'].dt.date == today.date()]
+        day_order_filter = list(df_today['order_type'].unique())
 
-        if order_type == 'PUT' and last_order_type!='PUT' and execute:
+        if order_type == 'PUT' and order_type not in day_order_filter:
             orders['Main']={'trading_symbol':main_leg['fin_pe_symbol'], 'order_action':'S', 'order_qty':str(trade_qty), 'order_type':'PUT'}
             logging.info(f"Main Leg: {main_leg['fin_pe_symbol']}")
             orders['Hedge']={'trading_symbol':hedge_leg['fin_pe_symbol'], 'order_action':'B', 'order_qty':str(trade_qty), 'order_type':'PUT'}
             logging.info(f"Hedge Leg: {hedge_leg['fin_pe_symbol']}")
-        elif order_type == 'CALL' and last_order_type!='CALL' and execute:
+        elif order_type == 'CALL' and order_type not in day_order_filter:
             orders['Main']={'trading_symbol':main_leg['fin_ce_symbol'], 'order_action':'S', 'order_qty':str(trade_qty), 'order_type':'CALL'}
             logging.info(f"Main Leg: {main_leg['fin_ce_symbol']}")
             orders['Hedge']={'trading_symbol':hedge_leg['fin_ce_symbol'], 'order_action':'B', 'order_qty':str(trade_qty), 'order_type':'CALL'}
