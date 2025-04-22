@@ -233,70 +233,70 @@ def get_positions(upstox_opt_api, finvasia_api, instrument, expiry,trade_qty,ups
 
 ################# Logic functions #################
 
-def get_data(api, now):
-    """
-    Fetch 30 days of hourly candle data for Nifty 50 from Finvasia API and save to test.csv.
+# def get_data(api, now):
+#     """
+#     Fetch 30 days of hourly candle data for Nifty 50 from Finvasia API and save to test.csv.
     
-    Parameters:
-    api: Finvasia API client instance
-    now (datetime): Current timestamp
+#     Parameters:
+#     api: Finvasia API client instance
+#     now (datetime): Current timestamp
     
-    Returns:
-    pd.DataFrame: DataFrame with columns ['time', 'open', 'high', 'low', 'close']
-    """
-    nifty_token = '26000'  # NSE|26000 is the Nifty 50 index
+#     Returns:
+#     pd.DataFrame: DataFrame with columns ['time', 'open', 'high', 'low', 'close']
+#     """
+#     nifty_token = '26000'  # NSE|26000 is the Nifty 50 index
     
-    # Round current time (assuming round_to_previous_15_45 is defined elsewhere)
-    if now is None:
-        now = datetime.now()
+#     # Round current time (assuming round_to_previous_15_45 is defined elsewhere)
+#     if now is None:
+#         now = datetime.now()
         
-    rounded_now = now  # Note: Original code suggests rounding function, adjust if needed
+#     rounded_now = now  # Note: Original code suggests rounding function, adjust if needed
 
-    # Time 30 days ago
-    rounded_thirty_days_ago = rounded_now - timedelta(days=21)
+#     # Time 30 days ago
+#     rounded_thirty_days_ago = rounded_now - timedelta(days=21)
 
-    # Desired format
-    fmt = "%d-%m-%Y %H:%M:%S"
+#     # Desired format
+#     fmt = "%d-%m-%Y %H:%M:%S"
 
-    # Convert times to seconds (assuming get_time is defined elsewhere)
-    start_secs = get_time(rounded_thirty_days_ago.strftime(fmt))  # dd-mm-YYYY HH:MM:SS
-    end_secs = get_time(rounded_now.strftime(fmt))
+#     # Convert times to seconds (assuming get_time is defined elsewhere)
+#     start_secs = get_time(rounded_thirty_days_ago.strftime(fmt))  # dd-mm-YYYY HH:MM:SS
+#     end_secs = get_time(rounded_now.strftime(fmt))
 
-    # Fetch data from Finvasia API
-    bars = api.get_time_price_series(
-        exchange='NSE',
-        token=nifty_token,
-        starttime=int(start_secs),
-        endtime=int(end_secs),
-        interval=60  # 60-minute candles
-    )
+#     # Fetch data from Finvasia API
+#     bars = api.get_time_price_series(
+#         exchange='NSE',
+#         token=nifty_token,
+#         starttime=int(start_secs),
+#         endtime=int(end_secs),
+#         interval=60  # 60-minute candles
+#     )
 
-    # Create DataFrame
-    df = pd.DataFrame.from_dict(bars)
-    df.rename(columns={
-        'into': 'open',
-        'inth': 'high',
-        'intl': 'low',
-        'intc': 'close'
-    }, inplace=True)
+#     # Create DataFrame
+#     df = pd.DataFrame.from_dict(bars)
+#     df.rename(columns={
+#         'into': 'open',
+#         'inth': 'high',
+#         'intl': 'low',
+#         'intc': 'close'
+#     }, inplace=True)
     
-    # Convert time to datetime and format
-    df['time'] = pd.to_datetime(df['time'], dayfirst=True)
-    df['time'] = df['time'].dt.strftime('%d-%m-%Y %H:%M:%S')
+#     # Convert time to datetime and format
+#     df['time'] = pd.to_datetime(df['time'], dayfirst=True)
+#     df['time'] = df['time'].dt.strftime('%d-%m-%Y %H:%M:%S')
     
-    # Select and convert columns to float
-    df = df[['time', 'open', 'high', 'low', 'close']]
-    df[['open', 'high', 'low', 'close']] = df[['open', 'high', 'low', 'close']].astype(float)
+#     # Select and convert columns to float
+#     df = df[['time', 'open', 'high', 'low', 'close']]
+#     df[['open', 'high', 'low', 'close']] = df[['open', 'high', 'low', 'close']].astype(float)
     
-    # Sort by time in ascending order
-    df['time_dt'] = pd.to_datetime(df['time'], format='%d-%m-%Y %H:%M:%S')
-    df = df.sort_values('time_dt').reset_index(drop=True)
-    df = df.drop(columns=['time_dt'])
+#     # Sort by time in ascending order
+#     df['time_dt'] = pd.to_datetime(df['time'], format='%d-%m-%Y %H:%M:%S')
+#     df = df.sort_values('time_dt').reset_index(drop=True)
+#     df = df.drop(columns=['time_dt'])
     
-    # Save to test.csv
-    df.to_csv('test.csv', index=False)
+#     # Save to test.csv
+#     df.to_csv('test.csv', index=False)
     
-    return df
+#     return df
 
 def place_order(api, live, trading_symbol, buy_sell, qty, order_type):
     logging.info(f"Within place order")
