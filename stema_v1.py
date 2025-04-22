@@ -427,6 +427,20 @@ def get_minute_data(api, now=None):
 
     return df
 
+def calculate_rsi(close_prices, period=14):
+    close_prices = close_prices.astype(float)
+    delta = close_prices.diff()
+    gain = delta.where(delta > 0, 0)
+    loss = -delta.where(delta < 0, 0)
+
+    avg_gain = gain.rolling(window=period).mean()
+    avg_loss = loss.rolling(window=period).mean()
+
+    rs = avg_gain / avg_loss
+    rsi = 100 - (100 / (1 + rs))
+
+    return rsi
+
 def calculate_supertrend(df_minute):
     """
     Calculates Supertrend (10 ATR, 3.5 factor) on hourly Nifty 50 candles without talib.
@@ -545,15 +559,17 @@ def calculate_supertrend(df_minute):
     # df_hourly['buySignal'] = (df_hourly['trend'] == 1) & (df_hourly['trend'].shift(1) == -1)
     # df_hourly['sellSignal'] = (df_hourly['trend'] == -1) & (df_hourly['trend'].shift(1) == 1)
 
-    # Calculate 20 EMA
+    # Calculate 20 and 50 EMA
     df_hourly['ema20'] = df_hourly['close'].ewm(span=20, adjust=False).mean()
     df_hourly['ema50'] = df_hourly['close'].ewm(span=50, adjust=False).mean()
     # df_hourly['adx'] = ta.trend.adx(high=df_hourly['high'], low=df_hourly['low'], close=df_hourly['close'], window=20)
+    # Calculate RSI
+    df_hourly['rsi'] = calculate_rsi(df_hourly['close'], period=14)
     df_hourly['entry_signal'] = 0
     # df_hourly.loc[(df_hourly['close'] < df_hourly['ema20']) & (df_hourly['trend'] == -1) & (df_hourly['adx'] > 25), 'entry_signal'] = 1
     # df_hourly.loc[(df_hourly['close'] > df_hourly['ema20']) & (df_hourly['trend'] == 1) & (df_hourly['adx'] > 25), 'entry_signal'] = -1
-    df_hourly.loc[(df_hourly['close'] < df_hourly['ema20']) & (df_hourly['close'] < df_hourly['ema50']) & (df_hourly['trend'] == -1), 'entry_signal'] = 1
-    df_hourly.loc[(df_hourly['close'] > df_hourly['ema20']) & (df_hourly['close'] > df_hourly['ema50']) & (df_hourly['trend'] == 1), 'entry_signal'] = -1
+    df_hourly.loc[(df_hourly['close'] < df_hourly['ema20']) & (df_hourly['close'] < df_hourly['ema50']) & (df_hourly['trend'] == -1) & (df_hourly['rsi'] <50), 'entry_signal'] = 1
+    df_hourly.loc[(df_hourly['close'] > df_hourly['ema20']) & (df_hourly['close'] > df_hourly['ema50']) & (df_hourly['trend'] == 1)& (df_hourly['rsi'] > 50) , 'entry_signal'] = -1
     # Initialize the exit_signal column to 0
     df_hourly['exit_signal'] = 0
     # Set exit_signal to 1 when the trend changes (current trend != previous trend)
@@ -692,7 +708,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     # latest_combined_signal = latest_row['combined_signal']
     entry_signal = latest_row['entry_signal']
     exit_signal = latest_row['exit_signal']
-
+    rsi = latest_row['rsi']
     logging.info(f"Latest Row: {latest_row}")
     
     # Read trade history
@@ -745,12 +761,17 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     
     curr_pos = pd.DataFrame(finvasia_api.get_positions())
     # Exit open orders if trend changes
+
     if exit_signal and has_open_order:
         exit_confirm+=1
     else:
         exit_confirm=0
     
-    if exit_confirm>1:
+    rsi_confirm = False
+    if (latest_trend ==1 and rsi>50) or (latest_trend == -1 and rsi<50):
+        rsi_confirm = True
+
+    if exit_confirm>1 and rsi_confirm:
         exit_confirm = 0
         logging.info(f"Checking open order when trend changed")
         for _, order in open_orders.iterrows():
@@ -784,7 +805,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     else:
         entry_confirm=0
 
-    if entry_confirm>1:
+    if entry_confirm>1 and rsi_confirm:
         entry_confirm = 0    
         orders={}
         order_type = 'CALL' if entry_signal == 1 else 'PUT'
@@ -884,9 +905,11 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     email_body = f"""
     Current Time: {latest_timestamp}
     Current Close: {latest_close}
-    EMA: {latest_row['ema20']}
+    20 EMA: {latest_row['ema20']}
+    50 EMA: {latest_row['ema50']}
     Trend: {latest_trend}
     Entry Signal: {entry_signal}
+    RSI: {rsi}
     Action: {'Placed ' + order_type if not has_open_order and entry_signal != 0 else 'No action' if not exit_signal else 'Closed open orders'}
     """
     return_msgs.append({'subject': subject, 'body': email_body})
