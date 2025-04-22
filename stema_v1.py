@@ -656,7 +656,7 @@ def calculate_supertrend(df_minute):
     
 #     return df
 
-def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, upstox_instruments, df, trade_history_file='trade_history_stema.csv', current_time=None):
+def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, upstox_instruments, df, entry_confirm, exit_confirm, trade_history_file='trade_history_stema.csv', current_time=None):
     logging.info(f"Started STEMA Strategy")
     return_msgs=[]
     instrument = "NSE_INDEX|Nifty 50"
@@ -746,6 +746,12 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     curr_pos = pd.DataFrame(finvasia_api.get_positions())
     # Exit open orders if trend changes
     if exit_signal and has_open_order:
+        exit_confirm+=1
+    else:
+        exit_confirm=0
+    
+    if exit_confirm>1:
+        exit_confirm = 0
         logging.info(f"Checking open order when trend changed")
         for _, order in open_orders.iterrows():
             order_tsm = order['trading_symbol']
@@ -774,6 +780,12 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
 
     # Place new order if no open orders and combined_signal is 1 or -1
     if not has_open_order and entry_signal != 0:
+        entry_confirm+=1
+    else:
+        entry_confirm=0
+
+    if entry_confirm>1:
+        entry_confirm = 0    
         orders={}
         order_type = 'CALL' if entry_signal == 1 else 'PUT'
         expiry = get_next_thursday_between_4_and_12_days(current_time)
@@ -880,7 +892,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     return_msgs.append({'subject': subject, 'body': email_body})
     # send_email_plain(subject, email_body)
     logging.info(f"sending emails: {email_body}")
-    return return_msgs
+    return return_msgs, entry_confirm, exit_confirm
     # print(f"Current Time: {latest_timestamp}")
     # print(f"Close: {latest_close}")
     # print(f"Supertrend: {latest_row['supertrend']}")
