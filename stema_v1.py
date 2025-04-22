@@ -484,9 +484,8 @@ def calculate_supertrend(df_minute):
     df_hourly.set_index('time', inplace=True)
     df_hourly = df_hourly.sort_index(ascending=True)
 
-
     ###########################END MIN#########################
-    
+        
     # Calculate True Range (TR)
     df_hourly['tr'] = pd.concat([
         df_hourly['high'] - df_hourly['low'],
@@ -507,7 +506,8 @@ def calculate_supertrend(df_minute):
     
     # Calculate Supertrend
     for i in range(len(df_hourly)):
-        src = (df_hourly['high'].iloc[i] + df_hourly['low'].iloc[i]) / 2
+        # src = (df_hourly['high'].iloc[i] + df_hourly['low'].iloc[i]) / 2
+        src = df_hourly['close'].iloc[i]
         if i == 0:
             # First bar initialization
             up = src - Multiplier * df_hourly['atr'].iloc[i]

@@ -585,6 +585,8 @@ def main():
         sleep_time.sleep(60)
 
     counter=0
+    exit_confirm = 0
+    entry_confirm = 0
 
     # Start Monitoring
     while is_within_timeframe(session.get('start_time'), session.get('end_time')):
@@ -606,7 +608,7 @@ def main():
                 # send_email_plain(subject, email_body)
                 stema_min_df = get_minute_data(api,now=None)
                 logging.info(f"Got historical data")
-                return_msgs = run_hourly_trading_strategy(live, trade_qty, api, upstox_opt_api, upstox_instruments, stema_min_df, trade_history_file='trade_history_stema.csv', current_time=None)
+                return_msgs, entry_confirm, exit_confirm = run_hourly_trading_strategy(live, trade_qty, api, upstox_opt_api, upstox_instruments, stema_min_df, entry_confirm, exit_confirm, trade_history_file='trade_history_stema.csv', current_time=None )
                 print(f'Number of email messages: {len(return_msgs)}')
                 for msg in return_msgs:
                     send_email_plain(msg['subject'], msg['body'])
