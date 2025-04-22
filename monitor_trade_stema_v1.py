@@ -478,8 +478,10 @@ def monitor_trade(api, upstox_opt_api, sender_email, receiver_email, email_passw
         # realized_premium = float((trade_hist_df['upldprc'].astype(float)-trade_hist_df['totbuyavgprc'].astype(float)).sum())*realized_qty
         act_realized_premium = (trade_hist_df['upldprc'].astype(float)*trade_hist_df['cfsellqty'].astype(int)-trade_hist_df['totbuyavgprc'].astype(float)*trade_hist_df['daybuyqty'].astype(int)).sum()
         realized_premium=0
-
-        total_premium_collected_per_option = (current_premium + realized_premium) /current_qty
+        if current_qty!=0:
+            total_premium_collected_per_option = (current_premium + realized_premium) /current_qty
+        else:
+            total_premium_collected_per_option=0
         current_pnl+=realized_premium
         max_profit+=realized_premium
 
