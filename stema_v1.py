@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 import logging
 import time as sleep_time
 import ta
+from zoneinfo import ZoneInfo 
 logging.basicConfig(level=logging.INFO)
 ################# Helper functions #################
 
@@ -358,33 +359,33 @@ def get_minute_data(api, now=None):
     nifty_token = '26000'  # NSE|26000 is the Nifty 50 index
     
     # Define trading hours
-    market_open = time(3, 45)
-    market_close = time(10, 00)
+    market_open = time(9, 15).astimezone(ZoneInfo("Asia/Kolkata"))
+    market_close = time(15, 30).astimezone(ZoneInfo("Asia/Kolkata"))
     
     # Set current time if not provided
     if now is None:
-        now = datetime.now()
+        now = datetime.now(ZoneInfo("Asia/Kolkata"))
     
     # Adjust latest_time to the most recent trading minute
     def adjust_to_trading_hours(dt):
-        dt_time = dt.time()
-        dt_date = dt.date()
+        dt_time = dt.time().astimezone(ZoneInfo("Asia/Kolkata"))
+        dt_date = dt.date().astimezone(ZoneInfo("Asia/Kolkata"))
         
         if dt_time > market_close:
             # After market close, use 15:30:00 of the same day
-            return datetime.combine(dt_date, market_close)
+            return datetime.combine(dt_date, market_close).astimezone(ZoneInfo("Asia/Kolkata"))
         elif dt_time < market_open:
             # Before market open, use 15:30:00 of the previous trading day
             prev_day = dt_date - timedelta(days=1)
             # Check if previous day is a weekday (Monday to Friday)
             while prev_day.weekday() >= 5:  # Skip Saturday (5) and Sunday (6)
                 prev_day -= timedelta(days=1)
-            return datetime.combine(prev_day, market_close)
+            return datetime.combine(prev_day, market_close).astimezone(ZoneInfo("Asia/Kolkata"))
         else:
             # Within trading hours, round down to the nearest minute
-            return dt.replace(second=0, microsecond=0)
+            return dt.replace(second=0, microsecond=0).astimezone(ZoneInfo("Asia/Kolkata"))
     
-    #latest_time = adjust_to_trading_hours(now)
+    latest_time = adjust_to_trading_hours(now)
     
     # Time 90 days ago
     start_time = latest_time - timedelta(days=30)
