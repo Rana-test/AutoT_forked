@@ -384,7 +384,7 @@ def get_minute_data(api, now=None):
             # Within trading hours, round down to the nearest minute
             return dt.replace(second=0, microsecond=0)
     
-    latest_time = adjust_to_trading_hours(now)
+    #latest_time = adjust_to_trading_hours(now)
     
     # Time 90 days ago
     start_time = latest_time - timedelta(days=30)
