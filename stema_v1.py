@@ -358,8 +358,8 @@ def get_minute_data(api, now=None):
     nifty_token = '26000'  # NSE|26000 is the Nifty 50 index
     
     # Define trading hours
-    market_open = time(9, 15)
-    market_close = time(15, 30)
+    market_open = time(3, 45)
+    market_close = time(10, 00)
     
     # Set current time if not provided
     if now is None:
