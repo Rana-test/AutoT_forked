@@ -677,6 +677,7 @@ def calculate_supertrend(df_minute):
 def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, upstox_instruments, df, entry_confirm, exit_confirm, trade_history_file='trade_history_stema.csv', current_time=None):
     logging.info(f"Started STEMA Strategy")
     return_msgs=[]
+    action = 'NO ACTION'
     instrument = "NSE_INDEX|Nifty 50"
     # Use current system time if not provided
     if current_time is None:
@@ -775,6 +776,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
 
     if exit_confirm>1 and rsi_confirm:
         exit_confirm = 0
+        action = "EXIT POSITIONS"
         logging.info(f"Checking open order when trend changed")
         for _, order in open_orders.iterrows():
             order_tsm = order['trading_symbol']
@@ -810,6 +812,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     if entry_confirm>3 and rsi_confirm:
         entry_confirm = 0    
         orders={}
+        action = 'MAKE ENTRY'
         order_type = 'CALL' if entry_signal == 1 else 'PUT'
         expiry = get_next_thursday_between_4_and_12_days(current_time)
         # Check if expiry is a holiday
@@ -901,7 +904,12 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     # Save trade history
     logging.info(f"Saving trade history")
     trade_history.to_csv(trade_history_file, index=False)
-    
+    if not has_open_order and entry_signal != 0 and entry_confirm > 3 and rsi_confirm:
+        action = 'Entry made'
+    elif has_open_order and exit_signal != 0 and exit_confirm > 0 and rsi_confirm:
+        action = 'Closed open orders'
+    else:
+        action = 'No action'
     # Debug output
     subject= f"Trade Decision at {latest_timestamp}"
     email_body = f"""
@@ -915,7 +923,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     Entry Confirm: {entry_confirm}
     Exit Signal: {exit_signal}
     Exit Confirm: {exit_confirm}
-    Action: {'Entry made' if not has_open_order and entry_signal != 0 and entry_confirm>3 and rsi_confirm else 'No action' if not exit_signal and exit_confirm>0 and rsi_confirm else 'Closed open orders'}
+    Action: {action}
     """
     return_msgs.append({'subject': subject, 'body': email_body})
     # send_email_plain(subject, email_body)
