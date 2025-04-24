@@ -24,30 +24,6 @@ holiday_dict ={
     '2025-12-25':'2025-12-24',
 }
 
-def round_to_previous_15_45(dt):
-    hour = dt.hour
-    minute = dt.minute
-
-    # Only apply rounding if time is between 9:15 and 15:30
-    start = dt.replace(hour=9, minute=15, second=0, microsecond=0)
-    end = dt.replace(hour=15, minute=30, second=0, microsecond=0)
-
-    if dt < start:
-        return start
-    if dt > end:
-        return end
-
-    # Round down to previous 15 or 45 minute
-    if minute >= 45:
-        rounded_minute = 45
-    elif minute >= 15:
-        rounded_minute = 15
-    else:
-        # If before 15 past, round down to the previous hour at 45
-        dt -= timedelta(hours=1)
-        rounded_minute = 45
-
-    return dt.replace(minute=rounded_minute, second=0, microsecond=0)
 
 def get_india_vix(api):
     return round(float(api.get_quotes(exchange="NSE", token=str(26017))['lp']),2)
@@ -809,7 +785,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     else:
         entry_confirm=0
 
-    if (entry_confirm>3 or entry_confirm<-3) and rsi_confirm:
+    if (entry_confirm>4 or entry_confirm<-3) and rsi_confirm:
         entry_confirm = 0    
         orders={}
         action = 'MAKE ENTRY'
@@ -904,7 +880,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     # Save trade history
     logging.info(f"Saving trade history")
     trade_history.to_csv(trade_history_file, index=False)
-    if not has_open_order and entry_signal != 0 and entry_confirm > 3 and rsi_confirm:
+    if not has_open_order and entry_signal != 0 and entry_confirm > 4 and rsi_confirm:
         action = 'Entry made'
     elif has_open_order and exit_signal != 0 and exit_confirm > 0 and rsi_confirm:
         action = 'Closed open orders'
