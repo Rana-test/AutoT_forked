@@ -805,11 +805,11 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
 
     # Place new order if no open orders and combined_signal is 1 or -1
     if not has_open_order and entry_signal != 0:
-        entry_confirm+=1
+        entry_confirm+=entry_signal
     else:
         entry_confirm=0
 
-    if entry_confirm>3 and rsi_confirm:
+    if (entry_confirm>3 or entry_confirm<-3) and rsi_confirm:
         entry_confirm = 0    
         orders={}
         action = 'MAKE ENTRY'
