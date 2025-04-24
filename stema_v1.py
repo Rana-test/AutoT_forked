@@ -680,7 +680,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     instrument = "NSE_INDEX|Nifty 50"
     # Use current system time if not provided
     if current_time is None:
-        current_time = datetime.now()
+        current_time = datetime.now(ZoneInfo("Asia/Kolkata"))
     
     logging.info(f"Current time: {current_time}")
         
@@ -720,7 +720,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
         # Close any trades whose expiry is past today's date
         for i, row in trade_history.iterrows():
             row_expiry = row['expiry']
-            days_to_expiry = (datetime.strptime(row_expiry, "%Y-%m-%d").date() - datetime.now().date()).days
+            days_to_expiry = (datetime.strptime(row_expiry, "%Y-%m-%d").date() - datetime.now(ZoneInfo("Asia/Kolkata")).date()).days
             if days_to_expiry < 1:
                 trade_history.at[i, 'status'] = 'CLOSED'
     else:
@@ -833,7 +833,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
         # Pseudocode: Place order
         # Check to not place the same trend order if exited on the same day
         # Get today's date (without time)
-        today = pd.Timestamp(datetime.now().date())
+        today = pd.Timestamp(datetime.now(ZoneInfo("Asia/Kolkata")).date())
         # Filter rows where the date part of 'exit_timestamp' matches today
         df_today = trade_history[trade_history['exit_timestamp'].dt.date == today.date()]
         day_order_filter = list(df_today['order_type'].unique())
