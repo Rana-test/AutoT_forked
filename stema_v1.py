@@ -912,6 +912,9 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     Trend: {latest_trend}
     RSI: {rsi}
     Entry Signal: {entry_signal}
+    Entry Confirm: {entry_confirm}
+    Exit Signal: {exit_signal}
+    Exit Confirm: {exit_confirm}
     Action: {'Placed ' + order_type if not has_open_order and entry_signal != 0 else 'No action' if not exit_signal else 'Closed open orders'}
     """
     return_msgs.append({'subject': subject, 'body': email_body})
