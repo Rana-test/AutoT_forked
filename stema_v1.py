@@ -807,7 +807,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     else:
         entry_confirm=0
 
-    if entry_confirm>1 and rsi_confirm:
+    if entry_confirm>3 and rsi_confirm:
         entry_confirm = 0    
         orders={}
         order_type = 'CALL' if entry_signal == 1 else 'PUT'
@@ -915,7 +915,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     Entry Confirm: {entry_confirm}
     Exit Signal: {exit_signal}
     Exit Confirm: {exit_confirm}
-    Action: {'Placed ' + order_type if not has_open_order and entry_signal != 0 else 'No action' if not exit_signal else 'Closed open orders'}
+    Action: {'Entry made' if not has_open_order and entry_signal != 0 and entry_confirm>3 and rsi_confirm else 'No action' if not exit_signal and exit_confirm>0 and rsi_confirm else 'Closed open orders'}
     """
     return_msgs.append({'subject': subject, 'body': email_body})
     # send_email_plain(subject, email_body)
