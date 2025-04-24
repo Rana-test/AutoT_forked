@@ -30,6 +30,7 @@ import requests
 import pandas as pd
 import logging
 from stema_v1 import get_minute_data, run_hourly_trading_strategy
+from zoneinfo import ZoneInfo
 
 logging.basicConfig(level=logging.INFO)
 
@@ -119,11 +120,11 @@ def get_india_vix(api):
 
 def is_within_time_range():
     # Get the current UTC time
-    now = datetime.now(pytz.utc).time()
+    now = datetime.now(ZoneInfo("Asia/Kolkata")).time()
 
     # Define the start and end times
-    start_time = time(3, 45)  # 3:45 a.m. UTC
-    end_time = time(21, 00)   # 10:00 a.m. UTC
+    start_time = time(9, 15)  # 3:45 a.m. UTC
+    end_time = time(15, 30)   # 10:00 a.m. UTC
 
     # Check if the current time is within the range
     return start_time <= now <= end_time
@@ -187,7 +188,7 @@ def init_creds():
     return userid, password, vendor_code, api_secret, imei, TOKEN, sender_email, receiver_email, email_password, UPSTOX_API_KEY, UPSTOX_URL, UPSTOX_API_SECRET, UPSTOX_MOB_NO, UPSTOX_CLIENT_PASS, UPSTOX_CLIENT_PIN
 
 def is_within_timeframe(start, end):
-    now = datetime.now(timezone.utc) 
+    now = datetime.now(ZoneInfo("Asia/Kolkata"))
     start_time = now.replace(hour=int(start.split(':')[0]), minute=int(start.split(':')[1]), second=0, microsecond=0)
     end_time = now.replace(hour=int(end.split(':')[0]), minute=int(end.split(':')[1]), second=0, microsecond=0)
     return start_time <= now <= end_time
@@ -202,10 +203,10 @@ def identify_session():
     # 12:30 == 7:00
     # 15:30 == 10:00
 
-    if is_within_timeframe("03:00", "06:55"):
-        return {"session": "session1", "start_time": "03:45", "end_time": "06:55"}
-    elif is_within_timeframe("07:00", "10:00"):
-        return {"session": "session2","start_time": "07:00", "end_time": "10:00"}
+    if is_within_timeframe("09:15", "12:25"):
+        return {"session": "session1", "start_time": "09:15", "end_time": "12:25"}
+    elif is_within_timeframe("12:30", "15:30"):
+        return {"session": "session2","start_time": "12:30", "end_time": "15:30"}
     return None
 
 def send_email(subject, body):
