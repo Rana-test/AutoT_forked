@@ -608,9 +608,9 @@ def main():
         var_init = var_init.astype(sess_var_df.dtypes.to_dict(), errors='ignore')
         sess_var_df = pd.concat([sess_var_df, var_init], ignore_index=True)
 
-    counter = sess_var_df[sess_var_df['session_var']=='counter'].iloc[0]
-    exit_confirm = sess_var_df[sess_var_df['session_var']=='exit_confirm'].iloc[0]
-    entry_confirm = sess_var_df[sess_var_df['session_var']=='entry_confirm'].iloc[0]
+    counter = sess_var_df[sess_var_df['session_var']=='counter']['value'].iloc[0]
+    exit_confirm = sess_var_df[sess_var_df['session_var']=='exit_confirm']['value'].iloc[0]
+    entry_confirm = sess_var_df[sess_var_df['session_var']=='entry_confirm']['value'].iloc[0]
 
     # Start Monitoring
     while is_within_timeframe(session.get('start_time'), session.get('end_time')):
@@ -641,9 +641,9 @@ def main():
   
     # Logout
     logging.info(f"Saving session variables")
-    sess_var_df.loc[sess_var_df['session_var']=='counter']=counter
-    sess_var_df.loc[sess_var_df['session_var']=='exit_confirm']=exit_confirm
-    sess_var_df.loc[sess_var_df['session_var']=='entry_confirm']=entry_confirm
+    sess_var_df.loc[sess_var_df['session_var']=='counter','value']=counter
+    sess_var_df.loc[sess_var_df['session_var']=='exit_confirm','value']=exit_confirm
+    sess_var_df.loc[sess_var_df['session_var']=='entry_confirm','value']=entry_confirm
     sess_var_df.to_csv(session_var_file, index=False)
     api.logout()
 
