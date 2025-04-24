@@ -376,27 +376,28 @@ def get_atm_iv(upstox_opt_api, expiry_date, current_index_price):
 def stop_loss_order(pos_df, api, live=False):
     for i,pos in pos_df.iterrows():
         # Exit only the loss making side
-        if pos["PnL"] < 1:
-            tradingsymbol = pos["tsym"]  # Trading symbol of the position
-            netqty = int(pos["netqty"])  # Net quantity of the position
-            if netqty != 0:  # Ensure position exists
-                transaction_type = "BUY" if netqty < 0 else "SELL"
-                quantity = abs(netqty)  # Exit full position
-                prd_type = 'M'
-                exchange = 'NFO' 
-                # disclosed_qty= 0
-                price_type = 'MKT'
-                price=0
-                trigger_price = None
-                retention='DAY'
-                if live:
-                    ret = api.place_order(buy_or_sell="B", product_type=prd_type, exchange=exchange, tradingsymbol=tradingsymbol, quantity=quantity, discloseqty=quantity,price_type=price_type, price=price,trigger_price=trigger_price, retention=retention, remarks="STOP LOSS ORDER")
-                else:
-                    print(f'buy_or_sell="B", product_type={prd_type}, exchange={exchange}, tradingsymbol={tradingsymbol}, quantity={quantity}, discloseqty={quantity},price_type={price_type}, price={price},trigger_price={trigger_price}, retention={retention}, remarks="STOP LOSS ORDER"')
-                
-                subject = f"STOP LOSS TRIGGERED for {tradingsymbol} at {price}."
-                email_body = f"STOP LOSS TRIGGERED for {tradingsymbol} at {price}."
-                send_email(subject, email_body)
+        # if pos["PnL"] < 1: #Exit complete leg
+        tradingsymbol = pos["tsym"]  # Trading symbol of the position
+        netqty = int(pos["netqty"])  # Net quantity of the position
+        if netqty != 0:  # Ensure position exists
+            transaction_type = "BUY" if netqty < 0 else "SELL"
+            quantity = abs(netqty)  # Exit full position
+            prd_type = 'M'
+            exchange = 'NFO' 
+            # disclosed_qty= 0
+            price_type = 'MKT'
+            price=0
+            trigger_price = None
+            retention='DAY'
+            buy_sell = 'S' if netqty>0 else 'B'
+            if live:
+                ret = api.place_order(buy_or_sell=buy_sell, product_type=prd_type, exchange=exchange, tradingsymbol=tradingsymbol, quantity=quantity, discloseqty=quantity,price_type=price_type, price=price,trigger_price=trigger_price, retention=retention, remarks="STOP LOSS ORDER")
+            else:
+                print(f'buy_or_sell=buy_sell, product_type={prd_type}, exchange={exchange}, tradingsymbol={tradingsymbol}, quantity={quantity}, discloseqty={quantity},price_type={price_type}, price={price},trigger_price={trigger_price}, retention={retention}, remarks="STOP LOSS ORDER"')
+            
+            subject = f"STOP LOSS TRIGGERED for {tradingsymbol} at {price}."
+            email_body = f"STOP LOSS TRIGGERED for {tradingsymbol} at {price}."
+            send_email(subject, email_body)
 
 def format_trade_metrics(metrics):
     total_pnl = metrics.get("Total_PNL", "N/A")
