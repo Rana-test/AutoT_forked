@@ -592,25 +592,17 @@ def main():
         sess_var_df = pd.read_csv(session_var_file)
     else:
         sess_var_df = pd.DataFrame(columns=['session_var', 'value'])
-        var_init = pd.DataFrame({
-                    'session_var': 'counter',
-                    'value': 0,
-                },
-                {
-                    'session_var': 'exit_confirm',
-                    'value': 0,
-                },
-                {
-                    'session_var': 'entry_confirm',
-                    'value': 0,
-                }
-                )
+        var_init = pd.DataFrame([
+            {'session_var': 'counter', 'value': 0},
+            {'session_var': 'exit_confirm', 'value': 0},
+            {'session_var': 'entry_confirm', 'value': 0}
+        ])
         var_init = var_init.astype(sess_var_df.dtypes.to_dict(), errors='ignore')
         sess_var_df = pd.concat([sess_var_df, var_init], ignore_index=True)
 
-    counter = sess_var_df[sess_var_df['session_var']=='counter']['value'].iloc[0]
-    exit_confirm = sess_var_df[sess_var_df['session_var']=='exit_confirm']['value'].iloc[0]
-    entry_confirm = sess_var_df[sess_var_df['session_var']=='entry_confirm']['value'].iloc[0]
+    counter = sess_var_df[sess_var_df['session_var'] == 'counter']['value'].iloc[0]
+    exit_confirm = sess_var_df[sess_var_df['session_var'] == 'exit_confirm']['value'].iloc[0]
+    entry_confirm = sess_var_df[sess_var_df['session_var'] == 'entry_confirm']['value'].iloc[0]
 
     # Start Monitoring
     while is_within_timeframe(session.get('start_time'), session.get('end_time')):
