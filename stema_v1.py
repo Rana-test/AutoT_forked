@@ -770,7 +770,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
         exit_confirm=0
     
     rsi_confirm = False
-    if (latest_trend ==1 and rsi>50) or (latest_trend == -1 and rsi<50):
+    if (latest_trend ==1 and rsi>55) or (latest_trend == -1 and rsi<45):
         rsi_confirm = True
 
     if exit_confirm>1 and rsi_confirm:
