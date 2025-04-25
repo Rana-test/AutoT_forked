@@ -405,19 +405,33 @@ def get_minute_data(api, now=None):
 
     return df
 
-def calculate_rsi(close_prices, period=14):
-    close_prices = close_prices.astype(float)
-    delta = close_prices.diff()
-    gain = delta.where(delta > 0, 0)
-    loss = -delta.where(delta < 0, 0)
+# def calculate_rsi(close_prices, period=14):
+#     close_prices = close_prices.astype(float)
+#     delta = close_prices.diff()
+#     gain = delta.where(delta > 0, 0)
+#     loss = -delta.where(delta < 0, 0)
 
-    avg_gain = gain.rolling(window=period).mean()
-    avg_loss = loss.rolling(window=period).mean()
+#     avg_gain = gain.rolling(window=period).mean()
+#     avg_loss = loss.rolling(window=period).mean()
+
+#     rs = avg_gain / avg_loss
+#     rsi = 100 - (100 / (1 + rs))
+
+#     return rsi
+
+def calculate_rsi_wilder(close_prices, period=14):
+    delta = close_prices.diff()
+    gain = delta.where(delta > 0, 0.0)
+    loss = -delta.where(delta < 0, 0.0)
+
+    # Use exponential weighted mean for Wilder's smoothing
+    avg_gain = gain.ewm(alpha=1/period, min_periods=period).mean()
+    avg_loss = loss.ewm(alpha=1/period, min_periods=period).mean()
 
     rs = avg_gain / avg_loss
     rsi = 100 - (100 / (1 + rs))
-
     return rsi
+
 
 def calculate_supertrend(df_minute):
     """
@@ -542,7 +556,7 @@ def calculate_supertrend(df_minute):
     df_hourly['ema50'] = df_hourly['close'].ewm(span=50, adjust=False).mean()
     # df_hourly['adx'] = ta.trend.adx(high=df_hourly['high'], low=df_hourly['low'], close=df_hourly['close'], window=20)
     # Calculate RSI
-    df_hourly['rsi'] = calculate_rsi(df_hourly['close'], period=14)
+    df_hourly['rsi'] = calculate_rsi_wilder(df_hourly['close'], period=14)
     df_hourly['entry_signal'] = 0
     # df_hourly.loc[(df_hourly['close'] < df_hourly['ema20']) & (df_hourly['trend'] == -1) & (df_hourly['adx'] > 25), 'entry_signal'] = 1
     # df_hourly.loc[(df_hourly['close'] > df_hourly['ema20']) & (df_hourly['trend'] == 1) & (df_hourly['adx'] > 25), 'entry_signal'] = -1
