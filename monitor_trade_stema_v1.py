@@ -602,7 +602,7 @@ def main():
         var_init = var_init.astype(sess_var_df.dtypes.to_dict(), errors='ignore')
         sess_var_df = pd.concat([sess_var_df, var_init], ignore_index=True)
 
-    counter = sess_var_df[sess_var_df['session_var'] == 'counter']['value'].iloc[0]
+    counter = 0
     exit_confirm = sess_var_df[sess_var_df['session_var'] == 'exit_confirm']['value'].iloc[0]
     entry_confirm = sess_var_df[sess_var_df['session_var'] == 'entry_confirm']['value'].iloc[0]
 
