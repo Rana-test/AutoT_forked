@@ -29,7 +29,7 @@ from pprint import pprint
 import requests
 import pandas as pd
 import logging
-from stema_v1 import get_minute_data, run_hourly_trading_strategy
+from stema_v1 import get_minute_data, run_hourly_trading_strategy, update_stema_tb
 from zoneinfo import ZoneInfo
 
 logging.basicConfig(level=logging.INFO)
@@ -393,6 +393,8 @@ def stop_loss_order(pos_df, api, live=False):
             buy_sell = 'S' if netqty>0 else 'B'
             if live:
                 ret = api.place_order(buy_or_sell=buy_sell, product_type=prd_type, exchange=exchange, tradingsymbol=tradingsymbol, quantity=quantity, discloseqty=quantity,price_type=price_type, price=price,trigger_price=trigger_price, retention=retention, remarks="STOP LOSS ORDER")
+                # Check Stema_trade book and update status to CLOSED
+                update_stema_tb(tradingsymbol, pos['type'])
             else:
                 print(f'buy_or_sell=buy_sell, product_type={prd_type}, exchange={exchange}, tradingsymbol={tradingsymbol}, quantity={quantity}, discloseqty={quantity},price_type={price_type}, price={price},trigger_price={trigger_price}, retention={retention}, remarks="STOP LOSS ORDER"')
             
@@ -626,7 +628,7 @@ def main():
                 # send_email_plain(subject, email_body)
                 stema_min_df = get_minute_data(api,now=None)
                 logging.info(f"Got historical data")
-                return_msgs, entry_confirm, exit_confirm = run_hourly_trading_strategy(live, trade_qty, api, upstox_opt_api, upstox_instruments, stema_min_df, entry_confirm, exit_confirm, trade_history_file='trade_history_stema.csv', current_time=None )
+                return_msgs, entry_confirm, exit_confirm = run_hourly_trading_strategy(live, trade_qty, api, upstox_opt_api, upstox_instruments, stema_min_df, entry_confirm, exit_confirm, current_time=None )
                 print(f'Number of email messages: {len(return_msgs)}')
                 for msg in return_msgs:
                     send_email_plain(msg['subject'], msg['body'])

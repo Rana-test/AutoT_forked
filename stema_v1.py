@@ -663,8 +663,22 @@ def calculate_supertrend(df_minute):
 #     df = df.drop(columns=['tr', 'atr', 'hl2', 'basic_upper_band', 'basic_lower_band'])
     
 #     return df
+# Read trade history
+trade_history_file='trade_history_stema.csv'
+logging.info(f"Reading Trade History")
+if os.path.exists(trade_history_file):
+    trade_history = pd.read_csv(trade_history_file, parse_dates=['time', 'exit_timestamp'])
+    # Close any trades whose expiry is past today's date
+    for i, row in trade_history.iterrows():
+        row_expiry = row['expiry']
+        days_to_expiry = (datetime.strptime(row_expiry, "%Y-%m-%d").date() - datetime.now(ZoneInfo("Asia/Kolkata")).date()).days
+        if days_to_expiry < 1:
+            trade_history.at[i, 'status'] = 'CLOSED'
+else:
+    trade_history = pd.DataFrame(columns=['time', 'trading_symbol', 'expiry','order_type', 'order_action', 'order_leg', 'status','exit_timestamp'])
 
-def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, upstox_instruments, df, entry_confirm, exit_confirm, trade_history_file='trade_history_stema.csv', current_time=None):
+def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, upstox_instruments, df, entry_confirm, exit_confirm, current_time=None):
+    global trade_history
     logging.info(f"Started STEMA Strategy")
     return_msgs=[]
     action = 'NO ACTION'
@@ -703,19 +717,6 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     exit_signal = latest_row['exit_signal']
     rsi = latest_row['rsi']
     logging.info(f"Latest Row: {latest_row}")
-    
-    # Read trade history
-    logging.info(f"Reading Trade History")
-    if os.path.exists(trade_history_file):
-        trade_history = pd.read_csv(trade_history_file, parse_dates=['time', 'exit_timestamp'])
-        # Close any trades whose expiry is past today's date
-        for i, row in trade_history.iterrows():
-            row_expiry = row['expiry']
-            days_to_expiry = (datetime.strptime(row_expiry, "%Y-%m-%d").date() - datetime.now(ZoneInfo("Asia/Kolkata")).date()).days
-            if days_to_expiry < 1:
-                trade_history.at[i, 'status'] = 'CLOSED'
-    else:
-        trade_history = pd.DataFrame(columns=['time', 'trading_symbol', 'expiry','order_type', 'order_action', 'order_leg', 'status','exit_timestamp'])
     
     # Check for open orders
     open_orders = trade_history[trade_history['status'] == 'ACTIVE']
@@ -927,3 +928,8 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     # print(f"Combined Signal: {latest_combined_signal}")
     # print(f"Action: {'Placed ' + order_type if not has_open_order and latest_combined_signal != 0 else 'No action' if not trend_changed else 'Closed open orders'}")
 
+def update_stema_tb(tradingsymbol, ord_type):
+    global trade_history
+    otype = "PUT" if ord_type=="PE" else "CALL"
+    trade_history.loc[(trade_history['trading_symbol'] == tradingsymbol) & (trade_history['order_type'] == otype), 'status'] = 'CLOSED'
+    trade_history.loc[(trade_history['trading_symbol'] == tradingsymbol) & (trade_history['order_type'] == otype), 'exit_timestamp'] = datetime.now(ZoneInfo("Asia/Kolkata"))
