@@ -189,6 +189,7 @@ def init_creds():
 
 def is_within_timeframe(start, end):
     now = datetime.now(ZoneInfo("Asia/Kolkata"))
+    logging.info(now)
     start_time = now.replace(hour=int(start.split(':')[0]), minute=int(start.split(':')[1]), second=0, microsecond=0)
     end_time = now.replace(hour=int(end.split(':')[0]), minute=int(end.split(':')[1]), second=0, microsecond=0)
     return start_time <= now <= end_time
@@ -203,7 +204,7 @@ def identify_session():
     # 12:30 == 7:00
     # 15:30 == 10:00
 
-    if is_within_timeframe("09:15", "12:25"):
+    if is_within_timeframe("08:30", "12:25"):
         return {"session": "session1", "start_time": "09:15", "end_time": "12:25"}
     elif is_within_timeframe("12:30", "15:30"):
         return {"session": "session2","start_time": "12:30", "end_time": "15:30"}
