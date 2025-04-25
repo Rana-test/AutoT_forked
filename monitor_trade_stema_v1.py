@@ -35,7 +35,7 @@ from zoneinfo import ZoneInfo
 logging.basicConfig(level=logging.INFO)
 
 live=True
-trade_qty=75
+trade_qty=750
 upstox_instruments = pd.read_csv("https://assets.upstox.com/market-quote/instruments/exchange/complete.csv.gz")
 sender_email =''
 receiver_email=''
