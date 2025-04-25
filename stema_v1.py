@@ -800,7 +800,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     else:
         entry_confirm=0
 
-    if abs(entry_confirm)>3 and rsi_confirm:
+    if abs(entry_confirm)>2 and rsi_confirm:
         entry_confirm = 0    
         orders={}
         action = 'MAKE ENTRY'
@@ -895,7 +895,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     # Save trade history
     logging.info(f"Saving trade history")
     trade_history.to_csv(trade_history_file, index=False)
-    if not has_open_order and entry_signal != 0 and abs(entry_confirm) > 3 and rsi_confirm:
+    if not has_open_order and entry_signal != 0 and abs(entry_confirm) > 2 and rsi_confirm:
         action = 'Entry made'
     elif has_open_order and exit_signal != 0 and exit_confirm > 0 and rsi_confirm:
         action = 'Closed open orders'
