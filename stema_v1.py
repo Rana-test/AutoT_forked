@@ -552,7 +552,7 @@ def calculate_supertrend(df_minute):
     # df_hourly['sellSignal'] = (df_hourly['trend'] == -1) & (df_hourly['trend'].shift(1) == 1)
 
     # Calculate 20 and 50 EMA
-    df_hourly['ema20'] = df_hourly['close'].ewm(span=20, adjust=False).mean()
+    # df_hourly['ema20'] = df_hourly['close'].ewm(span=20, adjust=False).mean()
     df_hourly['ema34'] = df_hourly['close'].ewm(span=34, adjust=False).mean()
     # df_hourly['adx'] = ta.trend.adx(high=df_hourly['high'], low=df_hourly['low'], close=df_hourly['close'], window=20)
     # Calculate RSI
@@ -560,8 +560,8 @@ def calculate_supertrend(df_minute):
     df_hourly['entry_signal'] = 0
     # df_hourly.loc[(df_hourly['close'] < df_hourly['ema20']) & (df_hourly['trend'] == -1) & (df_hourly['adx'] > 25), 'entry_signal'] = 1
     # df_hourly.loc[(df_hourly['close'] > df_hourly['ema20']) & (df_hourly['trend'] == 1) & (df_hourly['adx'] > 25), 'entry_signal'] = -1
-    df_hourly.loc[(df_hourly['close'] < df_hourly['ema20']) & (df_hourly['close'] < df_hourly['ema34']) & (df_hourly['trend'] == -1) & (df_hourly['rsi'] <50), 'entry_signal'] = 1
-    df_hourly.loc[(df_hourly['close'] > df_hourly['ema20']) & (df_hourly['close'] > df_hourly['ema34']) & (df_hourly['trend'] == 1)& (df_hourly['rsi'] > 50) , 'entry_signal'] = -1
+    df_hourly.loc[(df_hourly['close'] < df_hourly['ema34']) & (df_hourly['trend'] == -1) & (df_hourly['rsi'] <50), 'entry_signal'] = 1
+    df_hourly.loc[(df_hourly['close'] > df_hourly['ema34']) & (df_hourly['trend'] == 1)& (df_hourly['rsi'] > 50) , 'entry_signal'] = -1
     # Initialize the exit_signal column to 0
     df_hourly['exit_signal'] = 0
     # Set exit_signal to 1 when the trend changes (current trend != previous trend)
@@ -906,7 +906,6 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     email_body = f"""
     Current Time: {latest_timestamp}
     Current Close: {latest_close}
-    20 EMA: {latest_row['ema20']}
     34 EMA: {latest_row['ema34']}
     Trend: {latest_trend}
     RSI: {rsi}
