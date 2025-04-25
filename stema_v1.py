@@ -811,9 +811,9 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
             expiry=holiday_dict.get(expiry)
         logging.info(f"Calculated Expiry: {expiry}")
         try:
-            main_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,trade_qty,upstox_instruments, 0.4)
+            main_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,trade_qty,upstox_instruments, 0.35)
             logging.info(f"Main Leg: {main_leg}")
-            hedge_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,trade_qty,upstox_instruments, 0.25)
+            hedge_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,trade_qty,upstox_instruments, 0.20)
             logging.info(f"Hedge Leg: {hedge_leg}")
         except Exception as e:
             return_msgs.append({'subject': 'Error in get_positions', 'body': str(e)})
