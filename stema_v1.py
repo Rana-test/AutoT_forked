@@ -159,7 +159,7 @@ def get_positions(upstox_opt_api, finvasia_api, instrument, expiry,trade_qty,ups
     instruments.append({"instrument_key": upstox_pe_instrument_key, "quantity": trade_qty, "transaction_type": "SELL", "product": "D", "price": upstox_pe_ltp})
     current_index_price = round(float(finvasia_api.get_quotes(exchange="NSE", token=str(26000))['lp']),2)
     atm_iv =0
-    strike_interval = 50
+    strike_interval = 100
     remainder = math.fmod(current_index_price, strike_interval)
     if remainder > strike_interval / 2:
         atm_strike = math.ceil(current_index_price / strike_interval) * strike_interval
@@ -553,15 +553,15 @@ def calculate_supertrend(df_minute):
 
     # Calculate 20 and 50 EMA
     df_hourly['ema20'] = df_hourly['close'].ewm(span=20, adjust=False).mean()
-    df_hourly['ema50'] = df_hourly['close'].ewm(span=50, adjust=False).mean()
+    df_hourly['ema34'] = df_hourly['close'].ewm(span=34, adjust=False).mean()
     # df_hourly['adx'] = ta.trend.adx(high=df_hourly['high'], low=df_hourly['low'], close=df_hourly['close'], window=20)
     # Calculate RSI
     df_hourly['rsi'] = calculate_rsi_wilder(df_hourly['close'], period=14)
     df_hourly['entry_signal'] = 0
     # df_hourly.loc[(df_hourly['close'] < df_hourly['ema20']) & (df_hourly['trend'] == -1) & (df_hourly['adx'] > 25), 'entry_signal'] = 1
     # df_hourly.loc[(df_hourly['close'] > df_hourly['ema20']) & (df_hourly['trend'] == 1) & (df_hourly['adx'] > 25), 'entry_signal'] = -1
-    df_hourly.loc[(df_hourly['close'] < df_hourly['ema20']) & (df_hourly['close'] < df_hourly['ema50']) & (df_hourly['trend'] == -1) & (df_hourly['rsi'] <50), 'entry_signal'] = 1
-    df_hourly.loc[(df_hourly['close'] > df_hourly['ema20']) & (df_hourly['close'] > df_hourly['ema50']) & (df_hourly['trend'] == 1)& (df_hourly['rsi'] > 50) , 'entry_signal'] = -1
+    df_hourly.loc[(df_hourly['close'] < df_hourly['ema20']) & (df_hourly['close'] < df_hourly['ema34']) & (df_hourly['trend'] == -1) & (df_hourly['rsi'] <50), 'entry_signal'] = 1
+    df_hourly.loc[(df_hourly['close'] > df_hourly['ema20']) & (df_hourly['close'] > df_hourly['ema34']) & (df_hourly['trend'] == 1)& (df_hourly['rsi'] > 50) , 'entry_signal'] = -1
     # Initialize the exit_signal column to 0
     df_hourly['exit_signal'] = 0
     # Set exit_signal to 1 when the trend changes (current trend != previous trend)
@@ -907,7 +907,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     Current Time: {latest_timestamp}
     Current Close: {latest_close}
     20 EMA: {latest_row['ema20']}
-    50 EMA: {latest_row['ema50']}
+    50 EMA: {latest_row['ema34']}
     Trend: {latest_trend}
     RSI: {rsi}
     Entry Signal: {entry_signal}
