@@ -933,3 +933,6 @@ def update_stema_tb(tradingsymbol, ord_type):
     otype = "PUT" if ord_type=="PE" else "CALL"
     trade_history.loc[(trade_history['trading_symbol'] == tradingsymbol) & (trade_history['order_type'] == otype), 'status'] = 'CLOSED'
     trade_history.loc[(trade_history['trading_symbol'] == tradingsymbol) & (trade_history['order_type'] == otype), 'exit_timestamp'] = datetime.now(ZoneInfo("Asia/Kolkata"))
+    # Save trade history
+    logging.info(f"Saving trade history")
+    trade_history.to_csv(trade_history_file, index=False)
