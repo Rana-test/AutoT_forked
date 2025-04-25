@@ -906,7 +906,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     email_body = f"""
     Current Time: {latest_timestamp}
     Current Close: {latest_close}
-    20 EMA: {latest_row['ema320']}
+    20 EMA: {latest_row['ema20']}
     34 EMA: {latest_row['ema34']}
     Trend: {latest_trend}
     RSI: {rsi}
