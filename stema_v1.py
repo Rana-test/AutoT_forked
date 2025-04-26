@@ -765,7 +765,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     if (latest_trend ==1 and rsi>55) or (latest_trend == -1 and rsi<45):
         rsi_confirm = True
 
-    if exit_confirm>1 and rsi_confirm:
+    if exit_confirm>2:# and rsi_confirm:
         exit_confirm = 0
         action = "EXIT POSITIONS"
         logging.info(f"Checking open order when trend changed")
@@ -895,9 +895,9 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     # Save trade history
     logging.info(f"Saving trade history")
     trade_history.to_csv(trade_history_file, index=False)
-    if not has_open_order and entry_signal != 0 and abs(entry_confirm) > 2 and rsi_confirm:
+    if abs(entry_confirm) > 2 and rsi_confirm:
         action = 'Entry made'
-    elif has_open_order and exit_signal != 0 and exit_confirm > 0 and rsi_confirm:
+    elif exit_confirm > 2: # and rsi_confirm:
         action = 'Closed open orders'
     else:
         action = 'No action'
