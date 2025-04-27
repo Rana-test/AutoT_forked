@@ -551,7 +551,7 @@ def monitor_trade(api, upstox_opt_api, sender_email, receiver_email, email_passw
         stop_loss_condition = (current_index_price < lower_breakeven or current_index_price > upper_breakeven) and current_pnl < max_loss
         
         if stop_loss_condition:
-            stop_loss_order(group, api, live=False)
+            stop_loss_order(group, api, live=live)
             expiry_metrics[expiry] = {
             "PNL": round(current_pnl, 2),
             "CE_Strike": round(ce_strike, 2),
