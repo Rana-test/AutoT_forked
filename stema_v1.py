@@ -829,6 +829,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
         # Get today's date (without time)
         today = pd.Timestamp(datetime.now(ZoneInfo("Asia/Kolkata")).date())
         # Filter rows where the date part of 'exit_timestamp' matches today
+        trade_history['exit_timestamp'] = pd.to_datetime(trade_history['exit_timestamp'])
         df_today = trade_history[trade_history['exit_timestamp'].dt.date == today.date()]
         day_order_filter = list(df_today['order_type'].unique())
 
