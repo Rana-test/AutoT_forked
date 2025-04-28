@@ -205,7 +205,7 @@ def identify_session():
     # 15:30 == 10:00
 
     if is_within_timeframe("08:30", "12:25"):
-        return {"session": "session1", "start_time": "09:15", "end_time": "12:25"}
+        return {"session": "session1", "start_time": "08:30", "end_time": "12:25"}
     elif is_within_timeframe("12:30", "15:30"):
         return {"session": "session2","start_time": "12:30", "end_time": "15:30"}
     return None
