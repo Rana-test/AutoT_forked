@@ -606,7 +606,7 @@ def monitor_trade(api, upstox_opt_api, sender_email, receiver_email, email_passw
     metrics["Expiry_Details"] = expiry_metrics
     metrics["Total_PNL"] = round(total_pnl,2)
       
-    return metrics, float(trade_hist_df['rnpl'].sum())
+    return metrics, float(trade_hist_df['rpnl'].sum())
 
 def main():
     global session_var_file, sess_var_df
