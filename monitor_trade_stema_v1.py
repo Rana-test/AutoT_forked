@@ -207,8 +207,8 @@ def identify_session():
 
     if is_within_timeframe("08:30", "12:25"):
         return {"session": "session1", "start_time": "08:30", "end_time": "12:25"}
-    elif is_within_timeframe("12:30", "15:30"):
-        return {"session": "session2","start_time": "12:30", "end_time": "15:30"}
+    elif is_within_timeframe("12:30", "23:55"):
+        return {"session": "session2","start_time": "12:30", "end_time": "23:55"}
     return None
 
 def send_email(subject, body):
@@ -609,6 +609,7 @@ def monitor_trade(api, upstox_opt_api, sender_email, receiver_email, email_passw
     return metrics, float(trade_hist_df['rnpl'].sum())
 
 def main():
+    global session_var_file, sess_var_df
     logging.info("Inside Main")
     session = identify_session()
     logging.info(f"Identified Session: {session}")
