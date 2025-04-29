@@ -112,8 +112,9 @@ def login_upstox(UPSTOX_API_KEY, UPSTOX_URL, UPSTOX_API_SECRET, UPSTOX_MOB_NO, U
     configuration.access_token = access_token
 
     upstox_opt_api = upstox_client.OptionsApi(upstox_client.ApiClient(configuration))
+    upstox_charge_api = upstox_client.ChargeApi(upstox_client.ApiClient(configuration))
 
-    return upstox_client, upstox_opt_api
+    return upstox_client, upstox_opt_api, upstox_charge_api
 
 def get_india_vix(api):
     return round(float(api.get_quotes(exchange="NSE", token=str(26017))['lp']),2)
@@ -373,6 +374,19 @@ def get_atm_iv(upstox_opt_api, expiry_date, current_index_price):
         if sp.strike_price == atm_strike:
             return((float(sp.call_options.option_greeks.iv)+float(sp.put_options.option_greeks.iv))/2)
     return None   
+global session_var_file, sess_var_df
+session_var_file = "session_var.csv"
+if os.path.exists(session_var_file):
+    sess_var_df = pd.read_csv(session_var_file)
+else:
+    sess_var_df = pd.DataFrame(columns=['session_var', 'value'])
+    var_init = pd.DataFrame([
+        {'session_var': 'counter', 'value': 0},
+        {'session_var': 'exit_confirm', 'value': 0},
+        {'session_var': 'entry_confirm', 'value': 0},
+    ])
+    var_init = var_init.astype(sess_var_df.dtypes.to_dict(), errors='ignore')
+    sess_var_df = pd.concat([sess_var_df, var_init], ignore_index=True)
 
 def stop_loss_order(pos_df, api, live=False):
     for i,pos in pos_df.iterrows():
@@ -398,8 +412,8 @@ def stop_loss_order(pos_df, api, live=False):
             else:
                 print(f'buy_or_sell=buy_sell, product_type={prd_type}, exchange={exchange}, tradingsymbol={tradingsymbol}, quantity={quantity}, discloseqty={quantity},price_type={price_type}, price={price},trigger_price={trigger_price}, retention={retention}, remarks="STOP LOSS ORDER"')
             
-            subject = f"STOP LOSS TRIGGERED for {tradingsymbol} at {price}."
-            email_body = f"STOP LOSS TRIGGERED for {tradingsymbol} at {price}."
+            subject = f"STOP LOSS or PROFIT EXIT TRIGGERED for {tradingsymbol}"
+            email_body = f"STOP LOSS or PROFIT EXIT TRIGGERED for {tradingsymbol}"
             send_email(subject, email_body)
 
 def format_trade_metrics(metrics):
@@ -449,6 +463,8 @@ def format_trade_metrics(metrics):
     return email_body
 
 def monitor_trade(api, upstox_opt_api, sender_email, receiver_email, email_password):
+    global session_var_df
+    global session_var_file
     pos_df = get_positions(api)
     # vix = get_india_vix(api)
     if pos_df is None:
@@ -548,9 +564,9 @@ def monitor_trade(api, upstox_opt_api, sender_email, receiver_email, email_passw
         }
         total_pnl+=current_pnl
 
-        stop_loss_condition = (current_index_price < lower_breakeven or current_index_price > upper_breakeven) and current_pnl < max_loss
+        stop_loss_condition = ((current_index_price < lower_breakeven or current_index_price > upper_breakeven) and current_pnl < max_loss) or (current_pnl > 0.985 * max_profit)
         
-        if stop_loss_condition:
+        if stop_loss_condition and not (current_pnl > 0.985 * max_profit):
             stop_loss_order(group, api, live=live)
             expiry_metrics[expiry] = {
             "PNL": round(current_pnl, 2),
@@ -568,11 +584,29 @@ def monitor_trade(api, upstox_opt_api, sender_email, receiver_email, email_passw
             "Max_Loss": round(max_loss, 2),
             "Realized_Premium": round(act_realized_premium, 2),
         }
+        elif stop_loss_condition and (current_pnl > 0.985 * max_profit):
+            stop_loss_order(group, api, live=live)
+            expiry_metrics[expiry] = {
+            "PNL": round(current_pnl, 2),
+            "CE_Strike": round(ce_strike, 2),
+            "PE_Strike": round(pe_strike, 2),
+            "Current_Index_Price": current_index_price,
+            "ATM_IV": round(atm_iv, 2),
+            "Expected_Movement": round(expected_move, 2),
+            "Lower_Breakeven": "PROFIT_BOOKING",
+            "Upper_Breakeven": "PROFIT_BOOKING",
+            "Breakeven_Range": "PROFIT_BOOKING",
+            "Breakeven_Range_Per": "PROFIT_BOOKING",
+            "Near_Breakeven": round(near_breakeven, 2),
+            "Max_Profit": round(max_profit, 2),
+            "Max_Loss": round(max_loss, 2),
+            "Realized_Premium": round(act_realized_premium, 2),
+        }
 
     metrics["Expiry_Details"] = expiry_metrics
     metrics["Total_PNL"] = round(total_pnl,2)
       
-    return metrics
+    return metrics, float(trade_hist_df['rnpl'].sum())
 
 def main():
     logging.info("Inside Main")
@@ -585,24 +619,11 @@ def main():
     # Login
     userid, password, vendor_code, api_secret, imei, TOKEN, sender_email, receiver_email, email_password, UPSTOX_API_KEY, UPSTOX_URL, UPSTOX_API_SECRET, UPSTOX_MOB_NO, UPSTOX_CLIENT_PASS, UPSTOX_CLIENT_PIN = init_creds()
     api = login(userid, password, vendor_code, api_secret, imei, TOKEN)
-    upstox_client, upstox_opt_api = login_upstox(UPSTOX_API_KEY, UPSTOX_URL, UPSTOX_API_SECRET, UPSTOX_MOB_NO, UPSTOX_CLIENT_PASS, UPSTOX_CLIENT_PIN)
+    upstox_client, upstox_opt_api, upstox_charge_api = login_upstox(UPSTOX_API_KEY, UPSTOX_URL, UPSTOX_API_SECRET, UPSTOX_MOB_NO, UPSTOX_CLIENT_PASS, UPSTOX_CLIENT_PIN)
     logging.info(f"Logged into APIs")
     while is_within_timeframe("03:00", "03:45"):
         print("Initializing")
         sleep_time.sleep(60)
-
-    session_var_file = "session_var.csv"
-    if os.path.exists(session_var_file):
-        sess_var_df = pd.read_csv(session_var_file)
-    else:
-        sess_var_df = pd.DataFrame(columns=['session_var', 'value'])
-        var_init = pd.DataFrame([
-            {'session_var': 'counter', 'value': 0},
-            {'session_var': 'exit_confirm', 'value': 0},
-            {'session_var': 'entry_confirm', 'value': 0}
-        ])
-        var_init = var_init.astype(sess_var_df.dtypes.to_dict(), errors='ignore')
-        sess_var_df = pd.concat([sess_var_df, var_init], ignore_index=True)
 
     counter = 0
     exit_confirm = sess_var_df[sess_var_df['session_var'] == 'exit_confirm']['value'].iloc[0]
@@ -611,7 +632,7 @@ def main():
     # Start Monitoring
     while is_within_timeframe(session.get('start_time'), session.get('end_time')):
         logging.info(f"Monitoring Trade")
-        metrics = monitor_trade(api, upstox_opt_api, sender_email, receiver_email, email_password)
+        metrics, total_profit = monitor_trade(api, upstox_opt_api, sender_email, receiver_email, email_password)
         
         if metrics =="STOP_LOSS":
             send_email("STOP LOSS HIT - QUIT", "STOP LOSS HIT")
@@ -628,7 +649,8 @@ def main():
                 # send_email_plain(subject, email_body)
                 stema_min_df = get_minute_data(api,now=None)
                 logging.info(f"Got historical data")
-                return_msgs, entry_confirm, exit_confirm = run_hourly_trading_strategy(live, trade_qty, api, upstox_opt_api, upstox_instruments, stema_min_df, entry_confirm, exit_confirm, current_time=None )
+                pos_delta=60000
+                return_msgs, entry_confirm, exit_confirm = run_hourly_trading_strategy(live, trade_qty, api, upstox_opt_api, upstox_charge_api, upstox_instruments, stema_min_df, entry_confirm, exit_confirm, total_profit, pos_delta, current_time=None )
                 print(f'Number of email messages: {len(return_msgs)}')
                 for msg in return_msgs:
                     send_email_plain(msg['subject'], msg['body'])

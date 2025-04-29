@@ -144,6 +144,8 @@ def get_positions(upstox_opt_api, finvasia_api, instrument, expiry,trade_qty,ups
     trade_details={}
     option_chain = get_option_chain(upstox_opt_api, instrument, expiry)
     upstox_ce_instrument_key, upstox_pe_instrument_key, upstox_ce_ltp, upstox_pe_ltp,  po, co, call_oi, put_oi, call_delta, put_delta, call_bid_ask, put_bid_ask = get_nearest_delta_options(option_chain,upstox_instruments,delta)
+    trade_details['upstox_ce_instrument_key']=upstox_ce_instrument_key
+    trade_details['upstox_pe_instrument_key']=upstox_pe_instrument_key
     trade_details['call_oi']=call_oi
     trade_details['put_oi']=put_oi
     trade_details['call_delta']=call_delta*100
@@ -210,71 +212,6 @@ def get_positions(upstox_opt_api, finvasia_api, instrument, expiry,trade_qty,ups
 
 ################# Logic functions #################
 
-# def get_data(api, now):
-#     """
-#     Fetch 30 days of hourly candle data for Nifty 50 from Finvasia API and save to test.csv.
-    
-#     Parameters:
-#     api: Finvasia API client instance
-#     now (datetime): Current timestamp
-    
-#     Returns:
-#     pd.DataFrame: DataFrame with columns ['time', 'open', 'high', 'low', 'close']
-#     """
-#     nifty_token = '26000'  # NSE|26000 is the Nifty 50 index
-    
-#     # Round current time (assuming round_to_previous_15_45 is defined elsewhere)
-#     if now is None:
-#         now = datetime.now()
-        
-#     rounded_now = now  # Note: Original code suggests rounding function, adjust if needed
-
-#     # Time 30 days ago
-#     rounded_thirty_days_ago = rounded_now - timedelta(days=21)
-
-#     # Desired format
-#     fmt = "%d-%m-%Y %H:%M:%S"
-
-#     # Convert times to seconds (assuming get_time is defined elsewhere)
-#     start_secs = get_time(rounded_thirty_days_ago.strftime(fmt))  # dd-mm-YYYY HH:MM:SS
-#     end_secs = get_time(rounded_now.strftime(fmt))
-
-#     # Fetch data from Finvasia API
-#     bars = api.get_time_price_series(
-#         exchange='NSE',
-#         token=nifty_token,
-#         starttime=int(start_secs),
-#         endtime=int(end_secs),
-#         interval=60  # 60-minute candles
-#     )
-
-#     # Create DataFrame
-#     df = pd.DataFrame.from_dict(bars)
-#     df.rename(columns={
-#         'into': 'open',
-#         'inth': 'high',
-#         'intl': 'low',
-#         'intc': 'close'
-#     }, inplace=True)
-    
-#     # Convert time to datetime and format
-#     df['time'] = pd.to_datetime(df['time'], dayfirst=True)
-#     df['time'] = df['time'].dt.strftime('%d-%m-%Y %H:%M:%S')
-    
-#     # Select and convert columns to float
-#     df = df[['time', 'open', 'high', 'low', 'close']]
-#     df[['open', 'high', 'low', 'close']] = df[['open', 'high', 'low', 'close']].astype(float)
-    
-#     # Sort by time in ascending order
-#     df['time_dt'] = pd.to_datetime(df['time'], format='%d-%m-%Y %H:%M:%S')
-#     df = df.sort_values('time_dt').reset_index(drop=True)
-#     df = df.drop(columns=['time_dt'])
-    
-#     # Save to test.csv
-#     df.to_csv('test.csv', index=False)
-    
-#     return df
-
 def place_order(api, live, trading_symbol, buy_sell, qty, order_type):
     logging.info(f"Within place order")
     quantity = qty
@@ -330,7 +267,7 @@ def place_order(api, live, trading_symbol, buy_sell, qty, order_type):
         logging.info(f"Dummy order placed: {email_body}")
         return True, {'subject': subject, 'body': email_body}
 
-from datetime import time
+
 def get_minute_data(api, now=None):
     nifty_token = '26000'  # NSE|26000 is the Nifty 50 index
     
@@ -405,20 +342,6 @@ def get_minute_data(api, now=None):
 
     return df
 
-# def calculate_rsi(close_prices, period=14):
-#     close_prices = close_prices.astype(float)
-#     delta = close_prices.diff()
-#     gain = delta.where(delta > 0, 0)
-#     loss = -delta.where(delta < 0, 0)
-
-#     avg_gain = gain.rolling(window=period).mean()
-#     avg_loss = loss.rolling(window=period).mean()
-
-#     rs = avg_gain / avg_loss
-#     rsi = 100 - (100 / (1 + rs))
-
-#     return rsi
-
 def calculate_rsi_wilder(close_prices, period=14):
     delta = close_prices.diff()
     gain = delta.where(delta > 0, 0.0)
@@ -440,13 +363,7 @@ def calculate_supertrend(df_minute):
     Returns:
         pd.DataFrame: Hourly candles with Supertrend values and signals
     """
-    # # Define time range: last 10 days for sufficient ATR history
-    # end_date = pd.Timestamp.now(tz='Asia/Kolkata')
-    # start_date = end_date - timedelta(days=10)
-    
-    # # Fetch minute-level data (placeholder)
-    # df_minute = get_minute_data('NIFTY 50', start_date, end_date)
-    
+   
     # Convert timestamp to datetime and set as index
     df = df_minute.copy()
     df['time'] = pd.to_datetime(df_minute['time'])
@@ -569,100 +486,6 @@ def calculate_supertrend(df_minute):
     
     return df_hourly
 
-
-# def calculate_supertrend_and_ema(df, atr_period=10, multiplier=3.5, ema_period=130):
-#     """
-#     Calculate Supertrend indicator, 20-day EMA, and combined signals for a given OHLC dataframe.
-    
-#     Parameters:
-#     - df (pd.DataFrame): DataFrame with columns 'time', 'open', 'high', 'low', 'close'
-#     - atr_period (int): Period for ATR calculation, default is 10
-#     - multiplier (float): Multiplication factor for bands, default is 3.5
-#     - ema_period (int): Period for EMA calculation, default is 130 (approx. 20 trading days)
-    
-#     Returns:
-#     - pd.DataFrame: DataFrame with added 'supertrend', 'trend', 'signal', 'ema', and 'combined_signal' columns
-#     """
-#     # Ensure dataframe is sorted by timestamp
-#     df = df.sort_values('time').reset_index(drop=True)
-    
-#     # Calculate True Range (TR)
-#     df['tr'] = np.maximum(df['high'] - df['low'],
-#                           np.maximum(abs(df['high'] - df['close'].shift(1)),
-#                                      abs(df['low'] - df['close'].shift(1))))
-#     df.loc[0, 'tr'] = df.loc[0, 'high'] - df.loc[0, 'low']  # First row TR
-    
-#     # Calculate ATR using EMA (matches TradingView's RMA)
-#     alpha = 1 / atr_period
-#     df['atr'] = df['tr'].ewm(alpha=alpha, adjust=False).mean()
-    
-#     # Calculate (High + Low)/2
-#     df['hl2'] = (df['high'] + df['low']) / 2
-    
-#     # Calculate basic upper and lower bands
-#     df['basic_upper_band'] = df['hl2'] + multiplier * df['atr']
-#     df['basic_lower_band'] = df['hl2'] - multiplier * df['atr']
-    
-#     # Calculate 20-day EMA (130 periods for hourly data)
-#     df['ema'] = df['close'].ewm(span=ema_period, adjust=False).mean()
-    
-#     # Initialize arrays
-#     supertrend = np.zeros(len(df))
-#     trend = np.zeros(len(df))
-#     final_upper_band = np.zeros(len(df))
-#     final_lower_band = np.zeros(len(df))
-    
-#     # Set initial values
-#     final_upper_band[0] = df['basic_upper_band'].iloc[0]
-#     final_lower_band[0] = df['basic_lower_band'].iloc[0]
-#     trend[0] = 1 if df['close'].iloc[0] <= df['basic_upper_band'].iloc[0] else -1
-#     supertrend[0] = final_lower_band[0] if trend[0] == 1 else final_upper_band[0]
-    
-#     # Iterate through remaining rows
-#     for i in range(1, len(df)):
-#         # Adjust final bands based on previous trend and close
-#         if trend[i-1] == 1:
-#             final_lower_band[i] = max(df['basic_lower_band'].iloc[i], final_lower_band[i-1]) if df['close'].iloc[i-1] > final_lower_band[i-1] else df['basic_lower_band'].iloc[i]
-#             final_upper_band[i] = df['basic_upper_band'].iloc[i]
-#         else:
-#             final_upper_band[i] = min(df['basic_upper_band'].iloc[i], final_upper_band[i-1]) if df['close'].iloc[i-1] < final_upper_band[i-1] else df['basic_upper_band'].iloc[i]
-#             final_lower_band[i] = df['basic_lower_band'].iloc[i]
-        
-#         # Determine trend direction based on close vs. previous Supertrend
-#         if trend[i-1] == 1 and df['close'].iloc[i] < supertrend[i-1]:
-#             trend[i] = -1
-#         elif trend[i-1] == -1 and df['close'].iloc[i] > supertrend[i-1]:
-#             trend[i] = 1
-#         else:
-#             trend[i] = trend[i-1]
-        
-#         # Set Supertrend value
-#         supertrend[i] = final_lower_band[i] if trend[i] == 1 else final_upper_band[i]
-    
-#     # Add Supertrend and trend to DataFrame
-#     df['supertrend'] = supertrend.round(0).astype(int)
-#     df['trend'] = trend.astype(int)
-    
-#     # Generate trend flip signals
-#     trend_array = df['trend'].to_numpy()
-#     signals = np.zeros(len(df), dtype=int)
-#     signals[1:] = np.where(trend_array[1:] > trend_array[:-1], 1,
-#                            np.where(trend_array[1:] < trend_array[:-1], -1, 0))
-#     df['signal'] = signals
-    
-#     # Generate combined signals based on Close, EMA, and Supertrend
-#     combined_signals = np.zeros(len(df), dtype=int)
-#     close = df['close'].to_numpy()
-#     ema = df['ema'].to_numpy()
-#     supertrend = df['supertrend'].to_numpy()
-#     combined_signals = np.where((close > ema) & (close > supertrend), 1,
-#                                np.where((close < ema) & (close < supertrend), -1, 0))
-#     df['combined_signal'] = combined_signals
-#     df.to_csv('temp_data.csv', index=False)
-#     # Clean up intermediate columns
-#     df = df.drop(columns=['tr', 'atr', 'hl2', 'basic_upper_band', 'basic_lower_band'])
-    
-#     return df
 # Read trade history
 trade_history_file='trade_history_stema.csv'
 logging.info(f"Reading Trade History")
@@ -677,8 +500,66 @@ if os.path.exists(trade_history_file):
 else:
     trade_history = pd.DataFrame(columns=['time', 'trading_symbol', 'expiry','order_type', 'order_action', 'order_leg', 'status','exit_timestamp'])
 
-def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, upstox_instruments, df, entry_confirm, exit_confirm, current_time=None):
+import math
+
+def fixed_ratio_position_size(base_size, delta, total_profit):
+    """
+    Calculates position size allowing growth and reduction below initial size.
+
+    Parameters:
+    - base_size (int): Neutral starting size (e.g., 10 lots)
+    - delta (float): Profit required to add/subtract a unit
+    - total_profit (float): Cumulative profit or loss
+
+    Returns:
+    - int: Adjusted position size
+    """
+    if total_profit >= 0:
+        adjustment = math.floor(math.sqrt(total_profit / delta))
+    else:
+        adjustment = -math.floor(math.sqrt(abs(total_profit) / delta))
+    
+    position_size = base_size + adjustment
+    position_size = max(1, position_size)
+    return position_size # Ensure at least 1 lot is used
+
+
+def get_revised_qty_margin(orders, upstox_charge_api, min_coll):
+    main_leg = orders['Main'] #={'trading_symbol':main_leg['fin_pe_symbol'], , 'trading_up_symbol':main_leg['upstox_pe_instrument_key'], 'order_action':'S', 'order_qty':str(trade_qty), 'order_type':'PUT'}
+    hedge_leg = orders['Hedge'] #={'trading_symbol':hedge_leg['fin_pe_symbol'], , 'trading_up_symbol':main_leg['upstox_pe_instrument_key'], 'order_action':'B', 'order_qty':str(trade_qty), 'order_type':'PUT'}
+    instruments = [
+    {
+        "instrument_key": main_leg['trading_up_symbol'],  # Replace with actual instrument key
+        "quantity": main_leg['order_qty'],  # Quantity in lots
+        "transaction_type": "SELL" if main_leg['order_action']=="S" else "BUY",
+        "product": "D",  # 'D' for Delivery, 'I' for Intraday
+        "price": 0  # Market price; set to 0 for market orders
+    },
+    {
+        "instrument_key": hedge_leg['trading_up_symbol'],  # Replace with actual instrument key
+        "quantity": hedge_leg['order_qty'],  # Quantity in lots
+        "transaction_type": "SELL" if hedge_leg['order_action']=="S" else "BUY",
+        "product": "D",  # 'D' for Delivery, 'I' for Intraday
+        "price": 0  # Market price; set to 0 for market orders
+    },
+    ]
+    margin_request = {"instruments": instruments}
+    api_response = upstox_charge_api.post_margin(margin_request)
+    final_margin = float(api_response.data.final_margin)
+    if min_coll>final_margin*1.15:
+        return orders
+    else:
+        margin_per_lot = 1.15*75*final_margin/float(main_leg['order_qty'])
+        lots = min_coll//margin_per_lot
+        orders['Main']['order_qty']=lots*75
+        orders['Hedge']['order_qty']=lots*75
+        return orders
+
+
+def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, upstox_charge_api, upstox_instruments, df, entry_confirm, exit_confirm, total_profit, pos_delta, current_time=None):
     global trade_history
+    entry_trade_qty= fixed_ratio_position_size(10, pos_delta, total_profit) * 75
+
     logging.info(f"Started STEMA Strategy")
     return_msgs=[]
     action = 'NO ACTION'
@@ -689,21 +570,6 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     
     logging.info(f"Current time: {current_time}")
         
-    # # Ensure timestamp is in datetime format
-    # if not pd.api.types.is_datetime64_any_dtype(df['time']):
-    #     # df['time'] = pd.to_datetime(df['time'])
-    #     df['time'] = pd.to_datetime(df['time'], format='%d-%m-%Y %H:%M:%S', errors='coerce')
-    #     # '%d-%m-%Y %H:%M:%S'
-    
-    # # Filter OHLC data up to current time
-    # df = df[df['time'] <= current_time].copy()
-    # if df.empty:
-    #     print("No data available up to current time")
-    #     return
-    
-    # # Calculate Supertrend, EMA, and signals
-    # logging.info(f"Calculating Supertrend and EMA")
-
     result_df = calculate_supertrend(df)
     result_df=result_df.reset_index()
     
@@ -765,6 +631,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     if (latest_trend ==1 and rsi>55) or (latest_trend == -1 and rsi<45):
         rsi_confirm = True
 
+
     if exit_confirm>2:# and rsi_confirm:
         exit_confirm = 0
         action = "EXIT POSITIONS"
@@ -795,12 +662,12 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     logging.info(f"Check again has_open_order: {has_open_order}")
 
     # Place new order if no open orders and combined_signal is 1 or -1
-    if not has_open_order and entry_signal != 0:
+    if not has_open_order and entry_signal != 0 and rsi_confirm:
         entry_confirm+=entry_signal
     else:
         entry_confirm=0
 
-    if abs(entry_confirm)>2 and rsi_confirm:
+    if abs(entry_confirm)>2:
         entry_confirm = 0    
         orders={}
         action = 'MAKE ENTRY'
@@ -811,19 +678,19 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
             expiry=holiday_dict.get(expiry)
         logging.info(f"Calculated Expiry: {expiry}")
         try:
-            main_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,trade_qty,upstox_instruments, 0.35)
+            main_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.35)
             logging.info(f"Main Leg: {main_leg}")
-            hedge_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,trade_qty,upstox_instruments, 0.20)
+            hedge_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.20)
             logging.info(f"Hedge Leg: {hedge_leg}")
         except Exception as e:
             return_msgs.append({'subject': 'Error in get_positions', 'body': str(e)})
             logging.info(f"Error in get_position: {str(e)}")
             main_leg = {}
             hedge_leg = {}
-            main_leg['fin_pe_symbol'] = f'{expiry}-PE-DELAT0.4'
-            hedge_leg['fin_pe_symbol'] = f'{expiry}-PE-DELAT0.25'
-            main_leg['fin_ce_symbol'] = f'{expiry}-CE-DELAT0.4'
-            hedge_leg['fin_ce_symbol'] = f'{expiry}-CE-DELAT0.25'
+            main_leg['fin_pe_symbol'] = f'{expiry}-PE-DELAT0.35'
+            hedge_leg['fin_pe_symbol'] = f'{expiry}-PE-DELAT0.20'
+            main_leg['fin_ce_symbol'] = f'{expiry}-CE-DELAT035'
+            hedge_leg['fin_ce_symbol'] = f'{expiry}-CE-DELAT0.20'
         # Pseudocode: Place order
         # Check to not place the same trend order if exited on the same day
         # Get today's date (without time)
@@ -832,18 +699,22 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
         trade_history['exit_timestamp'] = pd.to_datetime(trade_history['exit_timestamp'])
         df_today = trade_history[trade_history['exit_timestamp'].dt.date == today.date()]
         day_order_filter = list(df_today['order_type'].unique())
-
+        # Get available cash and stock colalterals:
+        limits = finvasia_api.get_limits()
+        min_coll = min(float(limits['cash']) + float(limits['payin'])- float(limits['payout'])-float(limits['marginused'])/2, float(limits['collateral'])-float(limits['marginused'])/2)
         if order_type == 'PUT' and order_type not in day_order_filter:
-            orders['Main']={'trading_symbol':main_leg['fin_pe_symbol'], 'order_action':'S', 'order_qty':str(trade_qty), 'order_type':'PUT'}
+            orders['Main']={'trading_symbol':main_leg['fin_pe_symbol'], 'trading_up_symbol':main_leg['upstox_pe_instrument_key'], 'order_action':'S', 'order_qty':str(entry_trade_qty), 'order_type':'PUT'}
             logging.info(f"Main Leg: {main_leg['fin_pe_symbol']}")
-            orders['Hedge']={'trading_symbol':hedge_leg['fin_pe_symbol'], 'order_action':'B', 'order_qty':str(trade_qty), 'order_type':'PUT'}
+            orders['Hedge']={'trading_symbol':hedge_leg['fin_pe_symbol'], 'trading_up_symbol':main_leg['upstox_pe_instrument_key'], 'order_action':'B', 'order_qty':str(entry_trade_qty), 'order_type':'PUT'}
             logging.info(f"Hedge Leg: {hedge_leg['fin_pe_symbol']}")
+            # Get revised trade_qty based on margin
+            orders = get_revised_qty_margin(orders, upstox_charge_api, min_coll)
         elif order_type == 'CALL' and order_type not in day_order_filter:
-            orders['Main']={'trading_symbol':main_leg['fin_ce_symbol'], 'order_action':'S', 'order_qty':str(trade_qty), 'order_type':'CALL'}
+            orders['Main']={'trading_symbol':main_leg['fin_ce_symbol'], 'trading_up_symbol':main_leg['upstox_ce_instrument_key'], 'order_action':'S', 'order_qty':str(entry_trade_qty), 'order_type':'CALL'}
             logging.info(f"Main Leg: {main_leg['fin_ce_symbol']}")
-            orders['Hedge']={'trading_symbol':hedge_leg['fin_ce_symbol'], 'order_action':'B', 'order_qty':str(trade_qty), 'order_type':'CALL'}
+            orders['Hedge']={'trading_symbol':hedge_leg['fin_ce_symbol'], 'trading_up_symbol':main_leg['upstox_ce_instrument_key'], 'order_action':'B', 'order_qty':str(entry_trade_qty), 'order_type':'CALL'}
             logging.info(f"Hedge Leg: {hedge_leg['fin_ce_symbol']}")
-        
+            orders = get_revised_qty_margin(orders, upstox_charge_api, min_coll)
         #Place Hedge orders first
         for order_leg, order_det in orders.items():
             if order_leg == 'Hedge':
@@ -921,19 +792,14 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
     # send_email_plain(subject, email_body)
     logging.info(f"sending emails: {email_body}")
     return return_msgs, entry_confirm, exit_confirm
-    # print(f"Current Time: {latest_timestamp}")
-    # print(f"Close: {latest_close}")
-    # print(f"Supertrend: {latest_row['supertrend']}")
-    # print(f"EMA: {latest_row['ema']}")
-    # print(f"Trend: {latest_trend}")
-    # print(f"Combined Signal: {latest_combined_signal}")
-    # print(f"Action: {'Placed ' + order_type if not has_open_order and latest_combined_signal != 0 else 'No action' if not trend_changed else 'Closed open orders'}")
-
+    
 def update_stema_tb(tradingsymbol, ord_type):
     global trade_history
+    global trade_history_file
     otype = "PUT" if ord_type=="PE" else "CALL"
     trade_history.loc[(trade_history['trading_symbol'] == tradingsymbol) & (trade_history['order_type'] == otype), 'status'] = 'CLOSED'
     trade_history.loc[(trade_history['trading_symbol'] == tradingsymbol) & (trade_history['order_type'] == otype), 'exit_timestamp'] = datetime.now(ZoneInfo("Asia/Kolkata"))
     # Save trade history
     logging.info(f"Saving trade history")
     trade_history.to_csv(trade_history_file, index=False)
+
