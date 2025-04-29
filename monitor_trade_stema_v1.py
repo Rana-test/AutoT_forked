@@ -208,7 +208,7 @@ def identify_session():
     if is_within_timeframe("08:30", "12:25"):
         return {"session": "session1", "start_time": "08:30", "end_time": "12:25"}
     elif is_within_timeframe("12:30", "23:55"):
-        return {"session": "session2","start_time": "12:30", "end_time": "23:55"}
+        return {"session": "session2","start_time": "12:30", "end_time": "15:30"}
     return None
 
 def send_email(subject, body):
