@@ -35,7 +35,6 @@ from zoneinfo import ZoneInfo
 logging.basicConfig(level=logging.INFO)
 
 live=True
-trade_qty=750
 upstox_instruments = pd.read_csv("https://assets.upstox.com/market-quote/instruments/exchange/complete.csv.gz")
 sender_email =''
 receiver_email=''
@@ -651,7 +650,7 @@ def main():
                 stema_min_df = get_minute_data(api,now=None)
                 logging.info(f"Got historical data")
                 pos_delta=60000
-                return_msgs, entry_confirm, exit_confirm = run_hourly_trading_strategy(live, trade_qty, api, upstox_opt_api, upstox_charge_api, upstox_instruments, stema_min_df, entry_confirm, exit_confirm, total_profit, pos_delta, current_time=None )
+                return_msgs, entry_confirm, exit_confirm = run_hourly_trading_strategy(live, api, upstox_opt_api, upstox_charge_api, upstox_instruments, stema_min_df, entry_confirm, exit_confirm, total_profit, pos_delta, current_time=None )
                 print(f'Number of email messages: {len(return_msgs)}')
                 for msg in return_msgs:
                     send_email_plain(msg['subject'], msg['body'])

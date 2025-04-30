@@ -556,8 +556,9 @@ def get_revised_qty_margin(orders, upstox_charge_api, min_coll):
         return orders
 
 
-def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, upstox_charge_api, upstox_instruments, df, entry_confirm, exit_confirm, total_profit, pos_delta, current_time=None):
+def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge_api, upstox_instruments, df, entry_confirm, exit_confirm, total_profit, pos_delta, current_time=None):
     global trade_history
+    put_neg_bias = 5
     entry_trade_qty= fixed_ratio_position_size(10, pos_delta, total_profit) * 75
 
     logging.info(f"Started STEMA Strategy")
@@ -709,6 +710,9 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
             logging.info(f"Hedge Leg: {hedge_leg['fin_pe_symbol']}")
             # Get revised trade_qty based on margin
             orders = get_revised_qty_margin(orders, upstox_charge_api, min_coll)
+            # put_neg_bias
+            orders['Main']['order_qty']=75*(int(orders['Main']['order_qty'])//(75*put_neg_bias))
+            orders['Hedge']['order_qty']=75*(int(orders['Main']['order_qty'])//(75*put_neg_bias))
         elif order_type == 'CALL' and order_type not in day_order_filter:
             orders['Main']={'trading_symbol':main_leg['fin_ce_symbol'], 'trading_up_symbol':main_leg['upstox_ce_instrument_key'], 'order_action':'S', 'order_qty':str(entry_trade_qty), 'order_type':'CALL'}
             logging.info(f"Main Leg: {main_leg['fin_ce_symbol']}")
