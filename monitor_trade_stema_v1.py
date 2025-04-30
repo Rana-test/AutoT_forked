@@ -32,6 +32,12 @@ import logging
 from stema_v1 import get_minute_data, run_hourly_trading_strategy, update_stema_tb
 from zoneinfo import ZoneInfo
 
+holiday_dict ={
+    '2025-05-01':'2025-04-30',
+    '2025-10-02':'2025-10-01',
+    '2025-12-25':'2025-12-24',
+}
+
 logging.basicConfig(level=logging.INFO)
 
 live=True
@@ -609,6 +615,11 @@ def monitor_trade(api, upstox_opt_api, sender_email, receiver_email, email_passw
 
 def main():
     global session_var_file, sess_var_df, live
+    logging.info("Checking if today is a holiday")
+    dt = str(datetime.now(ZoneInfo("Asia/Kolkata")).date())
+    if dt in holiday_dict:
+        logging.info("Exiting since today is a holiday")
+        exit(0)
     logging.info("Inside Main")
     session = identify_session()
     logging.info(f"Identified Session: {session}")
