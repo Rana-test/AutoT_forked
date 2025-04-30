@@ -565,8 +565,8 @@ def monitor_trade(api, upstox_opt_api, sender_email, receiver_email, email_passw
         total_pnl+=current_pnl
 
         stop_loss_condition = ((current_index_price < lower_breakeven or current_index_price > upper_breakeven) and current_pnl < max_loss) or (current_pnl > 0.985 * max_profit)
-        
-        if stop_loss_condition and not (current_pnl > 0.985 * max_profit):
+
+        if stop_loss_condition and (current_pnl < 0.985 * max_profit):
             stop_loss_order(group, api, live=live)
             expiry_metrics[expiry] = {
             "PNL": round(current_pnl, 2),
@@ -605,11 +605,11 @@ def monitor_trade(api, upstox_opt_api, sender_email, receiver_email, email_passw
 
     metrics["Expiry_Details"] = expiry_metrics
     metrics["Total_PNL"] = round(total_pnl,2)
-      
-    return metrics, float(trade_hist_df['rpnl'].sum())
+    trade_hist_df = pd.read_csv("trade_history.csv", dtype=str)  
+    return metrics, float(trade_hist_df['rpnl'].astype(float).sum())
 
 def main():
-    global session_var_file, sess_var_df
+    global session_var_file, sess_var_df, live
     logging.info("Inside Main")
     session = identify_session()
     logging.info(f"Identified Session: {session}")

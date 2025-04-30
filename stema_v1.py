@@ -550,7 +550,7 @@ def get_revised_qty_margin(orders, upstox_charge_api, min_coll):
         return orders
     else:
         margin_per_lot = 1.15*75*final_margin/float(main_leg['order_qty'])
-        lots = min_coll//margin_per_lot
+        lots = max(0,min_coll//margin_per_lot)
         orders['Main']['order_qty']=lots*75
         orders['Hedge']['order_qty']=lots*75
         return orders
@@ -705,19 +705,19 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
         if order_type == 'PUT' and order_type not in day_order_filter:
             orders['Main']={'trading_symbol':main_leg['fin_pe_symbol'], 'trading_up_symbol':main_leg['upstox_pe_instrument_key'], 'order_action':'S', 'order_qty':str(entry_trade_qty), 'order_type':'PUT'}
             logging.info(f"Main Leg: {main_leg['fin_pe_symbol']}")
-            orders['Hedge']={'trading_symbol':hedge_leg['fin_pe_symbol'], 'trading_up_symbol':main_leg['upstox_pe_instrument_key'], 'order_action':'B', 'order_qty':str(entry_trade_qty), 'order_type':'PUT'}
+            orders['Hedge']={'trading_symbol':hedge_leg['fin_pe_symbol'], 'trading_up_symbol':hedge_leg['upstox_pe_instrument_key'], 'order_action':'B', 'order_qty':str(entry_trade_qty), 'order_type':'PUT'}
             logging.info(f"Hedge Leg: {hedge_leg['fin_pe_symbol']}")
             # Get revised trade_qty based on margin
             orders = get_revised_qty_margin(orders, upstox_charge_api, min_coll)
         elif order_type == 'CALL' and order_type not in day_order_filter:
             orders['Main']={'trading_symbol':main_leg['fin_ce_symbol'], 'trading_up_symbol':main_leg['upstox_ce_instrument_key'], 'order_action':'S', 'order_qty':str(entry_trade_qty), 'order_type':'CALL'}
             logging.info(f"Main Leg: {main_leg['fin_ce_symbol']}")
-            orders['Hedge']={'trading_symbol':hedge_leg['fin_ce_symbol'], 'trading_up_symbol':main_leg['upstox_ce_instrument_key'], 'order_action':'B', 'order_qty':str(entry_trade_qty), 'order_type':'CALL'}
+            orders['Hedge']={'trading_symbol':hedge_leg['fin_ce_symbol'], 'trading_up_symbol':hedge_leg['upstox_ce_instrument_key'], 'order_action':'B', 'order_qty':str(entry_trade_qty), 'order_type':'CALL'}
             logging.info(f"Hedge Leg: {hedge_leg['fin_ce_symbol']}")
             orders = get_revised_qty_margin(orders, upstox_charge_api, min_coll)
         #Place Hedge orders first
         for order_leg, order_det in orders.items():
-            if order_leg == 'Hedge':
+            if order_leg == 'Hedge' and int(order_det['order_qty'])>0:
                 ret_hedge_status, ret_msg=place_order(finvasia_api, live, order_det['trading_symbol'], order_det['order_action'], order_det['order_qty'], 'STEMA')
                 logging.info(f"Hedge Order Status: {ret_hedge_status}")
                 return_msgs.append(ret_msg)
@@ -742,7 +742,7 @@ def run_hourly_trading_strategy(live, trade_qty, finvasia_api, upstox_opt_api, u
 
         #Pleace Main orders
         for order_leg, order_det in orders.items():
-            if order_leg == 'Main':
+            if order_leg == 'Main' and int(order_det['order_qty'])>0:
                 ret_main_status, ret_msg=place_order(finvasia_api, live, order_det['trading_symbol'], order_det['order_action'], order_det['order_qty'], 'STEMA')
                 logging.info(f"Main Order Status: {ret_main_status}")
                 return_msgs.append(ret_msg)
