@@ -212,8 +212,8 @@ def identify_session():
 
     if is_within_timeframe("08:30", "12:25"):
         return {"session": "session1", "start_time": "08:30", "end_time": "12:25"}
-    elif is_within_timeframe("12:30", "17:30"):
-        return {"session": "session2","start_time": "12:30", "end_time": "17:30"}
+    elif is_within_timeframe("12:30", "15:30"):
+        return {"session": "session2","start_time": "12:30", "end_time": "15:30"}
     return None
 
 def send_email(subject, body):
@@ -634,7 +634,7 @@ def main():
     if dt in holiday_dict:
         logging.info("Exiting since today is a holiday")
         # Debug
-        # exit(0)
+        exit(0)
     logging.info("Inside Main")
     session = identify_session()
     logging.info(f"Identified Session: {session}")
@@ -647,7 +647,7 @@ def main():
     api = login(userid, password, vendor_code, api_secret, imei, TOKEN)
     upstox_client, upstox_opt_api, upstox_charge_api = login_upstox(UPSTOX_API_KEY, UPSTOX_URL, UPSTOX_API_SECRET, UPSTOX_MOB_NO, UPSTOX_CLIENT_PASS, UPSTOX_CLIENT_PIN)
     logging.info(f"Logged into APIs")
-    while is_within_timeframe("03:00", "03:45"):
+    while is_within_timeframe("08:30", "09:15"):
         print("Initializing")
         sleep_time.sleep(60)
 
