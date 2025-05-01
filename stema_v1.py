@@ -867,6 +867,7 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
     CE_Short: {ce_short}
     CE_Long : {ce_long}
     Action: {action}
+    Open Orders: {list(open_orders['tsym']) if has_open_order else "NA"} 
     """
     return_msgs.append({'subject': subject, 'body': email_body})
     # send_email_plain(subject, email_body)
