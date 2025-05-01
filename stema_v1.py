@@ -24,6 +24,29 @@ holiday_dict ={
     '2025-12-25':'2025-12-24',
 }
 
+def get_last_thursday(year, month):
+    # Get the last day of the month
+    last_day = calendar.monthrange(year, month)[1]
+    date = datetime(year, month, last_day)
+
+    # Go backwards to find the last Thursday
+    while date.weekday() != 3:  # 3 corresponds to Thursday
+        date -= timedelta(days=1)
+
+    return date
+
+def get_target_thursday():
+    today = datetime.now()
+    this_month_thursday = get_last_thursday(today.year, today.month)
+    days_until = (this_month_thursday - today).days
+
+    if days_until > 11:
+        return this_month_thursday.strftime("%Y-%m-%d")
+    else:
+        # Move to next month
+        year = today.year + (1 if today.month == 12 else 0)
+        month = 1 if today.month == 12 else today.month + 1
+        return get_last_thursday(year, month).strftime("%Y-%m-%d")
 
 def get_india_vix(api):
     return round(float(api.get_quotes(exchange="NSE", token=str(26017))['lp']),2)
@@ -558,7 +581,7 @@ def get_revised_qty_margin(orders, upstox_charge_api, min_coll):
 
 def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge_api, upstox_instruments, df, entry_confirm, exit_confirm, total_profit, pos_delta, current_time=None):
     global trade_history
-    put_neg_bias = 5
+    put_neg_bias = 1
     entry_trade_qty= fixed_ratio_position_size(10, pos_delta, total_profit) * 75
 
     logging.info(f"Started STEMA Strategy")
@@ -673,25 +696,13 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
         orders={}
         action = 'MAKE ENTRY'
         order_type = 'CALL' if entry_signal == 1 else 'PUT'
-        expiry = get_next_thursday_between_4_and_12_days(current_time)
+        # expiry = get_next_thursday_between_4_and_12_days(current_time)
+        expiry = get_target_thursday()
         # Check if expiry is a holiday
         if expiry in holiday_dict:
             expiry=holiday_dict.get(expiry)
         logging.info(f"Calculated Expiry: {expiry}")
-        try:
-            main_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.35)
-            logging.info(f"Main Leg: {main_leg}")
-            hedge_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.20)
-            logging.info(f"Hedge Leg: {hedge_leg}")
-        except Exception as e:
-            return_msgs.append({'subject': 'Error in get_positions', 'body': str(e)})
-            logging.info(f"Error in get_position: {str(e)}")
-            main_leg = {}
-            hedge_leg = {}
-            main_leg['fin_pe_symbol'] = f'{expiry}-PE-DELAT0.35'
-            hedge_leg['fin_pe_symbol'] = f'{expiry}-PE-DELAT0.20'
-            main_leg['fin_ce_symbol'] = f'{expiry}-CE-DELAT035'
-            hedge_leg['fin_ce_symbol'] = f'{expiry}-CE-DELAT0.20'
+
         # Pseudocode: Place order
         # Check to not place the same trend order if exited on the same day
         # Get today's date (without time)
@@ -704,6 +715,11 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
         limits = finvasia_api.get_limits()
         min_coll = min(float(limits['cash']) + float(limits['payin'])- float(limits['payout'])-float(limits['marginused'])/2, float(limits['collateral'])-float(limits['marginused'])/2)
         if order_type == 'PUT' and order_type not in day_order_filter:
+            main_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.21)
+            logging.info(f"Main Leg: {main_leg}")
+            hedge_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.10)
+            logging.info(f"Hedge Leg: {hedge_leg}")
+
             orders['Main']={'trading_symbol':main_leg['fin_pe_symbol'], 'trading_up_symbol':main_leg['upstox_pe_instrument_key'], 'order_action':'S', 'order_qty':str(entry_trade_qty), 'order_type':'PUT'}
             logging.info(f"Main Leg: {main_leg['fin_pe_symbol']}")
             orders['Hedge']={'trading_symbol':hedge_leg['fin_pe_symbol'], 'trading_up_symbol':hedge_leg['upstox_pe_instrument_key'], 'order_action':'B', 'order_qty':str(entry_trade_qty), 'order_type':'PUT'}
@@ -714,6 +730,11 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
             orders['Main']['order_qty']=75*(int(orders['Main']['order_qty'])//(75*put_neg_bias))
             orders['Hedge']['order_qty']=75*(int(orders['Main']['order_qty'])//(75*put_neg_bias))
         elif order_type == 'CALL' and order_type not in day_order_filter:
+            main_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.22)
+            logging.info(f"Main Leg: {main_leg}")
+            hedge_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.09)
+            logging.info(f"Hedge Leg: {hedge_leg}")
+
             orders['Main']={'trading_symbol':main_leg['fin_ce_symbol'], 'trading_up_symbol':main_leg['upstox_ce_instrument_key'], 'order_action':'S', 'order_qty':str(entry_trade_qty), 'order_type':'CALL'}
             logging.info(f"Main Leg: {main_leg['fin_ce_symbol']}")
             orders['Hedge']={'trading_symbol':hedge_leg['fin_ce_symbol'], 'trading_up_symbol':hedge_leg['upstox_ce_instrument_key'], 'order_action':'B', 'order_qty':str(entry_trade_qty), 'order_type':'CALL'}

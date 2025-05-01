@@ -569,9 +569,9 @@ def monitor_trade(api, upstox_opt_api, sender_email, receiver_email, email_passw
         }
         total_pnl+=current_pnl
 
-        stop_loss_condition = ((current_index_price < lower_breakeven or current_index_price > upper_breakeven) and current_pnl < max_loss) or (current_pnl > 0.985 * max_profit)
+        stop_loss_condition = ((current_index_price < lower_breakeven or current_index_price > upper_breakeven) and current_pnl < max_loss) or (current_pnl > 0.90 * max_profit)
 
-        if stop_loss_condition and (current_pnl < 0.985 * max_profit):
+        if stop_loss_condition and (current_pnl < 0.90 * max_profit):
             stop_loss_order(group, api, live=live)
             expiry_metrics[expiry] = {
             "PNL": round(current_pnl, 2),
@@ -589,7 +589,7 @@ def monitor_trade(api, upstox_opt_api, sender_email, receiver_email, email_passw
             "Max_Loss": round(max_loss, 2),
             "Realized_Premium": round(act_realized_premium, 2),
         }
-        elif stop_loss_condition and (current_pnl > 0.985 * max_profit):
+        elif stop_loss_condition and (current_pnl > 0.90 * max_profit):
             stop_loss_order(group, api, live=live)
             expiry_metrics[expiry] = {
             "PNL": round(current_pnl, 2),
