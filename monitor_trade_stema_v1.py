@@ -472,6 +472,7 @@ def format_trade_metrics(metrics):
 def monitor_trade(finvasia_api, upstox_opt_api, ce_short, ce_long):
     global session_var_df
     global session_var_file
+    logging.info("Getting positions")
     pos_df = get_positions(finvasia_api)
     # vix = get_india_vix(api)
     if pos_df is None:
@@ -480,7 +481,6 @@ def monitor_trade(finvasia_api, upstox_opt_api, ce_short, ce_long):
     metrics = {"Total_PNL": total_pnl}
     expiry_metrics = {}
     current_index_price = float(finvasia_api.get_quotes(exchange="NSE", token=str(26000))['lp'])
-    
     for expiry, group in pos_df.groupby("expiry"):
         ce_exit=False
         order_type = group['type'].iloc[-1]
@@ -516,8 +516,8 @@ def monitor_trade(finvasia_api, upstox_opt_api, ce_short, ce_long):
             total_premium_collected_per_option = (current_premium + realized_premium) /current_qty
         else:
             total_premium_collected_per_option=0
-        current_pnl+=realized_premium
-        max_profit+=realized_premium
+        # current_pnl+=realized_premium # Realized premium is always 0?
+        # max_profit+=realized_premium # Realized premium is always 0?
 
         ce_rows = group[group["type"] == "CE"]
         pe_rows = group[group["type"] == "PE"]
@@ -529,21 +529,23 @@ def monitor_trade(finvasia_api, upstox_opt_api, ce_short, ce_long):
             ce_strike = 0
             upper_breakeven=999999
         else:
-            ce_breakeven_factor = current_qty/(-1*ce_rows["netqty"].sum())
+            # ce_breakeven_factor = current_qty/(-1*ce_rows["netqty"].sum())
             ce_strike = float((ce_rows["sp"].astype(float) * ce_rows["netqty"].abs()).sum() / ce_rows["netqty"].abs().sum())
             # upper_breakeven = float(ce_strike + total_premium_collected_per_option*ce_breakeven_factor - current_index_price * ce_rows['exit_breakeven_per'].mean().astype(float)/ 100)
             # upper_breakeven = float(ce_strike - current_index_price * ce_rows['exit_breakeven_per'].mean().astype(float)/ 100)
-            upper_breakeven=float(ce_strike - expected_move + total_premium_collected_per_option)
+            # upper_breakeven=float(ce_strike - expected_move + total_premium_collected_per_option)
+            upper_breakeven=float(ce_strike)
 
         if pe_rows.empty:
             pe_strike = 0
             lower_breakeven = 0
         else:
-            pe_breakeven_factor = current_qty/(-1*pe_rows["netqty"].sum())
+            # pe_breakeven_factor = current_qty/(-1*pe_rows["netqty"].sum())
             pe_strike = float((pe_rows["sp"].astype(float) * pe_rows["netqty"].abs()).sum() / pe_rows["netqty"].abs().sum())
             # lower_breakeven = float(pe_strike - total_premium_collected_per_option*pe_breakeven_factor + current_index_price * pe_rows['exit_breakeven_per'].mean().astype(float)/ 100)
             # lower_breakeven = float(pe_strike + current_index_price * pe_rows['exit_breakeven_per'].mean().astype(float)/ 100)
-            lower_breakeven = float(pe_strike + expected_move-total_premium_collected_per_option)
+            # lower_breakeven = float(pe_strike + expected_move-total_premium_collected_per_option)
+            lower_breakeven = float(pe_strike)
 
         if ce_strike!=0 and pe_strike!=0:
             breakeven_range = upper_breakeven - lower_breakeven
@@ -577,7 +579,7 @@ def monitor_trade(finvasia_api, upstox_opt_api, ce_short, ce_long):
         }
         total_pnl+=current_pnl
 
-        stop_loss_condition = ce_exit or ((current_index_price < lower_breakeven or current_index_price > upper_breakeven) and current_pnl < max_loss) or (current_pnl > 0.90 * max_profit)
+        stop_loss_condition = ce_exit or ((current_index_price < lower_breakeven or current_index_price > upper_breakeven)) or current_pnl < max_loss or (current_pnl > 0.90 * max_profit)
 
         if stop_loss_condition and (current_pnl < 0.90 * max_profit):
             stop_loss_order(group, finvasia_api, live=live)
@@ -609,10 +611,10 @@ def monitor_trade(finvasia_api, upstox_opt_api, ce_short, ce_long):
             "Current_Index_Price": current_index_price,
             "ATM_IV": round(atm_iv, 2),
             "Expected_Movement": round(expected_move, 2),
-            "Lower_Breakeven": "PROFIT_BOOKING",
-            "Upper_Breakeven": "PROFIT_BOOKING",
-            "Breakeven_Range": "PROFIT_BOOKING",
-            "Breakeven_Range_Per": "PROFIT_BOOKING",
+            "Lower_Breakeven": "PROFIT_EXIT",
+            "Upper_Breakeven": "PROFIT_EXIT",
+            "Breakeven_Range": "PROFIT_EXIT",
+            "Breakeven_Range_Per": "PROFIT_EXIT",
             "Near_Breakeven": round(near_breakeven, 2),
             "Max_Profit": round(max_profit, 2),
             "Max_Loss": round(max_loss, 2),
@@ -649,6 +651,7 @@ def main():
     logging.info(f"Logged into APIs")
     while is_within_timeframe("08:30", "09:15"):
         print("Initializing")
+        logging.info("Initializing")
         sleep_time.sleep(60)
 
     counter = 0
@@ -656,11 +659,11 @@ def main():
     entry_confirm = sess_var_df[sess_var_df['session_var'] == 'entry_confirm']['value'].iloc[0]
     ce_short = sess_var_df[sess_var_df['session_var'] == 'ce_short']['value'].iloc[0]
     ce_long = sess_var_df[sess_var_df['session_var'] == 'ce_long']['value'].iloc[0]
+    logging.info(f"Loaded session variables: {sess_var_df}")
     # Start Monitoring
     while is_within_timeframe(session.get('start_time'), session.get('end_time')):
         logging.info(f"Monitoring Trade")
         metrics, total_profit = monitor_trade(api, upstox_opt_api, ce_short, ce_long)
-        
         if metrics =="STOP_LOSS":
             send_email("STOP LOSS HIT - QUIT", "STOP LOSS HIT")
         else:
@@ -676,8 +679,7 @@ def main():
                 # send_email_plain(subject, email_body)
                 stema_min_df = get_minute_data(api,now=None)
                 logging.info(f"Got historical data")
-                pos_delta=60000
-                return_msgs, entry_confirm, exit_confirm, ce_short, ce_long = run_hourly_trading_strategy(live, api, upstox_opt_api, upstox_charge_api, upstox_instruments, stema_min_df, entry_confirm, exit_confirm, total_profit, pos_delta, current_time=None )
+                return_msgs, entry_confirm, exit_confirm, ce_short, ce_long = run_hourly_trading_strategy(live, api, upstox_opt_api, upstox_charge_api, upstox_instruments, stema_min_df, entry_confirm, exit_confirm, total_profit,current_time=None )
                 print(f'Number of email messages: {len(return_msgs)}')
                 for msg in return_msgs:
                     send_email_plain(msg['subject'], msg['body'])

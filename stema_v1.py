@@ -348,7 +348,6 @@ def place_order(api, live, trading_symbol, buy_sell, qty, order_type):
         logging.info(f"Dummy order placed: {email_body}")
         return True, {'subject': subject, 'body': email_body}
 
-
 def get_minute_data(api, now=None):
     nifty_token = '26000'  # NSE|26000 is the Nifty 50 index
     
@@ -435,7 +434,6 @@ def calculate_rsi_wilder(close_prices, period=14):
     rs = avg_gain / avg_loss
     rsi = 100 - (100 / (1 + rs))
     return rsi
-
 
 def calculate_supertrend(df_minute):
     """
@@ -555,6 +553,7 @@ def calculate_supertrend(df_minute):
     # df_hourly['adx'] = ta.trend.adx(high=df_hourly['high'], low=df_hourly['low'], close=df_hourly['close'], window=20)
     # Calculate RSI
     df_hourly['rsi'] = calculate_rsi_wilder(df_hourly['close'], period=14)
+    df_hourly = chandelier_exit_tv(df_hourly, period=25, atr_multiplier=4.0)
     df_hourly['entry_signal'] = 0
     # df_hourly.loc[(df_hourly['close'] < df_hourly['ema20']) & (df_hourly['trend'] == -1) & (df_hourly['adx'] > 25), 'entry_signal'] = 1
     # df_hourly.loc[(df_hourly['close'] > df_hourly['ema20']) & (df_hourly['trend'] == 1) & (df_hourly['adx'] > 25), 'entry_signal'] = -1
@@ -565,8 +564,6 @@ def calculate_supertrend(df_minute):
     # Set exit_signal to 1 when the trend changes (current trend != previous trend)
     df_hourly.loc[df_hourly['trend'] != df_hourly['trend'].shift(1), 'exit_signal'] = 1
 
-    df_hourly = chandelier_exit_tv(df_hourly, period=25, atr_multiplier=4.0)
-    
     return df_hourly
 
 # Read trade history
@@ -582,8 +579,6 @@ if os.path.exists(trade_history_file):
             trade_history.at[i, 'status'] = 'CLOSED'
 else:
     trade_history = pd.DataFrame(columns=['time', 'trading_symbol', 'expiry','order_type', 'order_action', 'order_leg', 'status','exit_timestamp'])
-
-import math
 
 def fixed_ratio_position_size(base_size, delta, total_profit):
     """
@@ -605,7 +600,6 @@ def fixed_ratio_position_size(base_size, delta, total_profit):
     position_size = base_size + adjustment
     position_size = max(1, position_size)
     return position_size # Ensure at least 1 lot is used
-
 
 def get_revised_qty_margin(orders, upstox_charge_api, min_coll):
     main_leg = orders['Main'] #={'trading_symbol':main_leg['fin_pe_symbol'], , 'trading_up_symbol':main_leg['upstox_pe_instrument_key'], 'order_action':'S', 'order_qty':str(trade_qty), 'order_type':'PUT'}
@@ -638,11 +632,12 @@ def get_revised_qty_margin(orders, upstox_charge_api, min_coll):
         orders['Hedge']['order_qty']=lots*75
         return orders
 
-
-def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge_api, upstox_instruments, df, entry_confirm, exit_confirm, total_profit, pos_delta, current_time=None):
+def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge_api, upstox_instruments, df, entry_confirm, exit_confirm, total_profit, current_time=None):
     global trade_history
     put_neg_bias = 1
-    entry_trade_qty= fixed_ratio_position_size(10, pos_delta, total_profit) * 75
+    pos_base_lots = 10
+    pos_delta = 60000
+    entry_trade_qty= fixed_ratio_position_size(pos_base_lots, pos_delta, total_profit) * 75
 
     logging.info(f"Started STEMA Strategy")
     return_msgs=[]
@@ -659,6 +654,7 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
     
     # Get the latest row (most recent candle)
     latest_row = result_df.iloc[-1]
+    logging.info(f"Latest Row: {latest_row}")
     latest_timestamp = latest_row['time']
     latest_close = latest_row['close']
     latest_trend = latest_row['trend']
@@ -666,46 +662,34 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
     entry_signal = latest_row['entry_signal']
     exit_signal = latest_row['exit_signal']
     rsi = latest_row['rsi']
-    logging.info(f"Latest Row: {latest_row}")
     ce_long = latest_row['CE_long']
     ce_short = latest_row['CE_short']
     
     # Check for open orders
-    open_orders = trade_history[trade_history['status'] == 'ACTIVE']
+    # Try getting this from positions
+    # open_orders = trade_history[trade_history['status'] == 'ACTIVE']
+    pos = pd.DataFrame(finvasia_api.get_positions())
+    open_orders = pos[pos['netqty'].astype(int)!=0]
     has_open_order = not open_orders.empty
     logging.info(f"has_open_order: {has_open_order}")
-    
-    # # Check for trend change (compare with previous row if available)
-    # if len(result_df) > 1:
-    #     previous_trend = result_df.iloc[-2]['trend']
-    #     exit_signal = latest_trend != previous_trend
-    # else:
-    #     # trend_changed = False
-    #     exit_signal=False
-
-    # logging.info(f"Previous Trend: {previous_trend}")
     logging.info(f"Current Trend: {latest_trend}")
-    # logging.info(f"Trend Changed: {trend_changed}")
     logging.info(f"Entry Signal: {entry_signal}, Exit Signal:{exit_signal}")
-
-    #Check if open order for Put exists and trend is -1 then trend changed
+    # Check if open order for Put exists and trend is -1 then trend changed
     logging.info(f"Checking trend change for open orders")
     if has_open_order:
-        for _, order in open_orders.iterrows():
-            if order['order_type'] == 'PUT' and latest_trend == -1:
-                # trend_changed = True
-                exit_signal=1
-                logging.info(f"Trend changed for PUT order")
-                break
-            if order['order_type'] == 'CALL' and latest_trend == 1:
-                # trend_changed = True
-                exit_signal=1
-                logging.info(f"Trend changed for CALL order")
-                break
+        order_type = open_orders['dname'].apply(lambda x:x.split()[-1]).unique()[0]
+        if order_type == 'PE' and latest_trend == -1:
+            # trend_changed = True
+            exit_signal=1
+            logging.info(f"Trend changed for PUT order")
+        if order_type == 'CE' and latest_trend == 1:
+            # trend_changed = True
+            exit_signal=1
+            logging.info(f"Trend changed for CALL order")
         
     #Check if open order for Call exists and trend is 1 then trend changed
     
-    curr_pos = pd.DataFrame(finvasia_api.get_positions())
+    # curr_pos = pd.DataFrame(finvasia_api.get_positions())
     # Exit open orders if trend changes
 
     if exit_signal and has_open_order:
@@ -719,33 +703,37 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
 
 
     if exit_confirm>2:# and rsi_confirm:
+        #CE exit check happening every min and not here
         exit_confirm = 0
         action = "EXIT POSITIONS"
         logging.info(f"Checking open order when trend changed")
         for _, order in open_orders.iterrows():
-            order_tsm = order['trading_symbol']
-            order_type = order['order_type']
+            order_tsm = order['tsym']
+            order_type = order['dname'].split()[-1]
             # ord_qty = min(abs(int(curr_pos[curr_pos['tsym']==order_tsm]['netqty'].iloc[0])),order['order_qty'])
-            ord_qty = int(curr_pos[curr_pos['tsym']==order_tsm]['netqty'].iloc[0])
-            ord_act = 'S' if order['order_action'] == 'B' else 'B'
-            if (latest_trend ==-1 and order_type == 'PUT') or (latest_trend ==1 and order_type == 'CALL'):
+            qty = int(order['netqty'])
+            ord_act = 'S' if qty > 0 else 'B'
+            if (latest_trend ==-1 and order_type == 'PE') or (latest_trend ==1 and order_type == 'CE'):
                 # Pseudocode: Close Put order
                 # close_put_order(order_id, latest_close)
                 # print(f"Closing Put order {order_tsm}")
                 logging.info(f"Closing put order: {order}")
                 # Get the current qty as per exisitng position and limit qty to that 
-                ret_status, ret_msg = place_order(finvasia_api, live, order_tsm, ord_act, str(ord_qty), 'EXIT STEMA')
+                ret_status, ret_msg = place_order(finvasia_api, live, order_tsm, ord_act, str(qty), 'EXIT STEMA')
                 return_msgs.append(ret_msg)
             
             # Update trade history
             if ret_status:
                 trade_history.loc[trade_history['trading_symbol'] == order_tsm, 'status'] = 'CLOSED'
                 trade_history.loc[trade_history['trading_symbol'] == order_tsm, 'exit_timestamp'] = current_time
+        time.sleep(60)
     
-    # Check for open orders again after Exit # maybe - Giving gap of 1 iteration between exit and entry
-    open_orders = trade_history[trade_history['status'] == 'ACTIVE']
-    has_open_order = not open_orders.empty
-    logging.info(f"Check again has_open_order: {has_open_order}")
+        # Check for open orders again after Exit # maybe - Giving gap of 1 iteration between exit and entry
+        pos = pd.DataFrame(finvasia_api.get_positions())
+        open_orders = pos[pos['netqty'].astype(int)!=0]
+        has_open_order = not open_orders.empty
+
+        logging.info(f"Check again has_open_order: {has_open_order}")
 
     # Place new order if no open orders and combined_signal is 1 or -1
     
@@ -761,8 +749,8 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
         entry_confirm = 0    
         orders={}
         action = 'MAKE ENTRY'
-        order_type = 'CALL' if entry_signal == 1 else 'PUT'
-        if (order_type == 'PUT' and current_index_price > ce_long) or (order_type == 'CALL' and current_index_price < ce_short):
+        order_type = 'CE' if entry_signal == 1 else 'PE'
+        if (order_type == 'PE' and current_index_price > ce_long) or (order_type == 'CE' and current_index_price < ce_short):
             # expiry = get_next_thursday_between_4_and_12_days(current_time)
             expiry = get_target_thursday()
             # Check if expiry is a holiday
@@ -774,22 +762,22 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
             # Check to not place the same trend order if exited on the same day
             # Get today's date (without time)
             today = pd.Timestamp(datetime.now(ZoneInfo("Asia/Kolkata")).date())
-            # Filter rows where the date part of 'exit_timestamp' matches today
+            # Filter rows where the date part of 'exit_timestamp' matches today -- TODO check with tradebook
             trade_history['exit_timestamp'] = pd.to_datetime(trade_history['exit_timestamp'])
             df_today = trade_history[trade_history['exit_timestamp'].dt.date == today.date()]
             day_order_filter = list(df_today['order_type'].unique())
             # Get available cash and stock colalterals:
             limits = finvasia_api.get_limits()
             min_coll = min(float(limits['cash']) + float(limits['payin'])- float(limits['payout'])-float(limits['marginused'])/2, float(limits['collateral'])-float(limits['marginused'])/2)
-            if order_type == 'PUT' and order_type not in day_order_filter:
+            if order_type == 'PE' and order_type not in day_order_filter:
                 main_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.21)
                 logging.info(f"Main Leg: {main_leg}")
                 hedge_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.10)
                 logging.info(f"Hedge Leg: {hedge_leg}")
 
-                orders['Main']={'trading_symbol':main_leg['fin_pe_symbol'], 'trading_up_symbol':main_leg['upstox_pe_instrument_key'], 'order_action':'S', 'order_qty':str(entry_trade_qty), 'order_type':'PUT'}
+                orders['Main']={'trading_symbol':main_leg['fin_pe_symbol'], 'trading_up_symbol':main_leg['upstox_pe_instrument_key'], 'order_action':'S', 'order_qty':str(entry_trade_qty), 'order_type':'PE'}
                 logging.info(f"Main Leg: {main_leg['fin_pe_symbol']}")
-                orders['Hedge']={'trading_symbol':hedge_leg['fin_pe_symbol'], 'trading_up_symbol':hedge_leg['upstox_pe_instrument_key'], 'order_action':'B', 'order_qty':str(entry_trade_qty), 'order_type':'PUT'}
+                orders['Hedge']={'trading_symbol':hedge_leg['fin_pe_symbol'], 'trading_up_symbol':hedge_leg['upstox_pe_instrument_key'], 'order_action':'B', 'order_qty':str(entry_trade_qty), 'order_type':'PE'}
                 logging.info(f"Hedge Leg: {hedge_leg['fin_pe_symbol']}")
                 # Get revised trade_qty based on margin
                 orders = get_revised_qty_margin(orders, upstox_charge_api, min_coll)
@@ -802,69 +790,67 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
                 hedge_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.09)
                 logging.info(f"Hedge Leg: {hedge_leg}")
 
-                orders['Main']={'trading_symbol':main_leg['fin_ce_symbol'], 'trading_up_symbol':main_leg['upstox_ce_instrument_key'], 'order_action':'S', 'order_qty':str(entry_trade_qty), 'order_type':'CALL'}
+                orders['Main']={'trading_symbol':main_leg['fin_ce_symbol'], 'trading_up_symbol':main_leg['upstox_ce_instrument_key'], 'order_action':'S', 'order_qty':str(entry_trade_qty), 'order_type':'CE'}
                 logging.info(f"Main Leg: {main_leg['fin_ce_symbol']}")
-                orders['Hedge']={'trading_symbol':hedge_leg['fin_ce_symbol'], 'trading_up_symbol':hedge_leg['upstox_ce_instrument_key'], 'order_action':'B', 'order_qty':str(entry_trade_qty), 'order_type':'CALL'}
+                orders['Hedge']={'trading_symbol':hedge_leg['fin_ce_symbol'], 'trading_up_symbol':hedge_leg['upstox_ce_instrument_key'], 'order_action':'B', 'order_qty':str(entry_trade_qty), 'order_type':'CE'}
                 logging.info(f"Hedge Leg: {hedge_leg['fin_ce_symbol']}")
                 orders = get_revised_qty_margin(orders, upstox_charge_api, min_coll)
             #Place Hedge orders first
-            for order_leg, order_det in orders.items():
-                if order_leg == 'Hedge' and int(order_det['order_qty'])>0:
-                    ret_hedge_status, ret_msg=place_order(finvasia_api, live, order_det['trading_symbol'], order_det['order_action'], order_det['order_qty'], 'STEMA')
-                    logging.info(f"Hedge Order Status: {ret_hedge_status}")
-                    return_msgs.append(ret_msg)
-                    # Append to trade history
-                    new_order = pd.DataFrame({
-                        'time': latest_timestamp,
-                        'trading_symbol': order_det['trading_symbol'],
-                        'expiry': expiry,
-                        'order_action' : order_det['order_action'],
-                        'order_qty': order_det['order_qty'],
-                        'order_leg': order_leg,
-                        'order_type': order_det['order_type'],
-                        'status': 'ACTIVE',
-                        'exit_timestamp': [pd.NaT]
-                    })
-                    if ret_hedge_status:
-                        # trade_history = pd.concat([trade_history, new_order], ignore_index=True)
-                        if not new_order.empty:
-                            new_order = new_order.astype(trade_history.dtypes.to_dict(), errors='ignore')
-                            logging.info(f"Update Trade History for hedge order")
-                            trade_history = pd.concat([trade_history, new_order], ignore_index=True)
+            hedge_order = orders['Hedge']
 
-            #Pleace Main orders
-            for order_leg, order_det in orders.items():
-                if order_leg == 'Main' and int(order_det['order_qty'])>0:
-                    ret_main_status, ret_msg=place_order(finvasia_api, live, order_det['trading_symbol'], order_det['order_action'], order_det['order_qty'], 'STEMA')
-                    logging.info(f"Main Order Status: {ret_main_status}")
-                    return_msgs.append(ret_msg)
-                    # Append to trade history
-                    new_order = pd.DataFrame({
-                        'time': latest_timestamp,
-                        'trading_symbol': order_det['trading_symbol'],
-                        'expiry': expiry,
-                        'order_action' : order_det['order_action'],
-                        'order_qty': order_det['order_qty'],
-                        'order_leg': order_leg,
-                        'order_type': order_det['order_type'],
-                        'status': 'ACTIVE',
-                        'exit_timestamp': [pd.NaT]
-                    })
-                    if ret_main_status:
-                        if not new_order.empty:
-                            new_order = new_order.astype(trade_history.dtypes.to_dict(), errors='ignore')
-                            logging.info(f"Update Trade History for main order")
-                            trade_history = pd.concat([trade_history, new_order], ignore_index=True)
-    
+            if int(hedge_order['order_qty'])>0:
+                ret_hedge_status, ret_msg=place_order(finvasia_api, live, hedge_order['trading_symbol'], hedge_order['order_action'], hedge_order['order_qty'], 'STEMA')
+                logging.info(f"Hedge Order Status: {ret_hedge_status}")
+                return_msgs.append(ret_msg)
+                # Append to trade history
+                new_order = pd.DataFrame({
+                    'time': latest_timestamp,
+                    'trading_symbol': hedge_order['trading_symbol'],
+                    'expiry': expiry,
+                    'order_action' : hedge_order['order_action'],
+                    'order_qty': hedge_order['order_qty'],
+                    'order_leg': 'Hedge',
+                    'order_type': hedge_order['order_type'],
+                    'status': 'ACTIVE',
+                    'exit_timestamp': [pd.NaT]
+                })
+                if ret_hedge_status:
+                    # trade_history = pd.concat([trade_history, new_order], ignore_index=True)
+                    if not new_order.empty:
+                        new_order = new_order.astype(trade_history.dtypes.to_dict(), errors='ignore')
+                        logging.info(f"Update Trade History for hedge order")
+                        trade_history = pd.concat([trade_history, new_order], ignore_index=True)
+
+
+            #Place Main orders
+            main_order = orders['Main']
+            if int(main_order['order_qty'])>0:
+                ret_main_status, ret_msg=place_order(finvasia_api, live, main_order['trading_symbol'], main_order['order_action'], main_order['order_qty'], 'STEMA')
+                logging.info(f"Hedge Order Status: {ret_main_status}")
+                return_msgs.append(ret_msg)
+                # Append to trade history
+                new_order = pd.DataFrame({
+                    'time': latest_timestamp,
+                    'trading_symbol': main_order['trading_symbol'],
+                    'expiry': expiry,
+                    'order_action' : main_order['order_action'],
+                    'order_qty': main_order['order_qty'],
+                    'order_leg': 'Main',
+                    'order_type': main_order['order_type'],
+                    'status': 'ACTIVE',
+                    'exit_timestamp': [pd.NaT]
+                })
+                if ret_main_status:
+                    # trade_history = pd.concat([trade_history, new_order], ignore_index=True)
+                    if not new_order.empty:
+                        new_order = new_order.astype(trade_history.dtypes.to_dict(), errors='ignore')
+                        logging.info(f"Update Trade History for hedge order")
+                        trade_history = pd.concat([trade_history, new_order], ignore_index=True)
+
     # Save trade history
     logging.info(f"Saving trade history")
     trade_history.to_csv(trade_history_file, index=False)
-    if abs(entry_confirm) > 2 and rsi_confirm and ce_indicator:
-        action = 'Entry made'
-    elif exit_confirm > 2: # and rsi_confirm:
-        action = 'Closed open orders'
-    else:
-        action = 'No action'
+
     # Debug output
     subject= f"Trade Decision at {latest_timestamp}"
     email_body = f"""
@@ -890,9 +876,8 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
 def update_stema_tb(tradingsymbol, ord_type):
     global trade_history
     global trade_history_file
-    otype = "PUT" if ord_type=="PE" else "CALL"
-    trade_history.loc[(trade_history['trading_symbol'] == tradingsymbol) & (trade_history['order_type'] == otype), 'status'] = 'CLOSED'
-    trade_history.loc[(trade_history['trading_symbol'] == tradingsymbol) & (trade_history['order_type'] == otype), 'exit_timestamp'] = datetime.now(ZoneInfo("Asia/Kolkata"))
+    trade_history.loc[(trade_history['trading_symbol'] == tradingsymbol) & (trade_history['order_type'] == ord_type), 'status'] = 'CLOSED'
+    trade_history.loc[(trade_history['trading_symbol'] == tradingsymbol) & (trade_history['order_type'] == ord_type), 'exit_timestamp'] = datetime.now(ZoneInfo("Asia/Kolkata"))
     # Save trade history
     logging.info(f"Saving trade history")
     trade_history.to_csv(trade_history_file, index=False)
