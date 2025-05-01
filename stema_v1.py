@@ -762,7 +762,7 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
         orders={}
         action = 'MAKE ENTRY'
         order_type = 'CALL' if entry_signal == 1 else 'PUT'
-        if (order_type == 'PUT' and current_index_price > ce_short) or (order_type == 'CALL' and current_index_price < ce_long):
+        if (order_type == 'PUT' and current_index_price > ce_long) or (order_type == 'CALL' and current_index_price < ce_short):
             # expiry = get_next_thursday_between_4_and_12_days(current_time)
             expiry = get_target_thursday()
             # Check if expiry is a holiday

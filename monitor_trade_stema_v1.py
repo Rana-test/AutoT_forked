@@ -212,8 +212,8 @@ def identify_session():
 
     if is_within_timeframe("08:30", "12:25"):
         return {"session": "session1", "start_time": "08:30", "end_time": "12:25"}
-    elif is_within_timeframe("12:30", "23:55"):
-        return {"session": "session2","start_time": "12:30", "end_time": "15:30"}
+    elif is_within_timeframe("12:30", "17:30"):
+        return {"session": "session2","start_time": "12:30", "end_time": "17:30"}
     return None
 
 def send_email(subject, body):
@@ -389,8 +389,8 @@ else:
         {'session_var': 'counter', 'value': 0},
         {'session_var': 'exit_confirm', 'value': 0},
         {'session_var': 'entry_confirm', 'value': 0},
-        {'session_var': 'ce_short', 'value': -99999},
-        {'session_var': 'ce_long', 'value': 99999},
+        {'session_var': 'ce_short', 'value': 99999},
+        {'session_var': 'ce_long', 'value': -99999},
     ])
     var_init = var_init.astype(sess_var_df.dtypes.to_dict(), errors='ignore')
     sess_var_df = pd.concat([sess_var_df, var_init], ignore_index=True)
@@ -482,6 +482,12 @@ def monitor_trade(finvasia_api, upstox_opt_api, ce_short, ce_long):
     current_index_price = float(finvasia_api.get_quotes(exchange="NSE", token=str(26000))['lp'])
     
     for expiry, group in pos_df.groupby("expiry"):
+        ce_exit=False
+        order_type = group['type'].iloc[-1]
+        if order_type =="CE" and current_index_price>ce_short:
+            ce_exit = True
+        elif order_type =="PE" and current_index_price<ce_long:
+            ce_exit = True
         expiry_date_str = expiry.strftime('%Y-%m-%d')
         atm_iv = get_atm_iv(upstox_opt_api, expiry_date_str, current_index_price)
         # expected_move = calc_expected_move(current_index_price, vix, group['Days_to_Expiry'].mean().astype(int))
@@ -571,7 +577,7 @@ def monitor_trade(finvasia_api, upstox_opt_api, ce_short, ce_long):
         }
         total_pnl+=current_pnl
 
-        stop_loss_condition = ((current_index_price < lower_breakeven or current_index_price > upper_breakeven) and current_pnl < max_loss) or (current_pnl > 0.90 * max_profit) or (current_index_price < ce_short or current_index_price > ce_long)
+        stop_loss_condition = ce_exit or ((current_index_price < lower_breakeven or current_index_price > upper_breakeven) and current_pnl < max_loss) or (current_pnl > 0.90 * max_profit)
 
         if stop_loss_condition and (current_pnl < 0.90 * max_profit):
             stop_loss_order(group, finvasia_api, live=live)
@@ -592,7 +598,7 @@ def monitor_trade(finvasia_api, upstox_opt_api, ce_short, ce_long):
             "Realized_Premium": round(act_realized_premium, 2),
             "CE_Short": ce_short,
             "CE_Long": ce_long,
-            "CE_Exit": "YES" if (current_index_price < ce_short or current_index_price > ce_long) else "NO"
+            "CE_Exit": "YES" if ce_exit else "NO"
         }
         elif stop_loss_condition and (current_pnl > 0.90 * max_profit):
             stop_loss_order(group, finvasia_api, live=live)
@@ -613,7 +619,7 @@ def monitor_trade(finvasia_api, upstox_opt_api, ce_short, ce_long):
             "Realized_Premium": round(act_realized_premium, 2),
             "CE_Short": ce_short,
             "CE_Long": ce_long,
-            "CE_Exit": "YES" if (current_index_price < ce_short or current_index_price > ce_long) else "NO"
+            "CE_Exit": "YES" if ce_exit else "NO"
         }
 
     metrics["Expiry_Details"] = expiry_metrics
@@ -627,7 +633,8 @@ def main():
     dt = str(datetime.now(ZoneInfo("Asia/Kolkata")).date())
     if dt in holiday_dict:
         logging.info("Exiting since today is a holiday")
-        exit(0)
+        # Debug
+        # exit(0)
     logging.info("Inside Main")
     session = identify_session()
     logging.info(f"Identified Session: {session}")
@@ -649,7 +656,6 @@ def main():
     entry_confirm = sess_var_df[sess_var_df['session_var'] == 'entry_confirm']['value'].iloc[0]
     ce_short = sess_var_df[sess_var_df['session_var'] == 'ce_short']['value'].iloc[0]
     ce_long = sess_var_df[sess_var_df['session_var'] == 'ce_long']['value'].iloc[0]
-
     # Start Monitoring
     while is_within_timeframe(session.get('start_time'), session.get('end_time')):
         logging.info(f"Monitoring Trade")
