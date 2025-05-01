@@ -389,6 +389,8 @@ else:
         {'session_var': 'counter', 'value': 0},
         {'session_var': 'exit_confirm', 'value': 0},
         {'session_var': 'entry_confirm', 'value': 0},
+        {'session_var': 'ce_short', 'value': -99999},
+        {'session_var': 'ce_long', 'value': 99999},
     ])
     var_init = var_init.astype(sess_var_df.dtypes.to_dict(), errors='ignore')
     sess_var_df = pd.concat([sess_var_df, var_init], ignore_index=True)
@@ -467,17 +469,17 @@ def format_trade_metrics(metrics):
     
     return email_body
 
-def monitor_trade(api, upstox_opt_api, sender_email, receiver_email, email_password):
+def monitor_trade(finvasia_api, upstox_opt_api, ce_short, ce_long):
     global session_var_df
     global session_var_file
-    pos_df = get_positions(api)
+    pos_df = get_positions(finvasia_api)
     # vix = get_india_vix(api)
     if pos_df is None:
         return {'get_pos Error':"Error getting position Info"} 
     total_pnl=0
     metrics = {"Total_PNL": total_pnl}
     expiry_metrics = {}
-    current_index_price = float(api.get_quotes(exchange="NSE", token=str(26000))['lp'])
+    current_index_price = float(finvasia_api.get_quotes(exchange="NSE", token=str(26000))['lp'])
     
     for expiry, group in pos_df.groupby("expiry"):
         expiry_date_str = expiry.strftime('%Y-%m-%d')
@@ -569,10 +571,10 @@ def monitor_trade(api, upstox_opt_api, sender_email, receiver_email, email_passw
         }
         total_pnl+=current_pnl
 
-        stop_loss_condition = ((current_index_price < lower_breakeven or current_index_price > upper_breakeven) and current_pnl < max_loss) or (current_pnl > 0.90 * max_profit)
+        stop_loss_condition = ((current_index_price < lower_breakeven or current_index_price > upper_breakeven) and current_pnl < max_loss) or (current_pnl > 0.90 * max_profit) or (current_index_price < ce_short or current_index_price > ce_long)
 
         if stop_loss_condition and (current_pnl < 0.90 * max_profit):
-            stop_loss_order(group, api, live=live)
+            stop_loss_order(group, finvasia_api, live=live)
             expiry_metrics[expiry] = {
             "PNL": round(current_pnl, 2),
             "CE_Strike": round(ce_strike, 2),
@@ -588,9 +590,12 @@ def monitor_trade(api, upstox_opt_api, sender_email, receiver_email, email_passw
             "Max_Profit": round(max_profit, 2),
             "Max_Loss": round(max_loss, 2),
             "Realized_Premium": round(act_realized_premium, 2),
+            "CE_Short": ce_short,
+            "CE_Long": ce_long,
+            "CE_Exit": "YES" if (current_index_price < ce_short or current_index_price > ce_long) else "NO"
         }
         elif stop_loss_condition and (current_pnl > 0.90 * max_profit):
-            stop_loss_order(group, api, live=live)
+            stop_loss_order(group, finvasia_api, live=live)
             expiry_metrics[expiry] = {
             "PNL": round(current_pnl, 2),
             "CE_Strike": round(ce_strike, 2),
@@ -606,6 +611,9 @@ def monitor_trade(api, upstox_opt_api, sender_email, receiver_email, email_passw
             "Max_Profit": round(max_profit, 2),
             "Max_Loss": round(max_loss, 2),
             "Realized_Premium": round(act_realized_premium, 2),
+            "CE_Short": ce_short,
+            "CE_Long": ce_long,
+            "CE_Exit": "YES" if (current_index_price < ce_short or current_index_price > ce_long) else "NO"
         }
 
     metrics["Expiry_Details"] = expiry_metrics
@@ -639,11 +647,13 @@ def main():
     counter = 0
     exit_confirm = sess_var_df[sess_var_df['session_var'] == 'exit_confirm']['value'].iloc[0]
     entry_confirm = sess_var_df[sess_var_df['session_var'] == 'entry_confirm']['value'].iloc[0]
+    ce_short = sess_var_df[sess_var_df['session_var'] == 'ce_short']['value'].iloc[0]
+    ce_long = sess_var_df[sess_var_df['session_var'] == 'ce_long']['value'].iloc[0]
 
     # Start Monitoring
     while is_within_timeframe(session.get('start_time'), session.get('end_time')):
         logging.info(f"Monitoring Trade")
-        metrics, total_profit = monitor_trade(api, upstox_opt_api, sender_email, receiver_email, email_password)
+        metrics, total_profit = monitor_trade(api, upstox_opt_api, ce_short, ce_long)
         
         if metrics =="STOP_LOSS":
             send_email("STOP LOSS HIT - QUIT", "STOP LOSS HIT")
@@ -661,7 +671,7 @@ def main():
                 stema_min_df = get_minute_data(api,now=None)
                 logging.info(f"Got historical data")
                 pos_delta=60000
-                return_msgs, entry_confirm, exit_confirm = run_hourly_trading_strategy(live, api, upstox_opt_api, upstox_charge_api, upstox_instruments, stema_min_df, entry_confirm, exit_confirm, total_profit, pos_delta, current_time=None )
+                return_msgs, entry_confirm, exit_confirm, ce_short, ce_long = run_hourly_trading_strategy(live, api, upstox_opt_api, upstox_charge_api, upstox_instruments, stema_min_df, entry_confirm, exit_confirm, total_profit, pos_delta, current_time=None )
                 print(f'Number of email messages: {len(return_msgs)}')
                 for msg in return_msgs:
                     send_email_plain(msg['subject'], msg['body'])
@@ -673,6 +683,8 @@ def main():
     sess_var_df.loc[sess_var_df['session_var']=='counter','value']=counter
     sess_var_df.loc[sess_var_df['session_var']=='exit_confirm','value']=exit_confirm
     sess_var_df.loc[sess_var_df['session_var']=='entry_confirm','value']=entry_confirm
+    sess_var_df.loc[sess_var_df['session_var']=='ce_short','value']=ce_short
+    sess_var_df.loc[sess_var_df['session_var']=='ce_long','value']=ce_long
     sess_var_df.to_csv(session_var_file, index=False)
     api.logout()
 

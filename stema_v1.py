@@ -24,6 +24,64 @@ holiday_dict ={
     '2025-12-25':'2025-12-24',
 }
 
+def chandelier_exit_tv(df, period=25, atr_multiplier=4.0):
+    """
+    Calculate Chandelier Exit for ascending order DataFrame, matching TradingView.
+    Parameters:
+        df: DataFrame with columns ['high', 'low', 'close'] in ascending time order
+        period: Lookback period for highest high/lowest low and ATR (default: 25)
+        atr_multiplier: Multiplier for ATR (default: 4.0)
+    Returns:
+        df: DataFrame with added columns ['TR', 'ATR', 'Highest_High', 'Lowest_Low', 'CE_long', 'CE_short']
+    """
+    high = df['high'].copy()
+    low = df['low'].copy()
+    close = df['close'].copy()
+
+    # Calculate True Range
+    prev_close = close.shift(-1)  # Previous close in ascending order
+    tr = pd.concat([
+        high - low,
+        (high - prev_close).abs(),
+        (low - prev_close).abs()
+    ], axis=1).max(axis=1)
+    df['TR'] = tr
+
+    # Wilder's ATR, matching TradingView's ta.atr
+    def wilder_atr(tr, period):
+        atr = pd.Series(np.nan, index=tr.index)
+        # Initialize with first non-NaN TR
+        valid_idx = tr.first_valid_index()
+        if valid_idx is not None:
+            pos = tr.index.get_loc(valid_idx)
+            atr.iloc[pos] = tr.iloc[pos]
+            # Simple moving average for first `period - 1` values
+            for i in range(pos + 1, min(pos + period, len(tr))):
+                atr.iloc[i] = tr.iloc[pos:i + 1].mean()
+            # Wilder's smoothing: (prev_atr * (period - 1) + tr) / period
+            for i in range(pos + period, len(tr)):
+                atr.iloc[i] = (atr.iloc[i - 1] * (period - 1) + tr.iloc[i]) / period
+        return atr
+
+    atr = wilder_atr(tr, period)
+    df['ATR'] = atr
+
+    # Highest High and Lowest Low over previous `period` candles (excluding current)
+    highest_high = high.shift(-1).rolling(window=period, min_periods=1).max()
+    lowest_low = low.shift(-1).rolling(window=period, min_periods=1).min()
+    df['Highest_High'] = highest_high
+    df['Lowest_Low'] = lowest_low
+
+    # Chandelier Exit formulas
+    df['CE_long'] = highest_high - atr_multiplier * atr
+    df['CE_short'] = lowest_low + atr_multiplier * atr
+
+    # Round to match TradingView's precision
+    df['CE_long'] = df['CE_long'].round(2)
+    df['CE_short'] = df['CE_short'].round(2)
+
+    return df
+
 def get_last_thursday(year, month):
     # Get the last day of the month
     last_day = calendar.monthrange(year, month)[1]
@@ -506,6 +564,8 @@ def calculate_supertrend(df_minute):
     df_hourly['exit_signal'] = 0
     # Set exit_signal to 1 when the trend changes (current trend != previous trend)
     df_hourly.loc[df_hourly['trend'] != df_hourly['trend'].shift(1), 'exit_signal'] = 1
+
+    df_hourly = chandelier_exit_tv(df_hourly, period=25, atr_multiplier=4.0)
     
     return df_hourly
 
@@ -607,6 +667,8 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
     exit_signal = latest_row['exit_signal']
     rsi = latest_row['rsi']
     logging.info(f"Latest Row: {latest_row}")
+    ce_long = latest_row['CE_long']
+    ce_short = latest_row['CE_short']
     
     # Check for open orders
     open_orders = trade_history[trade_history['status'] == 'ACTIVE']
@@ -811,12 +873,14 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
     Entry Confirm: {entry_confirm}
     Exit Signal: {exit_signal}
     Exit Confirm: {exit_confirm}
+    CE_Short: {ce_short}
+    CE_Long : {ce_long}
     Action: {action}
     """
     return_msgs.append({'subject': subject, 'body': email_body})
     # send_email_plain(subject, email_body)
     logging.info(f"sending emails: {email_body}")
-    return return_msgs, entry_confirm, exit_confirm
+    return return_msgs, entry_confirm, exit_confirm, ce_short, ce_long
     
 def update_stema_tb(tradingsymbol, ord_type):
     global trade_history
