@@ -482,6 +482,7 @@ def monitor_trade(finvasia_api, upstox_opt_api, ce_short, ce_long):
     expiry_metrics = {}
     current_index_price = float(finvasia_api.get_quotes(exchange="NSE", token=str(26000))['lp'])
     for expiry, group in pos_df.groupby("expiry"):
+        # Chandlier Exit
         ce_exit=False
         order_type = group['type'].iloc[-1]
         if order_type =="CE" and current_index_price>ce_short:
@@ -512,12 +513,12 @@ def monitor_trade(finvasia_api, upstox_opt_api, ce_short, ce_long):
         # realized_premium = float((trade_hist_df['upldprc'].astype(float)-trade_hist_df['totbuyavgprc'].astype(float)).sum())*realized_qty
         act_realized_premium = (trade_hist_df['upldprc'].astype(float)*trade_hist_df['cfsellqty'].astype(int)-trade_hist_df['totbuyavgprc'].astype(float)*trade_hist_df['daybuyqty'].astype(int)).sum()
         realized_premium=0
-        if current_qty!=0:
-            total_premium_collected_per_option = (current_premium + realized_premium) /current_qty
-        else:
-            total_premium_collected_per_option=0
-        # current_pnl+=realized_premium # Realized premium is always 0?
-        # max_profit+=realized_premium # Realized premium is always 0?
+        # if current_qty!=0:
+        #     total_premium_collected_per_option = (current_premium + realized_premium) /current_qty
+        # else:
+        #     total_premium_collected_per_option=0
+        # # current_pnl+=realized_premium # Realized premium is always 0?
+        # # max_profit+=realized_premium # Realized premium is always 0?
 
         ce_rows = group[group["type"] == "CE"]
         pe_rows = group[group["type"] == "PE"]
@@ -530,7 +531,8 @@ def monitor_trade(finvasia_api, upstox_opt_api, ce_short, ce_long):
             upper_breakeven=999999
         else:
             # ce_breakeven_factor = current_qty/(-1*ce_rows["netqty"].sum())
-            ce_strike = float((ce_rows["sp"].astype(float) * ce_rows["netqty"].abs()).sum() / ce_rows["netqty"].abs().sum())
+            # ce_strike = float((ce_rows["sp"].astype(float) * ce_rows["netqty"].abs()).sum() / ce_rows["netqty"].abs().sum())
+            ce_strike = ce_rows["sp"].astype(float).min()
             # upper_breakeven = float(ce_strike + total_premium_collected_per_option*ce_breakeven_factor - current_index_price * ce_rows['exit_breakeven_per'].mean().astype(float)/ 100)
             # upper_breakeven = float(ce_strike - current_index_price * ce_rows['exit_breakeven_per'].mean().astype(float)/ 100)
             # upper_breakeven=float(ce_strike - expected_move + total_premium_collected_per_option)
@@ -541,7 +543,8 @@ def monitor_trade(finvasia_api, upstox_opt_api, ce_short, ce_long):
             lower_breakeven = 0
         else:
             # pe_breakeven_factor = current_qty/(-1*pe_rows["netqty"].sum())
-            pe_strike = float((pe_rows["sp"].astype(float) * pe_rows["netqty"].abs()).sum() / pe_rows["netqty"].abs().sum())
+            # pe_strike = float((pe_rows["sp"].astype(float) * pe_rows["netqty"].abs()).sum() / pe_rows["netqty"].abs().sum())
+            pe_strike = pe_rows["sp"].astype(float).max()
             # lower_breakeven = float(pe_strike - total_premium_collected_per_option*pe_breakeven_factor + current_index_price * pe_rows['exit_breakeven_per'].mean().astype(float)/ 100)
             # lower_breakeven = float(pe_strike + current_index_price * pe_rows['exit_breakeven_per'].mean().astype(float)/ 100)
             # lower_breakeven = float(pe_strike + expected_move-total_premium_collected_per_option)
