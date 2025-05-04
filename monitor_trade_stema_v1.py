@@ -469,7 +469,9 @@ def format_trade_metrics(metrics):
     
     return email_body
 
-def monitor_trade(finvasia_api, upstox_opt_api, ce_short, ce_long):
+# Removing Chandlier_exit_tv
+# def monitor_trade(finvasia_api, upstox_opt_api, ce_short, ce_long):
+def monitor_trade(finvasia_api, upstox_opt_api):
     global session_var_df
     global session_var_file
     logging.info("Getting positions")
@@ -482,13 +484,15 @@ def monitor_trade(finvasia_api, upstox_opt_api, ce_short, ce_long):
     expiry_metrics = {}
     current_index_price = float(finvasia_api.get_quotes(exchange="NSE", token=str(26000))['lp'])
     for expiry, group in pos_df.groupby("expiry"):
+        # Removing Chandlier_exit_tv
         # Chandlier Exit
-        ce_exit=False
+        # ce_exit=False
         order_type = group['type'].iloc[-1]
-        if order_type =="CE" and current_index_price>ce_short:
-            ce_exit = True
-        elif order_type =="PE" and current_index_price<ce_long:
-            ce_exit = True
+        # Removing Chandlier_exit_tv
+        # if order_type =="CE" and current_index_price>ce_short:
+        #     ce_exit = True
+        # elif order_type =="PE" and current_index_price<ce_long:
+        #     ce_exit = True
         expiry_date_str = expiry.strftime('%Y-%m-%d')
         atm_iv = get_atm_iv(upstox_opt_api, expiry_date_str, current_index_price)
         # expected_move = calc_expected_move(current_index_price, vix, group['Days_to_Expiry'].mean().astype(int))
@@ -582,7 +586,9 @@ def monitor_trade(finvasia_api, upstox_opt_api, ce_short, ce_long):
         }
         total_pnl+=current_pnl
 
-        stop_loss_condition = ce_exit or ((current_index_price < lower_breakeven or current_index_price > upper_breakeven)) or current_pnl < max_loss or (current_pnl > 0.90 * max_profit)
+        # Removing Chandlier_exit_tv
+        # stop_loss_condition = ce_exit or ((current_index_price < lower_breakeven or current_index_price > upper_breakeven)) or current_pnl < max_loss or (current_pnl > 0.90 * max_profit)
+        stop_loss_condition = ((current_index_price < lower_breakeven or current_index_price > upper_breakeven)) or current_pnl < max_loss or (current_pnl > 0.90 * max_profit)
 
         if stop_loss_condition and (current_pnl < 0.90 * max_profit):
             stop_loss_order(group, finvasia_api, live=live)
@@ -601,9 +607,6 @@ def monitor_trade(finvasia_api, upstox_opt_api, ce_short, ce_long):
             "Max_Profit": round(max_profit, 2),
             "Max_Loss": round(max_loss, 2),
             "Realized_Premium": round(act_realized_premium, 2),
-            "CE_Short": ce_short,
-            "CE_Long": ce_long,
-            "CE_Exit": "YES" if ce_exit else "NO"
         }
         elif stop_loss_condition and (current_pnl > 0.90 * max_profit):
             stop_loss_order(group, finvasia_api, live=live)
@@ -622,9 +625,6 @@ def monitor_trade(finvasia_api, upstox_opt_api, ce_short, ce_long):
             "Max_Profit": round(max_profit, 2),
             "Max_Loss": round(max_loss, 2),
             "Realized_Premium": round(act_realized_premium, 2),
-            "CE_Short": ce_short,
-            "CE_Long": ce_long,
-            "CE_Exit": "YES" if ce_exit else "NO"
         }
 
     metrics["Expiry_Details"] = expiry_metrics
@@ -660,13 +660,16 @@ def main():
     counter = 0
     exit_confirm = sess_var_df[sess_var_df['session_var'] == 'exit_confirm']['value'].iloc[0]
     entry_confirm = sess_var_df[sess_var_df['session_var'] == 'entry_confirm']['value'].iloc[0]
-    ce_short = sess_var_df[sess_var_df['session_var'] == 'ce_short']['value'].iloc[0]
-    ce_long = sess_var_df[sess_var_df['session_var'] == 'ce_long']['value'].iloc[0]
+    # Removing Chandlier_exit_tv
+    # ce_short = sess_var_df[sess_var_df['session_var'] == 'ce_short']['value'].iloc[0]
+    # ce_long = sess_var_df[sess_var_df['session_var'] == 'ce_long']['value'].iloc[0]
     logging.info(f"Loaded session variables: {sess_var_df}")
     # Start Monitoring
     while is_within_timeframe(session.get('start_time'), session.get('end_time')):
         logging.info(f"Monitoring Trade")
-        metrics, total_profit = monitor_trade(api, upstox_opt_api, ce_short, ce_long)
+        # Removing Chandlier_exit_tv
+        # metrics, total_profit = monitor_trade(api, upstox_opt_api, ce_short, ce_long)
+        metrics, total_profit = monitor_trade(api, upstox_opt_api)
         if metrics =="STOP_LOSS":
             send_email("STOP LOSS HIT - QUIT", "STOP LOSS HIT")
         else:
@@ -682,7 +685,9 @@ def main():
                 # send_email_plain(subject, email_body)
                 stema_min_df = get_minute_data(api,now=None)
                 logging.info(f"Got historical data")
-                return_msgs, entry_confirm, exit_confirm, ce_short, ce_long = run_hourly_trading_strategy(live, api, upstox_opt_api, upstox_charge_api, upstox_instruments, stema_min_df, entry_confirm, exit_confirm, total_profit,current_time=None )
+                # Removing Chandlier_exit_tv
+                # return_msgs, entry_confirm, exit_confirm, ce_short, ce_long = run_hourly_trading_strategy(live, api, upstox_opt_api, upstox_charge_api, upstox_instruments, stema_min_df, entry_confirm, exit_confirm, total_profit,current_time=None )
+                return_msgs, entry_confirm, exit_confirm = run_hourly_trading_strategy(live, api, upstox_opt_api, upstox_charge_api, upstox_instruments, stema_min_df, entry_confirm, exit_confirm, total_profit,current_time=None )
                 print(f'Number of email messages: {len(return_msgs)}')
                 for msg in return_msgs:
                     send_email_plain(msg['subject'], msg['body'])
@@ -694,8 +699,9 @@ def main():
     sess_var_df.loc[sess_var_df['session_var']=='counter','value']=counter
     sess_var_df.loc[sess_var_df['session_var']=='exit_confirm','value']=exit_confirm
     sess_var_df.loc[sess_var_df['session_var']=='entry_confirm','value']=entry_confirm
-    sess_var_df.loc[sess_var_df['session_var']=='ce_short','value']=ce_short
-    sess_var_df.loc[sess_var_df['session_var']=='ce_long','value']=ce_long
+    # Removing Chandlier_exit_tv
+    # sess_var_df.loc[sess_var_df['session_var']=='ce_short','value']=ce_short
+    # sess_var_df.loc[sess_var_df['session_var']=='ce_long','value']=ce_long
     sess_var_df.to_csv(session_var_file, index=False)
     api.logout()
 

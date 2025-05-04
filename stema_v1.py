@@ -553,7 +553,8 @@ def calculate_supertrend(df_minute):
     # df_hourly['adx'] = ta.trend.adx(high=df_hourly['high'], low=df_hourly['low'], close=df_hourly['close'], window=20)
     # Calculate RSI
     df_hourly['rsi'] = calculate_rsi_wilder(df_hourly['close'], period=14)
-    df_hourly = chandelier_exit_tv(df_hourly, period=25, atr_multiplier=4.0)
+    # Removing Chandlier_exit_tv
+    # df_hourly = chandelier_exit_tv(df_hourly, period=25, atr_multiplier=4.0)
     df_hourly['entry_signal'] = 0
     # df_hourly.loc[(df_hourly['close'] < df_hourly['ema20']) & (df_hourly['trend'] == -1) & (df_hourly['adx'] > 25), 'entry_signal'] = 1
     # df_hourly.loc[(df_hourly['close'] > df_hourly['ema20']) & (df_hourly['trend'] == 1) & (df_hourly['adx'] > 25), 'entry_signal'] = -1
@@ -662,8 +663,9 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
     entry_signal = latest_row['entry_signal']
     exit_signal = latest_row['exit_signal']
     rsi = latest_row['rsi']
-    ce_long = latest_row['CE_long']
-    ce_short = latest_row['CE_short']
+    # Removing Chandlier_exit_tv
+    # ce_long = latest_row['CE_long']
+    # ce_short = latest_row['CE_short']
     
     # Check for open orders
     # Try getting this from positions
@@ -750,102 +752,103 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
         orders={}
         action = 'MAKE ENTRY'
         order_type = 'CE' if entry_signal == 1 else 'PE'
-        if (order_type == 'PE' and current_index_price > ce_long) or (order_type == 'CE' and current_index_price < ce_short):
-            # expiry = get_next_thursday_between_4_and_12_days(current_time)
-            expiry = get_target_thursday()
-            # Check if expiry is a holiday
-            if expiry in holiday_dict:
-                expiry=holiday_dict.get(expiry)
-            logging.info(f"Calculated Expiry: {expiry}")
+        # Removing Chandlier_exit_tv
+        # if (order_type == 'PE' and current_index_price > ce_long) or (order_type == 'CE' and current_index_price < ce_short):
+        # expiry = get_next_thursday_between_4_and_12_days(current_time)
+        expiry = get_target_thursday()
+        # Check if expiry is a holiday
+        if expiry in holiday_dict:
+            expiry=holiday_dict.get(expiry)
+        logging.info(f"Calculated Expiry: {expiry}")
 
-            # Pseudocode: Place order
-            # Check to not place the same trend order if exited on the same day
-            # Get today's date (without time)
-            today = pd.Timestamp(datetime.now(ZoneInfo("Asia/Kolkata")).date())
-            # Filter rows where the date part of 'exit_timestamp' matches today -- TODO check with tradebook
-            trade_history['exit_timestamp'] = pd.to_datetime(trade_history['exit_timestamp'])
-            df_today = trade_history[trade_history['exit_timestamp'].dt.date == today.date()]
-            day_order_filter = list(df_today['order_type'].unique())
-            # Get available cash and stock colalterals:
-            limits = finvasia_api.get_limits()
-            min_coll = min(float(limits['cash']) + float(limits['payin'])- float(limits['payout'])-float(limits['marginused'])/2, float(limits['collateral'])-float(limits['marginused'])/2)
-            if order_type == 'PE' and order_type not in day_order_filter:
-                main_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.21)
-                logging.info(f"Main Leg: {main_leg}")
-                hedge_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.10)
-                logging.info(f"Hedge Leg: {hedge_leg}")
+        # Pseudocode: Place order
+        # Check to not place the same trend order if exited on the same day
+        # Get today's date (without time)
+        today = pd.Timestamp(datetime.now(ZoneInfo("Asia/Kolkata")).date())
+        # Filter rows where the date part of 'exit_timestamp' matches today -- TODO check with tradebook
+        trade_history['exit_timestamp'] = pd.to_datetime(trade_history['exit_timestamp'])
+        df_today = trade_history[trade_history['exit_timestamp'].dt.date == today.date()]
+        day_order_filter = list(df_today['order_type'].unique())
+        # Get available cash and stock colalterals:
+        limits = finvasia_api.get_limits()
+        min_coll = min(float(limits['cash']) + float(limits['payin'])- float(limits['payout'])-float(limits['marginused'])/2, float(limits['collateral'])-float(limits['marginused'])/2)
+        if order_type == 'PE' and order_type not in day_order_filter:
+            main_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.21)
+            logging.info(f"Main Leg: {main_leg}")
+            hedge_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.10)
+            logging.info(f"Hedge Leg: {hedge_leg}")
 
-                orders['Main']={'trading_symbol':main_leg['fin_pe_symbol'], 'trading_up_symbol':main_leg['upstox_pe_instrument_key'], 'order_action':'S', 'order_qty':str(entry_trade_qty), 'order_type':'PE'}
-                logging.info(f"Main Leg: {main_leg['fin_pe_symbol']}")
-                orders['Hedge']={'trading_symbol':hedge_leg['fin_pe_symbol'], 'trading_up_symbol':hedge_leg['upstox_pe_instrument_key'], 'order_action':'B', 'order_qty':str(entry_trade_qty), 'order_type':'PE'}
-                logging.info(f"Hedge Leg: {hedge_leg['fin_pe_symbol']}")
-                # Get revised trade_qty based on margin
-                orders = get_revised_qty_margin(orders, upstox_charge_api, min_coll)
-                # put_neg_bias
-                orders['Main']['order_qty']=75*(int(orders['Main']['order_qty'])//(75*put_neg_bias))
-                orders['Hedge']['order_qty']=75*(int(orders['Main']['order_qty'])//(75*put_neg_bias))
-            elif order_type == 'CALL' and order_type not in day_order_filter:
-                main_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.22)
-                logging.info(f"Main Leg: {main_leg}")
-                hedge_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.09)
-                logging.info(f"Hedge Leg: {hedge_leg}")
+            orders['Main']={'trading_symbol':main_leg['fin_pe_symbol'], 'trading_up_symbol':main_leg['upstox_pe_instrument_key'], 'order_action':'S', 'order_qty':str(entry_trade_qty), 'order_type':'PE'}
+            logging.info(f"Main Leg: {main_leg['fin_pe_symbol']}")
+            orders['Hedge']={'trading_symbol':hedge_leg['fin_pe_symbol'], 'trading_up_symbol':hedge_leg['upstox_pe_instrument_key'], 'order_action':'B', 'order_qty':str(entry_trade_qty), 'order_type':'PE'}
+            logging.info(f"Hedge Leg: {hedge_leg['fin_pe_symbol']}")
+            # Get revised trade_qty based on margin
+            orders = get_revised_qty_margin(orders, upstox_charge_api, min_coll)
+            # put_neg_bias
+            orders['Main']['order_qty']=75*(int(orders['Main']['order_qty'])//(75*put_neg_bias))
+            orders['Hedge']['order_qty']=75*(int(orders['Main']['order_qty'])//(75*put_neg_bias))
+        elif order_type == 'CALL' and order_type not in day_order_filter:
+            main_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.22)
+            logging.info(f"Main Leg: {main_leg}")
+            hedge_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.09)
+            logging.info(f"Hedge Leg: {hedge_leg}")
 
-                orders['Main']={'trading_symbol':main_leg['fin_ce_symbol'], 'trading_up_symbol':main_leg['upstox_ce_instrument_key'], 'order_action':'S', 'order_qty':str(entry_trade_qty), 'order_type':'CE'}
-                logging.info(f"Main Leg: {main_leg['fin_ce_symbol']}")
-                orders['Hedge']={'trading_symbol':hedge_leg['fin_ce_symbol'], 'trading_up_symbol':hedge_leg['upstox_ce_instrument_key'], 'order_action':'B', 'order_qty':str(entry_trade_qty), 'order_type':'CE'}
-                logging.info(f"Hedge Leg: {hedge_leg['fin_ce_symbol']}")
-                orders = get_revised_qty_margin(orders, upstox_charge_api, min_coll)
-            #Place Hedge orders first
-            hedge_order = orders['Hedge']
+            orders['Main']={'trading_symbol':main_leg['fin_ce_symbol'], 'trading_up_symbol':main_leg['upstox_ce_instrument_key'], 'order_action':'S', 'order_qty':str(entry_trade_qty), 'order_type':'CE'}
+            logging.info(f"Main Leg: {main_leg['fin_ce_symbol']}")
+            orders['Hedge']={'trading_symbol':hedge_leg['fin_ce_symbol'], 'trading_up_symbol':hedge_leg['upstox_ce_instrument_key'], 'order_action':'B', 'order_qty':str(entry_trade_qty), 'order_type':'CE'}
+            logging.info(f"Hedge Leg: {hedge_leg['fin_ce_symbol']}")
+            orders = get_revised_qty_margin(orders, upstox_charge_api, min_coll)
+        #Place Hedge orders first
+        hedge_order = orders['Hedge']
 
-            if int(hedge_order['order_qty'])>0:
-                ret_hedge_status, ret_msg=place_order(finvasia_api, live, hedge_order['trading_symbol'], hedge_order['order_action'], hedge_order['order_qty'], 'STEMA')
-                logging.info(f"Hedge Order Status: {ret_hedge_status}")
-                return_msgs.append(ret_msg)
-                # Append to trade history
-                new_order = pd.DataFrame({
-                    'time': latest_timestamp,
-                    'trading_symbol': hedge_order['trading_symbol'],
-                    'expiry': expiry,
-                    'order_action' : hedge_order['order_action'],
-                    'order_qty': hedge_order['order_qty'],
-                    'order_leg': 'Hedge',
-                    'order_type': hedge_order['order_type'],
-                    'status': 'ACTIVE',
-                    'exit_timestamp': [pd.NaT]
-                })
-                if ret_hedge_status:
-                    # trade_history = pd.concat([trade_history, new_order], ignore_index=True)
-                    if not new_order.empty:
-                        new_order = new_order.astype(trade_history.dtypes.to_dict(), errors='ignore')
-                        logging.info(f"Update Trade History for hedge order")
-                        trade_history = pd.concat([trade_history, new_order], ignore_index=True)
+        if int(hedge_order['order_qty'])>0:
+            ret_hedge_status, ret_msg=place_order(finvasia_api, live, hedge_order['trading_symbol'], hedge_order['order_action'], hedge_order['order_qty'], 'STEMA')
+            logging.info(f"Hedge Order Status: {ret_hedge_status}")
+            return_msgs.append(ret_msg)
+            # Append to trade history
+            new_order = pd.DataFrame({
+                'time': latest_timestamp,
+                'trading_symbol': hedge_order['trading_symbol'],
+                'expiry': expiry,
+                'order_action' : hedge_order['order_action'],
+                'order_qty': hedge_order['order_qty'],
+                'order_leg': 'Hedge',
+                'order_type': hedge_order['order_type'],
+                'status': 'ACTIVE',
+                'exit_timestamp': [pd.NaT]
+            })
+            if ret_hedge_status:
+                # trade_history = pd.concat([trade_history, new_order], ignore_index=True)
+                if not new_order.empty:
+                    new_order = new_order.astype(trade_history.dtypes.to_dict(), errors='ignore')
+                    logging.info(f"Update Trade History for hedge order")
+                    trade_history = pd.concat([trade_history, new_order], ignore_index=True)
 
 
-            #Place Main orders
-            main_order = orders['Main']
-            if int(main_order['order_qty'])>0:
-                ret_main_status, ret_msg=place_order(finvasia_api, live, main_order['trading_symbol'], main_order['order_action'], main_order['order_qty'], 'STEMA')
-                logging.info(f"Hedge Order Status: {ret_main_status}")
-                return_msgs.append(ret_msg)
-                # Append to trade history
-                new_order = pd.DataFrame({
-                    'time': latest_timestamp,
-                    'trading_symbol': main_order['trading_symbol'],
-                    'expiry': expiry,
-                    'order_action' : main_order['order_action'],
-                    'order_qty': main_order['order_qty'],
-                    'order_leg': 'Main',
-                    'order_type': main_order['order_type'],
-                    'status': 'ACTIVE',
-                    'exit_timestamp': [pd.NaT]
-                })
-                if ret_main_status:
-                    # trade_history = pd.concat([trade_history, new_order], ignore_index=True)
-                    if not new_order.empty:
-                        new_order = new_order.astype(trade_history.dtypes.to_dict(), errors='ignore')
-                        logging.info(f"Update Trade History for hedge order")
-                        trade_history = pd.concat([trade_history, new_order], ignore_index=True)
+        #Place Main orders
+        main_order = orders['Main']
+        if int(main_order['order_qty'])>0:
+            ret_main_status, ret_msg=place_order(finvasia_api, live, main_order['trading_symbol'], main_order['order_action'], main_order['order_qty'], 'STEMA')
+            logging.info(f"Hedge Order Status: {ret_main_status}")
+            return_msgs.append(ret_msg)
+            # Append to trade history
+            new_order = pd.DataFrame({
+                'time': latest_timestamp,
+                'trading_symbol': main_order['trading_symbol'],
+                'expiry': expiry,
+                'order_action' : main_order['order_action'],
+                'order_qty': main_order['order_qty'],
+                'order_leg': 'Main',
+                'order_type': main_order['order_type'],
+                'status': 'ACTIVE',
+                'exit_timestamp': [pd.NaT]
+            })
+            if ret_main_status:
+                # trade_history = pd.concat([trade_history, new_order], ignore_index=True)
+                if not new_order.empty:
+                    new_order = new_order.astype(trade_history.dtypes.to_dict(), errors='ignore')
+                    logging.info(f"Update Trade History for hedge order")
+                    trade_history = pd.concat([trade_history, new_order], ignore_index=True)
 
     # Save trade history
     logging.info(f"Saving trade history")
@@ -864,15 +867,16 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
     Entry Confirm: {entry_confirm}
     Exit Signal: {exit_signal}
     Exit Confirm: {exit_confirm}
-    CE_Short: {ce_short}
-    CE_Long : {ce_long}
     Action: {action}
     Open Orders: {list(open_orders['tsym']) if has_open_order else "NA"} 
     """
     return_msgs.append({'subject': subject, 'body': email_body})
     # send_email_plain(subject, email_body)
     logging.info(f"sending emails: {email_body}")
-    return return_msgs, entry_confirm, exit_confirm, ce_short, ce_long
+    # Removing Chandlier_exit_tv
+    # return return_msgs, entry_confirm, exit_confirm, ce_short, ce_long
+    return return_msgs, entry_confirm, exit_confirm
+
     
 def update_stema_tb(tradingsymbol, ord_type):
     global trade_history
