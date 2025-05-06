@@ -558,8 +558,8 @@ def calculate_supertrend(df_minute):
     df_hourly['entry_signal'] = 0
     # df_hourly.loc[(df_hourly['close'] < df_hourly['ema20']) & (df_hourly['trend'] == -1) & (df_hourly['adx'] > 25), 'entry_signal'] = 1
     # df_hourly.loc[(df_hourly['close'] > df_hourly['ema20']) & (df_hourly['trend'] == 1) & (df_hourly['adx'] > 25), 'entry_signal'] = -1
-    df_hourly.loc[(df_hourly['close'] < df_hourly['ema20']) & (df_hourly['close'] < df_hourly['ema34']) & (df_hourly['ema20']<df_hourly['ema34']) & (df_hourly['trend'] == -1) & (df_hourly['rsi'] <50), 'entry_signal'] = 1
-    df_hourly.loc[(df_hourly['close'] > df_hourly['ema20']) &(df_hourly['close'] > df_hourly['ema34']) & (df_hourly['ema20']>df_hourly['ema34'])& (df_hourly['trend'] == 1)& (df_hourly['rsi'] > 50) , 'entry_signal'] = -1
+    df_hourly.loc[(df_hourly['close'] < df_hourly['ema20']) & (df_hourly['close'] < df_hourly['ema34']) & (df_hourly['ema20']<df_hourly['ema34']) & (df_hourly['trend'] == -1) & (df_hourly['rsi'] <45), 'entry_signal'] = 1
+    df_hourly.loc[(df_hourly['close'] > df_hourly['ema20']) &(df_hourly['close'] > df_hourly['ema34']) & (df_hourly['ema20']>df_hourly['ema34'])& (df_hourly['trend'] == 1)& (df_hourly['rsi'] > 55) , 'entry_signal'] = -1
     # Initialize the exit_signal column to 0
     df_hourly['exit_signal'] = 0
     # Set exit_signal to 1 when the trend changes (current trend != previous trend)
