@@ -558,8 +558,8 @@ def calculate_supertrend(df_minute):
     df_hourly['entry_signal'] = 0
     # df_hourly.loc[(df_hourly['close'] < df_hourly['ema20']) & (df_hourly['trend'] == -1) & (df_hourly['adx'] > 25), 'entry_signal'] = 1
     # df_hourly.loc[(df_hourly['close'] > df_hourly['ema20']) & (df_hourly['trend'] == 1) & (df_hourly['adx'] > 25), 'entry_signal'] = -1
-    df_hourly.loc[(df_hourly['close'] < df_hourly['ema20']) & (df_hourly['close'] < df_hourly['ema34']) & (df_hourly['trend'] == -1) & (df_hourly['rsi'] <50), 'entry_signal'] = 1
-    df_hourly.loc[(df_hourly['close'] > df_hourly['ema20']) &(df_hourly['close'] > df_hourly['ema34']) & (df_hourly['trend'] == 1)& (df_hourly['rsi'] > 50) , 'entry_signal'] = -1
+    df_hourly.loc[(df_hourly['close'] < df_hourly['ema20']) & (df_hourly['close'] < df_hourly['ema34']) & (df_hourly['ema20']<df_hourly['ema34']) & (df_hourly['trend'] == -1) & (df_hourly['rsi'] <50), 'entry_signal'] = 1
+    df_hourly.loc[(df_hourly['close'] > df_hourly['ema20']) &(df_hourly['close'] > df_hourly['ema34']) & (df_hourly['ema20']>df_hourly['ema34'])& (df_hourly['trend'] == 1)& (df_hourly['rsi'] > 50) , 'entry_signal'] = -1
     # Initialize the exit_signal column to 0
     df_hourly['exit_signal'] = 0
     # Set exit_signal to 1 when the trend changes (current trend != previous trend)
@@ -771,7 +771,7 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
         day_order_filter = list(df_today['order_type'].unique())
         # Get available cash and stock colalterals:
         limits = finvasia_api.get_limits()
-        min_coll = min(float(limits['cash']) + float(limits['payin'])- float(limits['payout'])-float(limits['marginused'])/2, float(limits['collateral'])-float(limits['marginused'])/2)
+        min_coll = min(float(limits['cash'])+float(limits['cash_coll']) + float(limits['payin'])- float(limits['payout'])-float(limits['marginused'])/2, float(limits['collateral'])-float(limits['marginused'])/2)
         if order_type == 'PE' and order_type not in day_order_filter:
             main_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.21)
             logging.info(f"Main Leg: {main_leg}")
