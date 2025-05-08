@@ -10,6 +10,7 @@ import logging
 import time as sleep_time
 import ta
 from zoneinfo import ZoneInfo 
+from monitor_trade_stema_v1 import write_to_trade_book
 logging.basicConfig(level=logging.INFO)
 ################# Helper functions #################
 
@@ -638,6 +639,8 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
     put_neg_bias = 1
     pos_base_lots = 5
     pos_delta = 60000
+    tb = write_to_trade_book(finvasia_api)
+    # total_profit = tb[]
     entry_trade_qty= fixed_ratio_position_size(pos_base_lots, pos_delta, total_profit) * 75
 
     logging.info(f"Started STEMA Strategy")
@@ -729,6 +732,7 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
                 trade_history.loc[trade_history['trading_symbol'] == order_tsm, 'status'] = 'CLOSED'
                 trade_history.loc[trade_history['trading_symbol'] == order_tsm, 'exit_timestamp'] = current_time
         time.sleep(60)
+        tb = write_to_trade_book(finvasia_api)
     
         # Check for open orders again after Exit # maybe - Giving gap of 1 iteration between exit and entry
         pos = pd.DataFrame(finvasia_api.get_positions())
@@ -849,6 +853,8 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
                     new_order = new_order.astype(trade_history.dtypes.to_dict(), errors='ignore')
                     logging.info(f"Update Trade History for hedge order")
                     trade_history = pd.concat([trade_history, new_order], ignore_index=True)
+        
+        tb = write_to_trade_book(finvasia_api)
 
     # Save trade history
     logging.info(f"Saving trade history")

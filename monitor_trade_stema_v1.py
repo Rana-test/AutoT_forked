@@ -291,24 +291,22 @@ def insert_if_not_exists(df, new_record):
     return df
 
 def write_to_trade_book(api):
+    trade_csv = "trade_book.csv"
+    dtype_map={}
+    cols = ['trantype', 'tsym', 'qty', 'fillshares', 'flqty', 'flprc', 'avgprc', 'exch_tm', 'remarks', 'exchordid']
+    
+    for col in cols:
+        dtype_map[col]=str
+
+    # Load existing trade history or create an empty DataFrame
+    if os.path.exists(trade_csv):
+        trade_csv_df = pd.read_csv(trade_csv, dtype=str)
+    else:
+        trade_csv_df = pd.DataFrame(columns=trade_csv_df.columns)
+
     new_rec_df = pd.DataFrame(api.get_trade_book())
     if len(new_rec_df) > 0:
-        
         new_rec_df = new_rec_df[['trantype', 'tsym', 'qty', 'fillshares', 'flqty', 'flprc', 'avgprc', 'exch_tm', 'remarks', 'exchordid']]
-        
-        trade_csv = "trade_book.csv"
-        dtype_map={}
-        cols = ['trantype', 'tsym', 'qty', 'fillshares', 'flqty', 'flprc', 'avgprc', 'exch_tm', 'remarks', 'exchordid']
-        
-        for col in cols:
-            dtype_map[col]=str
-
-        # Load existing trade history or create an empty DataFrame
-        if os.path.exists(trade_csv):
-            trade_csv_df = pd.read_csv(trade_csv, dtype=str)
-        else:
-            trade_csv_df = pd.DataFrame(columns=trade_csv_df.columns)
-
         # Ensure column order and types match by creating a copy before modification
         trade_csv_df = trade_csv_df.copy()
 
@@ -335,8 +333,7 @@ def write_to_trade_book(api):
         # Save to CSV with fixed float format (2 decimal places)
         trade_csv_df.to_csv(trade_csv, index=False, float_format="%.2f")
 
-    return True
-
+    return trade_csv_df
 
 def write_to_trade_history(trade_book_df):
     trade_hist = "trade_history.csv"
