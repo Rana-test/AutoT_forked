@@ -82,6 +82,41 @@ def chandelier_exit_tv(df, period=25, atr_multiplier=4.0):
 
     return df
 
+def calculate_total_pnl(df):
+    df['flqty'] = df['flqty'].astype(float)
+    df['flprc'] = df['flprc'].astype(float)
+    
+    pnl_by_symbol = {}
+    
+    for tsym, group in df.groupby('tsym'):
+        buy_qty = 0
+        sell_qty = 0
+        buy_amount = 0.0
+        sell_amount = 0.0
+
+        for _, row in group.iterrows():
+            qty = row['flqty']
+            prc = row['flprc']
+            amt = qty * prc
+
+            if row['trantype'] == 'B':
+                buy_qty += qty
+                buy_amount += amt
+            elif row['trantype'] == 'S':
+                sell_qty += qty
+                sell_amount += amt
+
+        # Match only to the extent of minimum executed quantity (round-trip only)
+        matched_qty = min(buy_qty, sell_qty)
+        avg_buy_price = buy_amount / buy_qty if buy_qty else 0
+        avg_sell_price = sell_amount / sell_qty if sell_qty else 0
+
+        pnl = (avg_sell_price - avg_buy_price) * matched_qty
+        pnl_by_symbol[tsym] = pnl
+
+    total_pnl = sum(pnl_by_symbol.values())
+    return total_pnl, pnl_by_symbol
+
 def write_to_trade_book(api):
     trade_csv = "trade_book.csv"
     dtype_map={}
@@ -124,8 +159,9 @@ def write_to_trade_book(api):
 
         # Save to CSV with fixed float format (2 decimal places)
         trade_csv_df.to_csv(trade_csv, index=False, float_format="%.2f")
-
-    return trade_csv_df
+    
+        total_pnl, pnl_by_symbol = calculate_total_pnl(trade_csv_df)
+    return trade_csv_df, total_pnl
 
 
 def get_last_thursday(year, month):
@@ -684,9 +720,10 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
     put_neg_bias = 1
     pos_base_lots = 5
     pos_delta = 60000
-    tb = write_to_trade_book(finvasia_api)
+    tb, pnl = write_to_trade_book(finvasia_api)
+    logging.info(f"Trade Book based PNL: {pnl}")
     # total_profit = tb[]
-    entry_trade_qty= fixed_ratio_position_size(pos_base_lots, pos_delta, total_profit) * 75
+    entry_trade_qty= fixed_ratio_position_size(pos_base_lots, pos_delta, pnl) * 75
 
     logging.info(f"Started STEMA Strategy")
     return_msgs=[]
@@ -777,7 +814,7 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
                 trade_history.loc[trade_history['trading_symbol'] == order_tsm, 'status'] = 'CLOSED'
                 trade_history.loc[trade_history['trading_symbol'] == order_tsm, 'exit_timestamp'] = current_time
         time.sleep(60)
-        tb = write_to_trade_book(finvasia_api)
+        write_to_trade_book(finvasia_api)
     
         # Check for open orders again after Exit # maybe - Giving gap of 1 iteration between exit and entry
         pos = pd.DataFrame(finvasia_api.get_positions())
@@ -899,7 +936,7 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
                     logging.info(f"Update Trade History for hedge order")
                     trade_history = pd.concat([trade_history, new_order], ignore_index=True)
         
-        tb = write_to_trade_book(finvasia_api)
+        write_to_trade_book(finvasia_api)
 
     # Save trade history
     logging.info(f"Saving trade history")

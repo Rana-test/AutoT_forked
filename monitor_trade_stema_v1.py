@@ -290,6 +290,41 @@ def insert_if_not_exists(df, new_record):
     
     return df
 
+def calculate_total_pnl(df):
+    df['flqty'] = df['flqty'].astype(float)
+    df['flprc'] = df['flprc'].astype(float)
+    
+    pnl_by_symbol = {}
+    
+    for tsym, group in df.groupby('tsym'):
+        buy_qty = 0
+        sell_qty = 0
+        buy_amount = 0.0
+        sell_amount = 0.0
+
+        for _, row in group.iterrows():
+            qty = row['flqty']
+            prc = row['flprc']
+            amt = qty * prc
+
+            if row['trantype'] == 'B':
+                buy_qty += qty
+                buy_amount += amt
+            elif row['trantype'] == 'S':
+                sell_qty += qty
+                sell_amount += amt
+
+        # Match only to the extent of minimum executed quantity (round-trip only)
+        matched_qty = min(buy_qty, sell_qty)
+        avg_buy_price = buy_amount / buy_qty if buy_qty else 0
+        avg_sell_price = sell_amount / sell_qty if sell_qty else 0
+
+        pnl = (avg_sell_price - avg_buy_price) * matched_qty
+        pnl_by_symbol[tsym] = pnl
+
+    total_pnl = sum(pnl_by_symbol.values())
+    return total_pnl, pnl_by_symbol
+
 def write_to_trade_book(api):
     trade_csv = "trade_book.csv"
     dtype_map={}
@@ -333,7 +368,8 @@ def write_to_trade_book(api):
         # Save to CSV with fixed float format (2 decimal places)
         trade_csv_df.to_csv(trade_csv, index=False, float_format="%.2f")
 
-    return trade_csv_df
+        total_pnl, pnl_by_symbol = calculate_total_pnl(trade_csv_df)
+    return trade_csv_df, total_pnl
 
 def write_to_trade_history(trade_book_df):
     trade_hist = "trade_history.csv"
