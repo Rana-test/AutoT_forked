@@ -290,6 +290,54 @@ def insert_if_not_exists(df, new_record):
     
     return df
 
+def write_to_trade_book(api):
+    new_rec_df = pd.DataFrame(api.get_trade_book())
+    if len(new_rec_df) > 0:
+        
+        new_rec_df = new_rec_df[['trantype', 'tsym', 'qty', 'fillshares', 'flqty', 'flprc', 'avgprc', 'exch_tm', 'remarks', 'exchordid']]
+        
+        trade_csv = "trade_book.csv"
+        dtype_map={}
+        cols = ['trantype', 'tsym', 'qty', 'fillshares', 'flqty', 'flprc', 'avgprc', 'exch_tm', 'remarks', 'exchordid']
+        
+        for col in cols:
+            dtype_map[col]=str
+
+        # Load existing trade history or create an empty DataFrame
+        if os.path.exists(trade_csv):
+            trade_csv_df = pd.read_csv(trade_csv, dtype=str)
+        else:
+            trade_csv_df = pd.DataFrame(columns=trade_csv_df.columns)
+
+        # Ensure column order and types match by creating a copy before modification
+        trade_csv_df = trade_csv_df.copy()
+
+        # Convert all columns to string, ensuring NaN values don't cause warnings
+        new_rec_df = new_rec_df.fillna("").astype(str)
+        trade_csv_df = trade_csv_df.fillna("").astype(str)
+
+        for col, dtype in dtype_map.items():
+            if col in new_rec_df.columns:
+                new_rec_df.loc[:, col] = new_rec_df[col].astype(dtype)  # Use .loc to avoid SettingWithCopyWarning
+            if col in trade_csv_df.columns:
+                trade_csv_df.loc[:, col] = trade_csv_df[col].astype(dtype)  # Use .loc to avoid SettingWithCopyWarning
+
+        # Remove duplicates and keep only new records
+        # trade_csv_df = insert_if_not_exists(trade_csv_df, new_rec_df)
+        match_columns = ['exchordid']
+        # Check if there is any existing record with the same values in the match columns
+        exists = (trade_csv_df[match_columns] == new_rec_df[match_columns].iloc[0]).all(axis=1).any()
+        
+        # Insert only if the record does not exist
+        if not exists:
+            trade_csv_df = pd.concat([trade_csv_df, new_rec_df], ignore_index=True)
+
+        # Save to CSV with fixed float format (2 decimal places)
+        trade_csv_df.to_csv(trade_csv, index=False, float_format="%.2f")
+
+    return True
+
+
 def write_to_trade_history(trade_book_df):
     trade_hist = "trade_history.csv"
     dtype_map={}
@@ -703,6 +751,7 @@ def main():
     # sess_var_df.loc[sess_var_df['session_var']=='ce_short','value']=ce_short
     # sess_var_df.loc[sess_var_df['session_var']=='ce_long','value']=ce_long
     sess_var_df.to_csv(session_var_file, index=False)
+    write_to_trade_book(api)
     api.logout()
 
 if __name__ =="__main__":
