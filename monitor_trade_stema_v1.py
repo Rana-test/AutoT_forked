@@ -302,7 +302,7 @@ def write_to_trade_book(api):
     if os.path.exists(trade_csv):
         trade_csv_df = pd.read_csv(trade_csv, dtype=str)
     else:
-        trade_csv_df = pd.DataFrame(columns=trade_csv_df.columns)
+        trade_csv_df = pd.DataFrame(columns=cols)
 
     new_rec_df = pd.DataFrame(api.get_trade_book())
     if len(new_rec_df) > 0:
@@ -702,6 +702,7 @@ def main():
         logging.info("Initializing")
         sleep_time.sleep(60)
 
+    write_to_trade_book(api)
     counter = 0
     exit_confirm = sess_var_df[sess_var_df['session_var'] == 'exit_confirm']['value'].iloc[0]
     entry_confirm = sess_var_df[sess_var_df['session_var'] == 'entry_confirm']['value'].iloc[0]
