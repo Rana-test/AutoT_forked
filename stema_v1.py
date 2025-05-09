@@ -880,7 +880,7 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
             # put_neg_bias
             orders['Main']['order_qty']=75*(int(orders['Main']['order_qty'])//(75*put_neg_bias))
             orders['Hedge']['order_qty']=75*(int(orders['Main']['order_qty'])//(75*put_neg_bias))
-        elif order_type == 'CALL' and order_type not in day_order_filter:
+        elif order_type == 'CE' and order_type not in day_order_filter:
             main_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.22)
             logging.info(f"Main Leg: {main_leg}")
             hedge_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.09)
