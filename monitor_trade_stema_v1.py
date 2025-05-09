@@ -550,6 +550,16 @@ def format_trade_metrics(metrics):
     
     return email_body
 
+import math
+
+def sigmoid_exit_percent(dte, k=0.7):
+    if dte < 0:
+        return 100
+    elif dte > 5:
+        return 80
+    else:
+        return 80 + 20 / (1 + math.exp(k * (dte - 3.5)))
+
 # Removing Chandlier_exit_tv
 # def monitor_trade(finvasia_api, upstox_opt_api, ce_short, ce_long):
 def monitor_trade(finvasia_api, upstox_opt_api):
@@ -669,12 +679,8 @@ def monitor_trade(finvasia_api, upstox_opt_api):
 
         # Removing Chandlier_exit_tv
         # stop_loss_condition = ce_exit or ((current_index_price < lower_breakeven or current_index_price > upper_breakeven)) or current_pnl < max_loss or (current_pnl > 0.90 * max_profit)
-        day_wise_exit_per=0.90
-        current_date = datetime.now().date().strftime("%Y-%m-%d")
-        if current_date == expiry_date_str:
-            day_wise_exit_per = 0.99
-        else:
-            day_wise_exit_per = 0.90
+        days_2_expiry = group['Days_to_Expiry'].mean().astype(int)
+        day_wise_exit_per= sigmoid_exit_percent(days_2_expiry)/100
         stop_loss_condition = ((current_index_price < lower_breakeven or current_index_price > upper_breakeven)) or current_pnl < max_loss or (current_pnl > day_wise_exit_per * max_profit)
 
         if stop_loss_condition and (current_pnl < 0.90 * max_profit):
