@@ -838,7 +838,7 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
         entry_confirm=0
 
     ce_indicator = False
-    if abs(entry_confirm)>2:
+    if abs(entry_confirm)>0:
         current_index_price = float(finvasia_api.get_quotes(exchange="NSE", token=str(26000))['lp'])
         ce_indicator=True
         entry_confirm = 0    
@@ -864,7 +864,7 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
         day_order_filter = list(df_today['order_type'].unique())
         # Get available cash and stock colalterals:
         limits = finvasia_api.get_limits()
-        min_coll = min(float(limits['cash'])+float(limits['cash_coll']) + float(limits['payin'])- float(limits['payout'])-float(limits['marginused'])/2, float(limits['collateral'])-float(limits['marginused'])/2)
+        min_coll = min(float(limits['cash'])+float(limits['cash_coll']) + float(limits['payin'])- float(limits['payout'])-float(limits.get('marginused',0))/2, float(limits['collateral'])-float(limits.get('marginused',0))/2)
         if order_type == 'PE' and order_type not in day_order_filter:
             main_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.21)
             logging.info(f"Main Leg: {main_leg}")
