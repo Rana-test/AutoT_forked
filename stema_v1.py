@@ -838,7 +838,7 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
         entry_confirm=0
 
     ce_indicator = False
-    if abs(entry_confirm)>0:
+    if abs(entry_confirm)>2:
         current_index_price = float(finvasia_api.get_quotes(exchange="NSE", token=str(26000))['lp'])
         ce_indicator=True
         entry_confirm = 0    
