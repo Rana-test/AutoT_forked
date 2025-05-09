@@ -718,7 +718,7 @@ def get_revised_qty_margin(orders, upstox_charge_api, min_coll):
 def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge_api, upstox_instruments, df, entry_confirm, exit_confirm,current_time=None):
     global trade_history
     put_neg_bias = 1
-    pos_base_lots = 5
+    pos_base_lots = 7
     pos_delta = 60000
     tb, pnl = write_to_trade_book(finvasia_api)
     logging.info(f"Trade Book based PNL: {pnl}")
