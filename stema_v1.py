@@ -160,7 +160,7 @@ def write_to_trade_book(api):
         # Save to CSV with fixed float format (2 decimal places)
         trade_csv_df.to_csv(trade_csv, index=False, float_format="%.2f")
     
-        total_pnl, pnl_by_symbol = calculate_total_pnl(trade_csv_df)
+    total_pnl, pnl_by_symbol = calculate_total_pnl(trade_csv_df)
     return trade_csv_df, total_pnl
 
 
@@ -715,7 +715,7 @@ def get_revised_qty_margin(orders, upstox_charge_api, min_coll):
         orders['Hedge']['order_qty']=lots*75
         return orders
 
-def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge_api, upstox_instruments, df, entry_confirm, exit_confirm, total_profit, current_time=None):
+def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge_api, upstox_instruments, df, entry_confirm, exit_confirm,current_time=None):
     global trade_history
     put_neg_bias = 1
     pos_base_lots = 5

@@ -368,7 +368,7 @@ def write_to_trade_book(api):
         # Save to CSV with fixed float format (2 decimal places)
         trade_csv_df.to_csv(trade_csv, index=False, float_format="%.2f")
 
-        total_pnl, pnl_by_symbol = calculate_total_pnl(trade_csv_df)
+    total_pnl, pnl_by_symbol = calculate_total_pnl(trade_csv_df)
     return trade_csv_df, total_pnl
 
 def write_to_trade_history(trade_book_df):
@@ -711,7 +711,7 @@ def monitor_trade(finvasia_api, upstox_opt_api):
     metrics["Expiry_Details"] = expiry_metrics
     metrics["Total_PNL"] = round(total_pnl,2)
     trade_hist_df = pd.read_csv("trade_history.csv", dtype=str)  
-    return metrics, float(trade_hist_df['rpnl'].astype(float).sum())
+    return metrics
 
 def main():
     global session_var_file, sess_var_df, live
@@ -751,7 +751,7 @@ def main():
         logging.info(f"Monitoring Trade")
         # Removing Chandlier_exit_tv
         # metrics, total_profit = monitor_trade(api, upstox_opt_api, ce_short, ce_long)
-        metrics, total_profit = monitor_trade(api, upstox_opt_api)
+        metrics = monitor_trade(api, upstox_opt_api)
         if metrics =="STOP_LOSS":
             send_email("STOP LOSS HIT - QUIT", "STOP LOSS HIT")
         else:
@@ -769,7 +769,7 @@ def main():
                 logging.info(f"Got historical data")
                 # Removing Chandlier_exit_tv
                 # return_msgs, entry_confirm, exit_confirm, ce_short, ce_long = run_hourly_trading_strategy(live, api, upstox_opt_api, upstox_charge_api, upstox_instruments, stema_min_df, entry_confirm, exit_confirm, total_profit,current_time=None )
-                return_msgs, entry_confirm, exit_confirm = run_hourly_trading_strategy(live, api, upstox_opt_api, upstox_charge_api, upstox_instruments, stema_min_df, entry_confirm, exit_confirm, total_profit,current_time=None )
+                return_msgs, entry_confirm, exit_confirm = run_hourly_trading_strategy(live, api, upstox_opt_api, upstox_charge_api, upstox_instruments, stema_min_df, entry_confirm, exit_confirm,current_time=None )
                 print(f'Number of email messages: {len(return_msgs)}')
                 for msg in return_msgs:
                     send_email_plain(msg['subject'], msg['body'])
