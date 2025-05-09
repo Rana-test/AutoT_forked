@@ -669,7 +669,13 @@ def monitor_trade(finvasia_api, upstox_opt_api):
 
         # Removing Chandlier_exit_tv
         # stop_loss_condition = ce_exit or ((current_index_price < lower_breakeven or current_index_price > upper_breakeven)) or current_pnl < max_loss or (current_pnl > 0.90 * max_profit)
-        stop_loss_condition = ((current_index_price < lower_breakeven or current_index_price > upper_breakeven)) or current_pnl < max_loss or (current_pnl > 0.90 * max_profit)
+        day_wise_exit_per=0.90
+        current_date = datetime.now().date().strftime("%Y-%m-%d")
+        if current_date == expiry_date_str:
+            day_wise_exit_per = 0.99
+        else:
+            day_wise_exit_per = 0.90
+        stop_loss_condition = ((current_index_price < lower_breakeven or current_index_price > upper_breakeven)) or current_pnl < max_loss or (current_pnl > day_wise_exit_per * max_profit)
 
         if stop_loss_condition and (current_pnl < 0.90 * max_profit):
             stop_loss_order(group, finvasia_api, live=live)
