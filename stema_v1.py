@@ -756,8 +756,11 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
     # Try getting this from positions
     # open_orders = trade_history[trade_history['status'] == 'ACTIVE']
     pos = pd.DataFrame(finvasia_api.get_positions())
-    open_orders = pos[pos['netqty'].astype(int)!=0]
-    has_open_order = not open_orders.empty
+    if pos is None:
+        has_open_order= False
+    else:
+        open_orders = pos[pos['netqty'].astype(int)!=0]
+        has_open_order = not open_orders.empty
     logging.info(f"has_open_order: {has_open_order}")
     logging.info(f"Current Trend: {latest_trend}")
     logging.info(f"Entry Signal: {entry_signal}, Exit Signal:{exit_signal}")
@@ -818,8 +821,12 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
     
         # Check for open orders again after Exit # maybe - Giving gap of 1 iteration between exit and entry
         pos = pd.DataFrame(finvasia_api.get_positions())
-        open_orders = pos[pos['netqty'].astype(int)!=0]
-        has_open_order = not open_orders.empty
+        pos = pd.DataFrame(finvasia_api.get_positions())
+        if pos is None:
+            has_open_order= False
+        else:
+            open_orders = pos[pos['netqty'].astype(int)!=0]
+            has_open_order = not open_orders.empty
 
         logging.info(f"Check again has_open_order: {has_open_order}")
 
