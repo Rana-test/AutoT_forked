@@ -866,9 +866,9 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
         limits = finvasia_api.get_limits()
         min_coll = min(float(limits['cash'])+float(limits['cash_coll']) + float(limits['payin'])- float(limits['payout'])-float(limits.get('marginused',0))/2, float(limits['collateral'])-float(limits.get('marginused',0))/2)
         if order_type == 'PE' and order_type not in day_order_filter:
-            main_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.21)
+            main_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.25)
             logging.info(f"Main Leg: {main_leg}")
-            hedge_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.10)
+            hedge_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.17)
             logging.info(f"Hedge Leg: {hedge_leg}")
 
             orders['Main']={'trading_symbol':main_leg['fin_pe_symbol'], 'trading_up_symbol':main_leg['upstox_pe_instrument_key'], 'order_action':'S', 'order_qty':str(entry_trade_qty), 'order_type':'PE'}
@@ -881,9 +881,9 @@ def run_hourly_trading_strategy(live,finvasia_api, upstox_opt_api, upstox_charge
             orders['Main']['order_qty']=75*(int(orders['Main']['order_qty'])//(75*put_neg_bias))
             orders['Hedge']['order_qty']=75*(int(orders['Main']['order_qty'])//(75*put_neg_bias))
         elif order_type == 'CE' and order_type not in day_order_filter:
-            main_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.22)
+            main_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.25)
             logging.info(f"Main Leg: {main_leg}")
-            hedge_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.09)
+            hedge_leg = get_positions(upstox_opt_api, finvasia_api, instrument, expiry,entry_trade_qty,upstox_instruments, 0.17)
             logging.info(f"Hedge Leg: {hedge_leg}")
 
             orders['Main']={'trading_symbol':main_leg['fin_ce_symbol'], 'trading_up_symbol':main_leg['upstox_ce_instrument_key'], 'order_action':'S', 'order_qty':str(entry_trade_qty), 'order_type':'CE'}
